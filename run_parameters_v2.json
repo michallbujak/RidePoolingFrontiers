@@ -1,0 +1,18 @@
+{
+	"demand_variables": [
+		"nP"
+	],
+	"values_of_demand_variables": [
+		[60]
+	],
+	"operator_variables": [
+		"shared_discount"
+	],
+	"values_of_operator_variables": [
+		[0.26]
+	],
+	"replications": 10,
+	"duration_in_minutes": 10,
+	"initial_parameters": "base_config.json",
+	"path_results": "results/"	
+}
