@@ -3,3 +3,10 @@ ExMAS/data/graphs/Manhattan.csv
 ExMAS/data/nyc.csv
 ExMAS/data/graphs/Manhattan.graphml
 ExMAS/data/nyc_requests.csv
+.ipynb_checkpoints/NYC_Pipeline_data_prep-checkpoint.ipynb
+.ipynb_checkpoints/NYC_prepare_requests-checkpoint.ipynb
+cache/026626a0db2c9665defb22b8a822a03691e41cac.json
+cache/b76b1c122c770a6d4440af591e8e29f8542c5dec.json
+ExMAS/__pycache__/utils_nyc.cpython-39.pyc
+ExMAS/__pycache__/main.cpython-39.pyc
+ExMAS/__pycache__/utils.cpython-39.pyc
