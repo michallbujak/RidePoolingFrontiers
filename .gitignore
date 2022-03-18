@@ -13,3 +13,7 @@ ExMAS/__pycache__/utils.cpython-39.pyc
 .ipynb_checkpoints/Pipeline_NN-checkpoint.ipynb
 __pycache__/utils.cpython-39.pyc
 ExMAS/data/configs/default.json.bak
+.ipynb_checkpoints/NN_full_nyc-checkpoint.ipynb
+ExMAS/data/configs/nyc.json.bak
+ExMAS/data/configs/nyc.json.bak
+*.bak
