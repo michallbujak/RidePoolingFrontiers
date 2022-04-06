@@ -17,3 +17,11 @@ ExMAS/data/configs/default.json.bak
 ExMAS/data/configs/nyc.json.bak
 ExMAS/data/configs/nyc.json.bak
 *.bak
+.ipynb_checkpoints/Untitled1-checkpoint.ipynb
+.ipynb_checkpoints/NN_pooling_colab-checkpoint.ipynb
+.idea/vcs.xml
+.idea/modules.xml
+.ipynb_checkpoints/Untitled-checkpoint.ipynb
+.idea/misc.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/inspectionProfiles/profiles_settings.xml
