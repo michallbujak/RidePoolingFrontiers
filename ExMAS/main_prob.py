@@ -115,7 +115,7 @@ def main(_inData, params, plot=False):
     _inData.logger.info('Degree {} \tCompleted'.format(degree))
 
     if degree < params.max_degree:
-        _inData = make_shareability_graph(_inData)
+        _inData = make_shareability_graph(_inData, params)
 
         while degree < params.max_degree and _inData.sblts.R[degree].shape[0] > 0:
             _inData.logger.info('trips to extend at degree {} : {}'.format(degree,
@@ -259,11 +259,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
     def utility_i():
         # difference u_sh_i - u_ns_i (has to be positive)
-        return (params.price * r.dist_i / 1000 * params.shared_discount
-                + r.VoT_i * (r.ttrav_i - params.WtS * (r.t_oo + r.t_od + params.pax_delay + params.delay_value * abs(r.delay_i))))
-
-    def relative_utility_i():
-        # difference u_sh_i - u_ns_i (has to be positive) /u_ns_i
         return (params.price * r.dist_i / 1000 * params.shared_discount
                 + r.VoT_i * (r.ttrav_i - params.WtS * (r.t_oo + r.t_od + params.pax_delay + params.delay_value * abs(r.delay_i))))
 
@@ -612,7 +607,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     return _inData
 
 
-def make_shareability_graph(_inData):
+def make_shareability_graph(_inData, params):
     """
     Prepares the shareability graphs from trip pairs
     :param _inData: inData.sblts.rides
@@ -628,8 +623,13 @@ def make_shareability_graph(_inData):
     R2['index_copy'] = R2.index
 
     _inData.sblts.R[2] = R2
-    _inData.sblts.S = nx.from_pandas_edgelist(_inData.sblts.R[2], 'i', 'j',
-                                              edge_attr=['kind', 'index_copy'],
+    # New part for weighting a graph:
+    df = R2.copy()
+    df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.mu_prob, params.st_dev_prob)
+                                               *norm.cdf(x[1], params.mu_prob, params.st_dev_prob))
+
+    _inData.sblts.S = nx.from_pandas_edgelist(df, 'i', 'j',
+                                              edge_attr=['kind', 'index_copy', 'weight'],
                                               create_using=nx.MultiDiGraph())  # create a graph
     return _inData
 
