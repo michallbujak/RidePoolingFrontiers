@@ -69,7 +69,7 @@ np.warnings.filterwarnings('ignore')
 ##########
 
 # columns of ride-candidates DataFrame
-RIDE_COLS = ['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'indexes_orig', 'indexes_dest']
+RIDE_COLS = ['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'indexes_orig', 'indexes_dest', 'true_u_pax']
 
 
 class SbltType(Enum):  # type of shared ride. first digit is the degree, second is type (FIFO/LIFO/other)
@@ -207,6 +207,7 @@ def single_rides(_inData, params):
     df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times']]
     df['indexes_orig'] = df.indexes  # copy order of origins for single rides
     df['indexes_dest'] = df.indexes  # and dest
+    df['true_u_pax'] = df['u_pax']
     df = df[RIDE_COLS]
 
     _inData.sblts.SINGLES = df.copy()  # single trips
@@ -515,6 +516,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['delta_ji'] = r.apply(lambda x: x.delta_j - params.delay_value * abs(x.delay_j) - (x.t_j - x.ttrav_j), axis=1)
         r['delta'] = r[['delta_ji', 'delta_ij']].min(axis=1)
         r['u_pax'] = r['u_i'] + r['u_j']
+        r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
         # check_me_FIFO() if check else None
 
     _inData.sblts.FIFO2 = r.copy()
@@ -573,6 +575,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['delta_ji'] = r.apply(lambda x: x.delta_j - params.delay_value * abs(x.delay_j), axis=1)
         r['delta'] = r[['delta_ji', 'delta_ij']].min(axis=1)
         r['u_pax'] = r['u_i'] + r['u_j']
+        r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
         # check_me_LIFO() if check else None
 
     _inData.sblts.LIFO2 = r.copy()
@@ -625,8 +628,9 @@ def make_shareability_graph(_inData, params):
     _inData.sblts.R[2] = R2
     # New part for weighting a graph:
     df = R2.copy()
-    df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.mu_prob, params.st_dev_prob)
-                                               *norm.cdf(x[1], params.mu_prob, params.st_dev_prob))
+    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.mu_prob, params.st_dev_prob)
+    #                                            *norm.cdf(x[1], params.mu_prob, params.st_dev_prob))
+    df['weight'] = df['true_u_pax']
 
     _inData.sblts.S = nx.from_pandas_edgelist(df, 'i', 'j',
                                               edge_attr=['kind', 'index_copy', 'weight'],
@@ -675,7 +679,7 @@ def extend_degree(_inData, params, degree):
         nPotential += nSearched
 
     df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
-                                     'u_paxes', 'times', 'indexes_dest'])  # data synthax for rides
+                                     'u_paxes', 'times', 'indexes_dest', 'true_u_pax'])  # data synthax for rides
 
     df = df[RIDE_COLS]
     df = df.reset_index()
@@ -818,18 +822,20 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict):
                 #    pd.Series(d, index=x).plot()  # option plot d=f(dep)
                 u_paxes = list()
 
+                realisations = np.random.normal(params.mu_prob, params.st_dev_prob, degree+1)
                 for i in range(degree + 1):
 
                     u_paxes.append(trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i]))
-                    if u_paxes[-1] < 0:
+                    if u_paxes[-1] + realisations[i] < 0:
                         feasible_flag = False
                         break
                 if feasible_flag:
-                    re.u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i]) for i in
-                                  range(degree + 1)]
+                    re.u_paxes = [a + b for a, b in zip([shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i]) for i in
+                                  range(degree + 1)], realisations)]
                     re.pos = pos
                     re.times = new_times
                     re.u_pax = sum(re.u_paxes)
+                    re.true_u_pax = re.u_pax - sum(realisations)
                     re.u_veh = sum(re.times[1:])
                     if degree > 4:
                         re.kind = 100
