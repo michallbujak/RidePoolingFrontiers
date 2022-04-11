@@ -109,6 +109,7 @@ def main(_inData, params, plot=False):
     _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
 
     degree = 1
+    _inData = add_noise(_inData, params)
 
     _inData = pairs(_inData, params, plot=plot)
     degree = 2
@@ -464,9 +465,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     if params.st_dev_prob == 0:
         r = r[r['delta_utility_i'] > 0]
     else:
-        realisations = np.random.normal(params.mu_prob, params.st_dev_prob, len(r))
-        r['noise_i'] = realisations
-        r = r[r['delta_utility_i'] + realisations > 0]
+        r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_i']), left_on='i', right_index=True)
+        r = r[r['delta_utility_i'] + r['noise_i'] > 0]
 
     if plot:
         sp_plot(_r, r, 2, 'utility for i')
@@ -485,9 +485,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     if params.st_dev_prob == 0:
         r = r[r['delta_utility_j'] > 0]
     else:
-        realisations = np.random.normal(params.mu_prob, params.st_dev_prob, len(r))
-        r['noise_j'] = realisations
-        r = r[r['delta_utility_j'] + realisations > 0]
+        r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_j']), left_on='j', right_index=True)
+        r = r[r['delta_utility_j'] + r['noise_j'] > 0]
 
     if plot:
         sp_plot(_r, r, 3, 'utility for j')
@@ -533,9 +532,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     if params.st_dev_prob == 0:
         r = r[r['delta_utility_i'] > 0]
     else:
-        realisations = np.random.normal(params.mu_prob, params.st_dev_prob, len(r))
-        r['noise_i'] = realisations
-        r = r[r['delta_utility_i'] + realisations > 0]
+        # r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_i']), left_on='i', right_index=True)
+        r = r[r['delta_utility_i'] + r['noise_i'] > 0]
 
     # r = r[utility_j_LIFO() > 0]
 
@@ -544,9 +542,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     if params.st_dev_prob == 0:
         r = r[r['delta_utility_j'] > 0]
     else:
-        realisations = np.random.normal(params.mu_prob, params.st_dev_prob, len(r))
-        r['noise_j'] = realisations
-        r = r[r['delta_utility_j'] + realisations > 0]
+        r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_j']), left_on='j', right_index=True)
+        r = r[r['delta_utility_j'] + r['noise_j'] > 0]
 
     r = r.set_index(['i', 'j'], drop=False)
     r['ttrav'] = r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay
@@ -630,7 +627,8 @@ def make_shareability_graph(_inData, params):
     df = R2.copy()
     # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.mu_prob, params.st_dev_prob)
     #                                            *norm.cdf(x[1], params.mu_prob, params.st_dev_prob))
-    df['weight'] = df['true_u_pax']
+    # df['weight'] = df['true_u_pax']
+    df['weight'] = df['u_paxes']
 
     _inData.sblts.S = nx.from_pandas_edgelist(df, 'i', 'j',
                                               edge_attr=['kind', 'index_copy', 'weight'],
@@ -674,7 +672,8 @@ def extend_degree(_inData, params, degree):
     retR = list()  # for output
 
     for _, r in R[degree].iterrows():  # iterate through all rides to extend
-        newtrips, nSearched = extend(r, _inData.sblts.S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict)
+        newtrips, nSearched = extend(r, _inData.sblts.S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict
+                                     , _inData.prob.noise)
         retR.extend(newtrips)
         nPotential += nSearched
 
@@ -696,7 +695,7 @@ def extend_degree(_inData, params, degree):
 
 
 # ALGORITHM 2 a
-def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict):
+def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, noise):
     """
     extends a single ride of a given degree with all feasible rides of degree+1
     calls trip_sharing_utility to test if ride is attractive
@@ -752,6 +751,8 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict):
             indexes_dest.insert(pos, q)  # new destination order
             re.indexes_dest = indexes_dest
 
+            re.noises = noise[re.indexes]
+
             # times[1] = oo, times[2] = od, times[3]=dd
 
             new_time_oo = [E[re.indexes_orig[-2]].times[1]]  # this is always the case
@@ -800,7 +801,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict):
             # first assume null delays
             feasible_flag = True
             for i in range(degree + 1):
-                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i]) < 0:
+                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i]) + re.noises[i] < 0:
                     feasible_flag = False
                     break
             if feasible_flag:
@@ -822,20 +823,19 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict):
                 #    pd.Series(d, index=x).plot()  # option plot d=f(dep)
                 u_paxes = list()
 
-                realisations = np.random.normal(params.mu_prob, params.st_dev_prob, degree+1)
                 for i in range(degree + 1):
 
-                    u_paxes.append(trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i]))
-                    if u_paxes[-1] + realisations[i] < 0:
+                    u_paxes.append(
+                        trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i]) + noise[i])
+                    if u_paxes[-1] < 0:
                         feasible_flag = False
                         break
                 if feasible_flag:
-                    re.u_paxes = [a + b for a, b in zip([shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i]) for i in
-                                  range(degree + 1)], realisations)]
+                    re.u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i]) + noise[i] for i in
+                                  range(degree + 1)]
                     re.pos = pos
                     re.times = new_times
                     re.u_pax = sum(re.u_paxes)
-                    re.true_u_pax = re.u_pax - sum(realisations)
                     re.u_veh = sum(re.times[1:])
                     if degree > 4:
                         re.kind = 100
@@ -1232,6 +1232,13 @@ def assert_extension(_inData, params, degree=3, nchecks=4, t=None):
             _inData.logger.warning(skim_times)
             _inData.logger.warning(t.times[1:])
             assert skim_times == t.times[1:]
+
+
+def add_noise(inData, params, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+    inData.prob.noise = np.random.normal(params.mu_prob, params.st_dev_prob, len(inData.requests))
+    return inData
 
 
 if __name__ == "__main__":
