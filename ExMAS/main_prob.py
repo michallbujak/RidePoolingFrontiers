@@ -127,7 +127,8 @@ def main(_inData, params, plot=False):
         if degree == params.max_degree:
             _inData.logger.info('Max degree reached {}'.format(degree))
             _inData.logger.info('Trips still possible to extend at degree {} : {}'.format(degree,
-                                                                                          _inData.sblts.R[degree].shape[0]))
+                                                                                          _inData.sblts.R[degree].shape[
+                                                                                              0]))
         else:
             _inData.logger.info(('No more trips to exted at degree {}'.format(degree)))
 
@@ -156,6 +157,7 @@ def single_rides(_inData, params):
     :param params: parameters
     :return:
     """
+
     def f_delta():
         # maximal possible delay of a trip (computed before join)
         return (1 / params.WtS - 1) * req.ttrav + \
@@ -163,19 +165,20 @@ def single_rides(_inData, params):
 
     def utility_PT():
         # utility of trip with PT - not used
-        if (params.get("PT_discount") is None)|(params.get("PT_beta") is None):
+        if (params.get("PT_discount") is None) | (params.get("PT_beta") is None):
             return 999999
         else:
             return params.price * (1 - params.PT_discount) * req.dist / 1000 + req.VoT * params.PT_beta * req.timePT
-    #prepare data structures
+
+    # prepare data structures
     _inData.sblts = DotMap(_dynamic=False)
     _inData.sblts.log = DotMap(_dynamic=False)
     _inData.sblts.log.sizes = DotMap(_dynamic=False)
     # prepare requests
     req = _inData.requests.copy().sort_index()
-    if params.get('reset_ttrav',True):
+    if params.get('reset_ttrav', True):
         # reset times, reindex
-        t0 = req.treq.min() # set 0 as the earliest departure time
+        t0 = req.treq.min()  # set 0 as the earliest departure time
         req.treq = (req.treq - t0).dt.total_seconds().astype(int)  # recalc times for seconds starting from zero
         req.ttrav = req.ttrav.dt.total_seconds().divide(params.avg_speed).astype(int)  # recalc travel times using speed
     if 'VoT' not in req.columns:
@@ -262,12 +265,14 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     def utility_i():
         # difference u_sh_i - u_ns_i (has to be positive)
         return (params.price * r.dist_i / 1000 * params.shared_discount
-                + r.VoT_i * (r.ttrav_i - params.WtS * (r.t_oo + r.t_od + params.pax_delay + params.delay_value * abs(r.delay_i))))
+                + r.VoT_i * (r.ttrav_i - params.WtS * (
+                        r.t_oo + r.t_od + params.pax_delay + params.delay_value * abs(r.delay_i))))
 
     def utility_j():
         # difference u_sh_i - u_ns_i
         return (params.price * r.dist_j / 1000 * params.shared_discount
-                + r.VoT_j * (r.ttrav_j - params.WtS * (r.t_od + r.t_dd + params.pax_delay + params.delay_value * abs(r.delay_j))))
+                + r.VoT_j * (r.ttrav_j - params.WtS * (
+                        r.t_od + r.t_dd + params.pax_delay + params.delay_value * abs(r.delay_j))))
 
     def utility_i_LIFO():
         # utility of LIFO trip for i
@@ -283,7 +288,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     def utility_sh_i_LIFO():
         # difference u_sh_i_LIFO - u_ns_i
         return (params.price * (1 - params.shared_discount) * r.dist_i / 1000 +
-                r.VoT_i * params.WtS * (r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay + params.delay_value * abs(r.delay_i)))
+                r.VoT_i * params.WtS * (
+                        r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay + params.delay_value * abs(r.delay_i)))
 
     def utility_sh_j_LIFO():
         # difference u_sh_j_LIFO - u_ns_j
@@ -824,7 +830,6 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                 u_paxes = list()
 
                 for i in range(degree + 1):
-
                     u_paxes.append(
                         trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i]) + noise[i])
                     if u_paxes[-1] < 0:
@@ -1012,7 +1017,8 @@ def match(im, r, params, plot=False, make_assertion=True, logger=None):
     logger.info('Problem solution: {}. \n'
                 'Total costs for single trips:  {:13,} '
                 '\nreduced by matching to: {:20,}'.format(pulp.LpStatus[prob.status], int(sum(costs[:nR])),
-                                                          int(pulp.value(prob.objective)))) if logger is not None else None
+                                                          int(pulp.value(
+                                                              prob.objective)))) if logger is not None else None
 
     assert pulp.value(prob.objective) <= sum(costs[:nR]) + 2  # we did not go above original
 
@@ -1234,9 +1240,13 @@ def assert_extension(_inData, params, degree=3, nchecks=4, t=None):
             assert skim_times == t.times[1:]
 
 
-def add_noise(inData, params, seed=None):
-    if seed is not None:
-        np.random.seed(seed)
+def add_noise(inData, params):
+    try:
+        if params.seed != "None":
+            np.random.seed(int(params.seed))
+    except:
+        print("Error trying to set seed, check the code.")
+        pass
     inData.prob.noise = np.random.normal(params.mu_prob, params.st_dev_prob, len(inData.requests))
     return inData
 
@@ -1256,6 +1266,3 @@ if __name__ == "__main__":
     inData = ExMAS.utils.generate_demand(inData, params)
 
     main(inData, params)
-
-
-
