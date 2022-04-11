@@ -41,5 +41,6 @@
 	},
 	"logger_level": "CRITICAL",
 	"mu_prob": 0,
-	"st_dev_prob": 2
+	"st_dev_prob": 2,
+	"seed": 4
 }
