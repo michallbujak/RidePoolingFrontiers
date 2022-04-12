@@ -673,13 +673,14 @@ def extend_degree(_inData, params, degree):
     ttrav_dict = _inData.sblts.requests.ttrav.to_dict()  # travel times
     treq_dict = _inData.sblts.requests.treq.to_dict()  # requests times
     VoT_dict = _inData.sblts.requests.VoT.to_dict()  # valuoes of time
+    noise_dict = {i: _inData.prob.noise[i] for i in range(len(_inData.prob.noise))}  # noise for utility
 
     nPotential = 0
     retR = list()  # for output
 
     for _, r in R[degree].iterrows():  # iterate through all rides to extend
         newtrips, nSearched = extend(r, _inData.sblts.S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict
-                                     , _inData.prob.noise)
+                                     , noise_dict)
         retR.extend(newtrips)
         nPotential += nSearched
 
@@ -701,7 +702,7 @@ def extend_degree(_inData, params, degree):
 
 
 # ALGORITHM 2 a
-def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, noise):
+def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, noise_dict):
     """
     extends a single ride of a given degree with all feasible rides of degree+1
     calls trip_sharing_utility to test if ride is attractive
@@ -716,7 +717,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
     :param VoT_dict:
     :return:
     """
-    deptimefun = lambda dep: max([abs(dep + delay) for delay in delays])  # minmax
+    deptimefun = lambda dep: max([abs(dep + delay)**2 for delay in delays])  # minmax
     deptimefun = np.vectorize(deptimefun)
     accuracy = 10
     retR = list()
@@ -756,8 +757,6 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             re.indexes_orig = re.indexes
             indexes_dest.insert(pos, q)  # new destination order
             re.indexes_dest = indexes_dest
-
-            re.noises = noise[re.indexes]
 
             # times[1] = oo, times[2] = od, times[3]=dd
 
@@ -804,10 +803,13 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             ttrav = [sum(new_times[i + 1:degree + 2 + re.indexes_dest.index(re.indexes[i])]) for i in
                      range(degree + 1)]
 
+            # probabilistic addon
+            noise = [noise_dict[_] for _ in re.indexes]
+
             # first assume null delays
             feasible_flag = True
             for i in range(degree + 1):
-                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i]) + re.noises[i] < 0:
+                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i]) + noise[i] < 0:
                     feasible_flag = False
                     break
             if feasible_flag:
@@ -1241,13 +1243,10 @@ def assert_extension(_inData, params, degree=3, nchecks=4, t=None):
 
 
 def add_noise(inData, params):
-    try:
-        if params.seed != "None":
-            np.random.seed(int(params.seed))
-    except:
-        print("Error trying to set seed, check the code.")
-        pass
-    inData.prob.noise = np.random.normal(params.mu_prob, params.st_dev_prob, len(inData.requests))
+    seed = params.get('seed', None)
+    if seed is not None:
+        np.random.seed(int(params.seed))
+    inData.prob.noise = np.random.normal(params.get('mu_prob', 0), params.get('st_dev_prob', 0), len(inData.requests))
     return inData
 
 
