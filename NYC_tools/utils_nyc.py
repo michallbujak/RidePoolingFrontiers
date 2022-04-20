@@ -92,12 +92,12 @@ def make_paths(params, relative = False):
     # call it whenever you change a city name, or main path
     params.paths.main = "ExMAS"
 
-    params.paths.data = os.path.join(params.paths.main, 'data')
+    params.paths.data = os.path.join(params.paths.main, '../ExMAS/data')
     params.paths.params = os.path.join(params.paths.data, 'configs')
     params.paths.albatross = os.path.join(params.paths.data, 'albatross')  # albatross data
     params.paths.G = os.path.join(params.paths.data, 'graphs',
                                   params.city.split(",")[0] + ".graphml")  # graphml of a current .city
-    params.paths.skim = os.path.join(params.paths.main, 'data', 'graphs', params.city.split(",")[
+    params.paths.skim = os.path.join(params.paths.main, '../ExMAS/data', 'graphs', params.city.split(",")[
         0] + ".csv")  # csv with a skim between the nodes of the .city
 
     params.paths.postcodes = os.path.join(params.paths.data, 'postcodes',
