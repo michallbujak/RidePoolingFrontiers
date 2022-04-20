@@ -6,6 +6,7 @@ import os, sys
 from tqdm import tqdm
 import ExMAS.utils
 import logging
+import warnings
 
 
 def initialise_indata_dotmap():
@@ -91,32 +92,33 @@ def nyc_csv_prepare_batches(_inData, _params):
 
 
 def nyc_pick_batch(batches, trips, inData, _params, batch_no):
-    _inData = inData.copy()
-    batch = list(batches.groups.keys())[batch_no]
-    df = batches.get_group(batch)
-    df['status'] = 0
-    df.pos = df['origin']
-    _inData.passengers = df
-    requests = df
-    requests['dist'] = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)
-    requests['treq'] = (trips.pickup_datetime - trips.pickup_datetime.min())
-    requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
-    requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
-    requests = requests.sort_values('treq')
-    requests['pax_id'] = requests.index.copy()
-    _inData.requests = requests
-    _inData.passengers.pos = _inData.requests.origin
-    _params.nP = _inData.requests.shape[0]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        _inData = inData.copy()
+        batch = list(batches.groups.keys())[batch_no]
+        df = batches.get_group(batch)
+        df['status'] = 0
+        df.pos = df['origin']
+        _inData.passengers = df
+        requests = df
+        requests['dist'] = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)
+        requests['treq'] = (trips.pickup_datetime - trips.pickup_datetime.min())
+        requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
+        requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
+        requests = requests.sort_values('treq')
+        requests['pax_id'] = requests.index.copy()
+        _inData.requests = requests
+        _inData.passengers.pos = _inData.requests.origin
+        _params.nP = _inData.requests.shape[0]
     return _inData
 
 
 def prepare_batches(number_of_batches, config_name="nyc_prob", filter_function=lambda x: len(x.requests) > 0,
-                    freq="10min", output_params=True, logger=None):
-    logger = embed_logger(logger)
+                    output_params=True):
     copy_wd = os.getcwd()
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     params = get_config('ExMAS/data/configs/' + config_name + '.json')
-    params.freq = freq
+    logger = embed_logger(params.get("logger_level", None))
     inData = initialise_indata_dotmap()
     inData = ExMAS.utils.load_G(inData, params, stats=True)
 
@@ -124,16 +126,21 @@ def prepare_batches(number_of_batches, config_name="nyc_prob", filter_function=l
 
     logger.warning("Preparing NYC batches \n")
     inDatas = []
-    for j in tqdm(range(number_of_batches)):
+    pbar = tqdm(total=number_of_batches)
+    counter = 0
+    while counter < number_of_batches:
         try:
-            temp = nyc_pick_batch(batches, trips, inData, params, j)
+            temp = nyc_pick_batch(batches, trips, inData, params, counter)
             if filter_function(temp):
                 inDatas.append(temp)
+                pbar.update(1)
+                counter += 1
             else:
-                logger.debug('Impossible to attach batch number: ', j)
+                logger.debug('Impossible to attach batch number: ', counter)
                 pass
         except:
             pass
+    pbar.close()
 
     os.chdir(copy_wd)
     logger.warning("Batches READY! \n")
@@ -143,16 +150,22 @@ def prepare_batches(number_of_batches, config_name="nyc_prob", filter_function=l
         return inDatas
 
 
-def run_exmas_nyc_batches(exmas_algorithm, params, indatas, replications=1, logger=None):
+def run_exmas_nyc_batches(exmas_algorithm, params, indatas, topo_params=None, replications=1, logger=None):
     logger = embed_logger(logger)
     results = []
     params.logger_level = "CRITICAL"
-    logger.warning("Calculating ExMAS values \n ")
+    logger.warning(" Calculating ExMAS values \n ")
     for i in tqdm(range(len(indatas))):
         try:
             for j in range(replications):
-                temp = exmas_algorithm(indatas[i], params, False)
-                results.append(temp.copy())
+                if topo_params is None or topo_params.variables is None:
+                    temp = exmas_algorithm(indatas[i], params, False)
+                    results.append(temp.copy())
+                else:
+                    for k in range(len(topo_params.values)):
+                        params[topo_params.variables] = topo_params.values[k]
+                        temp = exmas_algorithm(indatas[i], params, False)
+                        results.append(temp.copy())
         except:
             logger.debug('Impossible to attach batch number: ', i)
             pass
@@ -169,8 +182,10 @@ def init_log(logger_level, logger=None):
         level = logging.WARNING
     elif logger_level == 'CRITICAL':
         level = logging.CRITICAL
-    else:
+    elif logger_level == 'INFO':
         level = logging.INFO
+    else:
+        raise Exception("Not accepted logger level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
     if logger is None:
         logging.basicConfig(stream=sys.stdout, format='%(asctime)s-%(levelname)s-%(message)s',
                             datefmt='%H:%M:%S', level=level)
@@ -187,9 +202,8 @@ def init_log(logger_level, logger=None):
 def embed_logger(log):
     if log is None:
         return init_log('WARNING')
-    elif not log:
-        return init_log("CRITICAL")
-    elif log:
-        return init_log("DEBUG")
+    elif log in ["DEBUG", "WARNING", "CRITICAL", "INFO"]:
+        return init_log(log)
     else:
-        return log
+        raise Exception("Not accepted logger level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
+

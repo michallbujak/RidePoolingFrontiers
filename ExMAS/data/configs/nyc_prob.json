@@ -39,7 +39,7 @@
 	"speeds": {
 		"ride": {}
 	},
-	"logger_level": "CRITICAL",
+	"logger_level": "DEBUG",
 	"mu_prob": 0,
 	"st_dev_prob": 2
 }
