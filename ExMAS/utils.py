@@ -356,7 +356,8 @@ def generate_demand(_inData, _params=None, avg_speed=False, start_time_exact=Fal
         treq = np.random.uniform(-_params.simTime * 60 * 60 / 2, _params.simTime * 60 * 60 / 2,
                                  _params.nP)  # apply uniform distribution on request times
     elif _params.demand_structure.temporal_distribution == 'uniform' and start_time_exact:
-        treq = np.random.uniform(0, _params.simTime * 60 * 60, _params.nP)  # apply uniform distribution on request times
+        treq = np.random.uniform(0, _params.simTime * 60 * 60,
+                                 _params.nP)  # apply uniform distribution on request times
     elif _params.demand_structure.temporal_distribution == 'normal':
         treq = np.random.normal(_params.simTime * 60 * 60 / 2,
                                 _params.demand_structure.temporal_dispertion * _params.simTime * 60 * 60 / 2,
@@ -746,7 +747,7 @@ def make_graph(requests, rides,
         df['prob'] = df.apply(lambda x: x.expu / requests.loc[x.request].sum_u, axis=1)
     edges = list()
     for i, row in df.iterrows():
-        # edges.append((row.ride,row.request, {'prob':row.prob}))
+        # edges.append((row.ride, row.request, {'prob': row.prob}))
         edges.append((row.ride, row.request))
     # edges
     G.add_edges_from(edges)
