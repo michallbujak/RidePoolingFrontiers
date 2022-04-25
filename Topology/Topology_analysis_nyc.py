@@ -45,9 +45,14 @@ if __name__ == "__main__":
     merged_results.to_excel(merged_file_path, index=False)
 
     """ Compute final results """
+    variables = ['Batch']
     utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
                               topological_config.path_results,
-                              topological_config.path_results + "/temp",
-                              )
+                              topological_config.path_results + "/temp/",
+                              variables,
+                              topological_config.graph_topological_properties,
+                              topological_config.kpis,
+                              topological_config.graph_properties_against_inputs,
+                              topological_config.dictionary_variables).do_all()
 
 
