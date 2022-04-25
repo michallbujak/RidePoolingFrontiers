@@ -7,6 +7,7 @@ import numpy as np
 import collections
 import logging
 import sys
+import seaborn as sns
 
 
 def get_parameters(path, time_correction=False):
@@ -244,3 +245,240 @@ def worker_topological_properties(GraphStatObj):
                              'Proportion_max_component', 'No. of components']
 
     return data_output
+
+
+def alternate_kpis(dataset):
+    if 'nP' in dataset.columns:
+        pass
+    else:
+        dataset['nP'] = dataset['No_nodes_group1']
+
+    dataset['Proportion_singles'] = dataset['SINGLE'] / dataset['nP']
+    dataset['Proportion_pairs'] = dataset['PAIRS'] / dataset['nP']
+    dataset['Proportion_triples'] = dataset['TRIPLES'] / dataset['nP']
+    dataset['Proportion_triples_plus'] = (dataset['nP'] - dataset['SINGLE'] -
+                                               dataset['PAIRS']) / dataset['nP']
+    dataset['Proportion_quadruples'] = dataset['QUADRIPLES'] / dataset['nP']
+    dataset['Proportion_quintets'] = dataset['QUINTETS'] / dataset['nP']
+    dataset['Proportion_six_plus'] = dataset['PLUS5'] / dataset['nP']
+    dataset['SavedVehHours'] = (dataset['VehHourTrav_ns'] - dataset['VehHourTrav']) / \
+                                    dataset['VehHourTrav_ns']
+    dataset['AddedPasHours'] = (dataset['PassHourTrav'] - dataset['PassHourTrav_ns']) / \
+                                    dataset['PassHourTrav_ns']
+    dataset['UtilityGained'] = (dataset['PassUtility'] - dataset['PassUtility_ns']) / \
+                                    dataset['PassUtility_ns']
+    dataset['Fraction_isolated'] = dataset['No_isolated_pairs']/dataset['nP']
+    return dataset
+
+
+def amend_merged_file(merged_file, alter_kpis=False, inplace=True):
+    if not inplace:
+        merged_file = merged_file.copy(deep=True)
+    merged_file.drop(columns=['_typ', 'dtype'], inplace=True)
+    merged_file.reset_index(inplace=True, drop=True)
+    if alter_kpis:
+        merged_file = alternate_kpis(merged_file)
+    return merged_file
+
+
+def merge_results(dotmaps_list_results, topo_dataframes, settings_list):
+    res = [pd.concat([z, x, y.sblts.res]) for z, x, y in
+           zip([pd.Series(k) for k in settings_list], topo_dataframes, dotmaps_list_results)]
+    merged_file = pd.DataFrame()
+    for item in res:
+        merged_file = pd.concat([merged_file, item.T])
+    amend_merged_file(merged_file)
+    return merged_file
+
+
+class APosterioriAnalysis:
+    def __init__(self, dataset: pd.DataFrame, output_path: str, output_temp: str, input_variables: list,
+                 all_graph_properties: list, kpis: list, graph_properties_to_plot: list, labels: dict,
+                 err_style: str = "band"):
+        """
+        Class designed to performed analysis on merged results from shareability graph properties.
+        :param dataset: input merged datasets from replications
+        :param output_path: output for final results
+        :param output_temp: output for temporal results required in the process
+        :param input_variables: search space variables
+        :param all_graph_properties: all graph properties for heatmap/correlation analysis
+        :param kpis: final matching coefficients to take into account
+        :param graph_properties_to_plot: properties of graph to be plotted
+        :param labels: dictionary of labels
+        :param err_style: for line plots style of the error
+        """
+        self.dataset = dataset.drop(columns=['Replication_ID'])
+        self.input_variables = input_variables
+        self.all_graph_properties = all_graph_properties
+        self.dataset_grouped = self.dataset.groupby(self.input_variables)
+        self.output_path = output_path
+        self.output_temp = output_temp
+        self.kpis = kpis
+        self.graph_properties_to_plot = graph_properties_to_plot
+        self.labels = labels
+        self.err_style = err_style
+        self.heatmap = None
+
+    def alternate_kpis(self):
+        if 'nP' in self.dataset.columns:
+            pass
+        else:
+            self.dataset['nP'] = self.dataset['No_nodes_group1']
+
+        self.dataset['Proportion_singles'] = self.dataset['SINGLE'] / self.dataset['nR']
+        self.dataset['Proportion_pairs'] = self.dataset['PAIRS'] / self.dataset['nR']
+        self.dataset['Proportion_triples'] = self.dataset['TRIPLES'] / self.dataset['nR']
+        self.dataset['Proportion_triples_plus'] = (self.dataset['nR'] - self.dataset['SINGLE'] -
+                                                   self.dataset['PAIRS']) / self.dataset['nR']
+        self.dataset['Proportion_quadruples'] = self.dataset['QUADRIPLES'] / self.dataset['nR']
+        self.dataset['Proportion_quintets'] = self.dataset['QUINTETS'] / self.dataset['nR']
+        self.dataset['Proportion_six_plus'] = self.dataset['PLUS5'] / self.dataset['nR']
+        self.dataset['SavedVehHours'] = (self.dataset['VehHourTrav_ns'] - self.dataset['VehHourTrav']) / \
+                                        self.dataset['VehHourTrav_ns']
+        self.dataset['AddedPasHours'] = (self.dataset['PassHourTrav'] - self.dataset['PassHourTrav_ns']) / \
+                                        self.dataset['PassHourTrav_ns']
+        self.dataset['UtilityGained'] = (self.dataset['PassUtility'] - self.dataset['PassUtility_ns']) / \
+                                        self.dataset['PassUtility_ns']
+        self.dataset['Fraction_isolated'] = self.dataset['No_isolated_pairs'] / self.dataset['nP']
+        self.dataset_grouped = self.dataset.groupby(self.input_variables)
+
+    def boxplot_inputs(self):
+        for counter, y_axis in enumerate(self.all_graph_properties):
+            dataset = self.dataset.copy()
+            if len(self.input_variables) <= 2:
+                if len(self.input_variables) == 1:
+                    sns.boxplot(x=self.input_variables[0], y=y_axis, data=dataset) \
+                        .set(xlabel=self.labels[self.input_variables[0]], ylabel=self.labels[y_axis])
+                elif len(self.input_variables) == 2:
+                    temp_dataset = dataset.copy()
+                    temp_dataset[self.labels[self.input_variables[1]]] = temp_dataset[self.input_variables[1]]
+                    sns.boxplot(x=self.input_variables[0], y=y_axis, data=temp_dataset,
+                                hue=self.labels[self.input_variables[1]]) \
+                        .set(xlabel=self.labels[self.input_variables[0]], ylabel=self.labels[y_axis])
+                else:
+                    break
+                plt.savefig(self.output_temp + 'temp_boxplot_' + str(counter) + '.png')
+                plt.close()
+            else:
+                raise Exception('Grouping variables number is:', len(self.input_variables), ' - too long for boxplot.')
+
+    def line_plot_inputs(self):
+        for counter, x_axis in enumerate(self.input_variables):
+            if len(self.graph_properties_to_plot) <= 2:
+                if len(self.input_variables) == 1:
+                    sns.lineplot(x=x_axis, y=self.graph_properties_to_plot[0], data=self.dataset)
+                    plt.xlabel(self.labels[x_axis])
+                    plt.ylabel(self.labels[self.graph_properties_to_plot[0]], color='b')
+                elif len(self.input_variables) == 2:
+                    fig, ax1 = plt.subplots()
+                    ax2 = ax1.twinx()
+                    sns.lineplot(x=x_axis, y=self.graph_properties_to_plot[0], data=self.dataset, color='b', ax=ax1,
+                                 err_style=self.err_style)
+                    sns.lineplot(x=x_axis, y=self.graph_properties_to_plot[1], data=self.dataset, color='r', ax=ax2,
+                                 err_style=self.err_style)
+                    ax1.set_xlabel(self.labels[x_axis])
+                    ax1.set_ylabel(self.labels[self.graph_properties_to_plot[0]], color='b')
+                    ax2.set_ylabel(self.labels[self.graph_properties_to_plot[1]], color='r')
+                else:
+                    pass
+                plt.savefig(self.output_temp + 'temp_lineplot_' + str(counter) + '.png')
+                plt.close()
+            else:
+                raise Exception('Grouping variables number is:', len(self.input_variables), ' - too long for lineplot.')
+
+    def plot_kpis_properties(self):
+        plot_arguments = [(x, y) for x in self.graph_properties_to_plot for y in self.kpis]
+        dataset = self.dataset.copy()
+        for counter, value in enumerate(self.input_variables):
+            min_val = min(self.dataset[value])
+            max_val = max(self.dataset[value])
+            step = (max_val - min_val) / 3
+            if min_val < 5:
+                bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 3)
+            else:
+                bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 0)
+            labels = [f'{i}+' if j == np.inf else f'{i}-{j}' for i, j in
+                      zip(bins, bins[1:])]  # additional part with infinity
+            dataset[self.labels[value] + " bin"] = pd.cut(dataset[value], bins, labels=labels)
+
+        for counter, j in enumerate(plot_arguments):
+            if len(self.input_variables) == 1:
+                fig, ax = plt.subplots()
+                sns.scatterplot(x=j[0], y=j[1], data=dataset, hue=dataset[self.labels[self.input_variables[0]] + " bin"]
+                                , palette="crest")
+                ax.set_xlabel(self.labels[j[0]])
+                ax.set_ylabel(self.labels[j[1]])
+                plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+                plt.close()
+            elif len(self.input_variables) == 2:
+                fix, ax = plt.subplots()
+                sns.scatterplot(x=j[0], y=j[1], data=dataset,
+                                hue=dataset[self.labels[self.input_variables[0]] + " bin"],
+                                size=dataset[self.labels[self.input_variables[1]] + " bin"], palette="crest")
+                ax.set_xlabel(self.labels[j[0]])
+                ax.set_ylabel(self.labels[j[1]])
+                plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+                plt.close()
+            else:
+                fig, ax = plt.subplots()
+                sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
+                ax.set_xlabel(self.labels[j[0]])
+                ax.set_ylabel(self.labels[j[1]])
+                plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+                plt.close()
+
+    def create_heatmap(self):
+        df = self.dataset[self.all_graph_properties + self.kpis]
+        for column in df.columns:
+            df.rename(columns={column: self.labels[column]}, inplace=True)
+
+        corr = df.corr()
+        self.heatmap = corr
+        plt.figure(figsize=(10, 10))
+        sns.heatmap(corr,
+                    xticklabels=corr.columns,
+                    yticklabels=corr.columns,
+                    linewidths=.5,
+                    annot=True,
+                    center=0,
+                    cmap='OrRd')
+        plt.subplots_adjust(bottom=0.3, left=0.3)
+        plt.savefig(self.output_temp + 'heatmap' + '.png')
+        plt.close()
+        self.heatmap = round(self.heatmap, 3).style.background_gradient(cmap='coolwarm').set_precision(2)
+
+    def save_grouped_results(self):
+        writer = pd.ExcelWriter(self.output_path + 'Final_results_' + '_'.join(self.input_variables) + '.xlsx',
+                                engine='xlsxwriter')
+        self.dataset_grouped.min().to_excel(writer, sheet_name='Min')
+        self.dataset_grouped.mean().to_excel(writer, sheet_name='Mean')
+        self.dataset_grouped.max().to_excel(writer, sheet_name='Max')
+        workbook = writer.book
+
+        worksheet = workbook.add_worksheet('Boxplots')
+        for counter in range(len(self.all_graph_properties)):
+            worksheet.insert_image('B' + str(counter * 25 + 1),
+                                   self.output_temp + 'temp_boxplot_' + str(counter) + '.png')
+
+        worksheet = workbook.add_worksheet('Lineplots')
+        for counter in range(len(self.graph_properties_to_plot)):
+            worksheet.insert_image('B' + str(counter * 25 + 1),
+                                   self.output_temp + 'temp_lineplot_' + str(counter) + '.png')
+
+        worksheet = workbook.add_worksheet('KpiPlots')
+        for counter in range(len(self.graph_properties_to_plot) * len(self.kpis)):
+            worksheet.insert_image('B' + str(counter * 25 + 1),
+                                   self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+
+        self.heatmap.to_excel(writer, sheet_name='Correlation')
+        worksheet = workbook.get_worksheet_by_name('Correlation')
+        worksheet.insert_image('B' + str(len(self.all_graph_properties) * 2 + 5), self.output_temp + 'heatmap' + '.png')
+        writer.save()
+
+    def do_all(self):
+        self.alternate_kpis()
+        self.line_plot_inputs()
+        self.boxplot_inputs()
+        self.plot_kpis_properties()
+        self.create_heatmap()
+        self.save_grouped_results()

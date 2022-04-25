@@ -32,14 +32,13 @@
 	},
 	"max_degree": 8,
 	"t0": "15:00",
-	"batch": 300,
 	"date": "20160101",
 	"freq": "10min",
 	"speed": {},
 	"speeds": {
 		"ride": {}
 	},
-	"logger_level": "DEBUG",
+	"logger_level": "INFO",
 	"mu_prob": 0,
 	"st_dev_prob": 2
 }

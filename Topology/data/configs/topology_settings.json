@@ -39,7 +39,6 @@
 		"UtilityGained": "Utility gain",
 		"Fraction_isolated": "Fraction of nonshareable travellers"
 	},
-	"replications": 10,
 	"initial_parameters": "ExMAS/data/configs/nyc_prob.json",
 	"path_results": "data/results/"
 }

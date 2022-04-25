@@ -6,15 +6,15 @@ from ExMAS.utils import make_graph as exmas_make_graph
 import pandas as pd
 import multiprocessing as mp
 import os
+import datetime
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    print(os.getcwd())
     topological_config = utils.get_parameters('data/configs/topology_settings.json')
 
     """ Set up varying parameters (optional) """
-    topological_config.variable = 'shared_discount'
-    topological_config.values = [0.22, 0.24]
+    # topological_config.variable = 'shared_discount'
+    # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
     topological_config.replications = 2
@@ -27,7 +27,8 @@ if __name__ == "__main__":
 
     dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
                                                                           topological_config,
-                                                                          replications=topological_config.replications)
+                                                                          replications=topological_config.replications,
+                                                                          logger_level='INFO')
 
     """ Perform topological analysis """
     pool = mp.Pool(mp.cpu_count())
@@ -38,6 +39,15 @@ if __name__ == "__main__":
     pool.close()
 
     """ Merge results """
-    x = 0
-    def merge_results(dotmaps_list_results, topo_dataframes, settings):
-        x = 0
+    merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
+    merged_file_path = topological_config.path_results + 'merged_files_' + \
+                       str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
+    merged_results.to_excel(merged_file_path, index=False)
+
+    """ Compute final results """
+    utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
+                              topological_config.path_results,
+                              topological_config.path_results + "/temp",
+                              )
+
+

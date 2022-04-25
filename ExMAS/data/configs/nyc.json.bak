@@ -38,5 +38,6 @@
 	"speed": {},
 	"speeds": {
 		"ride": {}
-	}
+	},
+	"logger_level": "CRITICAL"
 }
