@@ -94,11 +94,12 @@ class SbltType(Enum):  # type of shared ride. first digit is the degree, second 
 ##############
 
 # ALGORITHM 3
-def main(_inData, params, plot=False):
+def main(_inData, params, noise_prior=None, plot=False):
     """
     main call
     :param _inData: input (graph, requests, .. )
     :param params: parameters
+    :param noise_prior: choose whether to pass the noise to the algorithm or to sample
     :param plot: flag to plot charts for consecutive steps
     :return: inData.sblts.schedule - selecgted shared rides
     inData.sblts.rides - all ride candidates
@@ -109,7 +110,7 @@ def main(_inData, params, plot=False):
     _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
 
     degree = 1
-    _inData = add_noise(_inData, params)
+    _inData = add_noise(_inData, params, noise_prior)
 
     _inData = pairs(_inData, params, plot=plot)
     degree = 2
@@ -631,8 +632,8 @@ def make_shareability_graph(_inData, params):
     _inData.sblts.R[2] = R2
     # New part for weighting a graph:
     df = R2.copy()
-    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.mu_prob, params.st_dev_prob)
-    #                                            *norm.cdf(x[1], params.mu_prob, params.st_dev_prob))
+    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.starting_probs.mu_prob, params.st_dev_prob)
+    #                                            *norm.cdf(x[1], params.starting_probs.mu_prob, params.st_dev_prob))
     # df['weight'] = df['true_u_pax']
     df['weight'] = df['u_paxes']
 
@@ -717,7 +718,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
     :param VoT_dict:
     :return:
     """
-    deptimefun = lambda dep: max([abs(dep + delay)**2 for delay in delays])  # minmax
+    deptimefun = lambda dep: max([abs(dep + delay) ** 2 for delay in delays])  # minmax
     deptimefun = np.vectorize(deptimefun)
     accuracy = 10
     retR = list()
@@ -1242,12 +1243,47 @@ def assert_extension(_inData, params, degree=3, nchecks=4, t=None):
             assert skim_times == t.times[1:]
 
 
-def add_noise(inData, params):
+def add_noise(inData, params, noise_prior):
     seed = params.get('seed', None)
     if seed is not None:
-        np.random.seed(int(params.seed))
-    inData.prob.noise = np.random.normal(params.get('mu_prob', 0), params.get('st_dev_prob', 0), len(inData.requests))
+        try:
+            np.random.seed(int(params.seed))
+        except:
+            raise Exception('Passed seed cannot be set')
+    if noise_prior is None:
+        inData.prob.noise = np.random.normal(params.starting_probs.get('mu_prob', 0),
+                                             params.starting_probs.get('st_dev_prob', 0),
+                                             len(inData.requests))
+    else:
+        inData.prob.noise = noise_prior
     return inData
+
+
+def noise_generator(step=0, noise=None, params=None, batch_length=0, type=None, constrains=None):
+    """
+    Function designed to create noise and update it stepwise if required.
+    @param step: 0 is a start, any number >0 means updating existing noise (stochastic process)
+    @param noise: existing noise to be updated (if step != 0)
+    @param type: currently only wiener process supported. None returns None objecty -
+    @param params:
+    @param batch_length:
+    @param constrains:
+    @return: noise
+    """
+    normal_list = ['wiener', 'normal', 'brownian']
+    if type is None:
+        return None
+    else:
+        assert type in normal_list, 'Incorrect type'
+        if step == 0:
+            if type in normal_list:
+                return np.random.normal(params.starting_probs.get('mu_prob', 0),
+                                        params.starting_probs.get('st_dev_prob', 0), batch_length)
+        else:
+            assert noise is not None, 'Not-zero step and no noise passed'
+            if type in normal_list:
+                return noise + np.random.normal(params.stepwise_probs.get('mu_prob', 0),
+                                                params.stepwise_probs.get('st_dev_prob', 0), batch_length)
 
 
 if __name__ == "__main__":

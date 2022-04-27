@@ -37,7 +37,8 @@
 		"shared_ratio": "Coverage of shared rides",
 		"SavedVehHours": "Saved vehicle hours (relative)",
 		"UtilityGained": "Utility gain",
-		"Fraction_isolated": "Fraction of nonshareable travellers"
+		"Fraction_isolated": "Fraction of nonshareable travellers",
+		"Batch": "Dataset"
 	},
 	"initial_parameters": "ExMAS/data/configs/nyc_prob.json",
 	"path_results": "data/results/"

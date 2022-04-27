@@ -7,6 +7,7 @@ from tqdm import tqdm
 import ExMAS.utils
 import logging
 import warnings
+from ExMAS.main_prob import noise_generator as stochastic_noise
 
 
 def initialise_indata_dotmap():
@@ -154,8 +155,8 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
         return inDatas
 
 
-def run_exmas_nyc_batches(exmas_algorithm, params, indatas, topo_params=DotMap({'variable': None})
-                          , replications=1, logger_level=None):
+def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None,
+                          topo_params=DotMap({'variable': None}), replications=1, logger_level=None):
     logger = embed_logger(logger_level)
     results = []
     settings = []
@@ -163,11 +164,18 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, topo_params=DotMap({
     logger.warning(" Calculating ExMAS values \n ")
     for i in range(len(indatas)):
         logger.info(" Batch no. " + str(i))
+        step = 0
+        noise = stochastic_noise(step=0, noise=None, params=params, batch_length=len(indatas[i].requests),
+                                 constrains=None, type='wiener')
         for j in tqdm(range(replications)):
             if topo_params.variable is None:
                 try:
-                    temp = exmas_algorithm(indatas[i], params, False)
+                    temp = exmas_algorithm(indatas[i], params, noise, False)
                     results.append(temp.copy())
+                    step += 1
+                    noise = stochastic_noise(step=step, noise=noise, params=params,
+                                             batch_length=len(indatas[i].requests),
+                                             constrains=None, type='wiener')
                     settings.append({'Replication_ID': j, 'Batch': i})
                 except:
                     logger.debug('Impossible to attach batch number: ' + str(i))
@@ -176,7 +184,7 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, topo_params=DotMap({
                 for k in range(len(topo_params['values'])):
                     params[topo_params['variable']] = topo_params['values'][k]
                     try:
-                        temp = exmas_algorithm(indatas[i], params, False)
+                        temp = exmas_algorithm(indatas[i], params, None, False)
                         results.append(temp.copy())
                         settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
                     except:

@@ -389,43 +389,56 @@ class APosterioriAnalysis:
     def plot_kpis_properties(self):
         plot_arguments = [(x, y) for x in self.graph_properties_to_plot for y in self.kpis]
         dataset = self.dataset.copy()
+        binning = False
         for counter, value in enumerate(self.input_variables):
             min_val = min(self.dataset[value])
             max_val = max(self.dataset[value])
-            step = (max_val - min_val) / 3
-            if min_val < 5:
-                bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 3)
+            if min_val == 0 and max_val == 0:
+                binning = False
             else:
-                bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 0)
-            labels = [f'{i}+' if j == np.inf else f'{i}-{j}' for i, j in
-                      zip(bins, bins[1:])]  # additional part with infinity
-            dataset[self.labels[value] + " bin"] = pd.cut(dataset[value], bins, labels=labels)
+                step = (max_val - min_val) / 3
+                if min_val < 5:
+                    bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 3)
+                else:
+                    bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 0)
+                labels = [f'{i}+' if j == np.inf else f'{i}-{j}' for i, j in
+                          zip(bins, bins[1:])]  # additional part with infinity
+                dataset[self.labels[value] + " bin"] = pd.cut(dataset[value], bins, labels=labels)
+                binning = True
 
         for counter, j in enumerate(plot_arguments):
-            if len(self.input_variables) == 1:
-                fig, ax = plt.subplots()
-                sns.scatterplot(x=j[0], y=j[1], data=dataset, hue=dataset[self.labels[self.input_variables[0]] + " bin"]
-                                , palette="crest")
-                ax.set_xlabel(self.labels[j[0]])
-                ax.set_ylabel(self.labels[j[1]])
-                plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
-                plt.close()
-            elif len(self.input_variables) == 2:
-                fix, ax = plt.subplots()
-                sns.scatterplot(x=j[0], y=j[1], data=dataset,
-                                hue=dataset[self.labels[self.input_variables[0]] + " bin"],
-                                size=dataset[self.labels[self.input_variables[1]] + " bin"], palette="crest")
-                ax.set_xlabel(self.labels[j[0]])
-                ax.set_ylabel(self.labels[j[1]])
-                plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
-                plt.close()
-            else:
+            if not binning:
                 fig, ax = plt.subplots()
                 sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
                 ax.set_xlabel(self.labels[j[0]])
                 ax.set_ylabel(self.labels[j[1]])
                 plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
                 plt.close()
+            else:
+                if len(self.input_variables) == 1:
+                    fig, ax = plt.subplots()
+                    sns.scatterplot(x=j[0], y=j[1], data=dataset,
+                                    hue=dataset[self.labels[self.input_variables[0]] + " bin"], palette="crest")
+                    ax.set_xlabel(self.labels[j[0]])
+                    ax.set_ylabel(self.labels[j[1]])
+                    plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+                    plt.close()
+                elif len(self.input_variables) == 2:
+                    fix, ax = plt.subplots()
+                    sns.scatterplot(x=j[0], y=j[1], data=dataset,
+                                    hue=dataset[self.labels[self.input_variables[0]] + " bin"],
+                                    size=dataset[self.labels[self.input_variables[1]] + " bin"], palette="crest")
+                    ax.set_xlabel(self.labels[j[0]])
+                    ax.set_ylabel(self.labels[j[1]])
+                    plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+                    plt.close()
+                else:
+                    fig, ax = plt.subplots()
+                    sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
+                    ax.set_xlabel(self.labels[j[0]])
+                    ax.set_ylabel(self.labels[j[1]])
+                    plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+                    plt.close()
 
     def create_heatmap(self):
         df = self.dataset[self.all_graph_properties + self.kpis]

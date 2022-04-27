@@ -15,6 +15,6 @@ import pickle
 #     pickle.dump(inData, file)
 with open('test_obj.obj', 'rb') as file:
   inData = pickle.load(file)
-inData = main(inData, params, plot = False)
+inData = main(inData, params, plot=False)
 
 print(inData.sblts.res)

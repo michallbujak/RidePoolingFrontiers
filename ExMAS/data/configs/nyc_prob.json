@@ -39,6 +39,13 @@
 		"ride": {}
 	},
 	"logger_level": "INFO",
-	"mu_prob": 0,
-	"st_dev_prob": 2
+	"starting_probs": {
+		"mu_prob": 0,
+		"st_dev_prob": 2
+	},
+	"stepwise_probs": {
+		"mu_prob": 0,
+		"st_dev_prob": 2
+	}
+
 }

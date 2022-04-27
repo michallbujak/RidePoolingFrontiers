@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     """ Run parameters """
     topological_config.replications = 2
-    topological_config.no_batches = 2
+    topological_config.no_batches = 1
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
@@ -26,7 +26,8 @@ if __name__ == "__main__":
                                                      config=topological_config.initial_parameters)
 
     dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
-                                                                          topological_config,
+                                                                          noise_generator='wiener',
+                                                                          topo_params=topological_config,
                                                                           replications=topological_config.replications,
                                                                           logger_level='INFO')
 
@@ -54,5 +55,3 @@ if __name__ == "__main__":
                               topological_config.kpis,
                               topological_config.graph_properties_against_inputs,
                               topological_config.dictionary_variables).do_all()
-
-
