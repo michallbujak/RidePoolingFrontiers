@@ -166,7 +166,7 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
         logger.info(" Batch no. " + str(i))
         step = 0
         noise = stochastic_noise(step=0, noise=None, params=params, batch_length=len(indatas[i].requests),
-                                 constrains=None, type='wiener')
+                                 constrains=params.stepwise_probs.get('constrains', None), type='wiener')
         for j in tqdm(range(replications)):
             if topo_params.variable is None:
                 try:

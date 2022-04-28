@@ -1282,8 +1282,22 @@ def noise_generator(step=0, noise=None, params=None, batch_length=0, type=None, 
         else:
             assert noise is not None, 'Not-zero step and no noise passed'
             if type in normal_list:
-                return noise + np.random.normal(params.stepwise_probs.get('mu_prob', 0),
-                                                params.stepwise_probs.get('st_dev_prob', 0), batch_length)
+                if constrains is None:
+                    return noise + np.random.normal(params.stepwise_probs.get('mu_prob', 0),
+                                                    params.stepwise_probs.get('st_dev_prob', 0), batch_length)
+                else:
+                    temp = noise + np.random.normal(params.stepwise_probs.get('mu_prob', 0),
+                                                    params.stepwise_probs.get('st_dev_prob', 0), batch_length)
+
+                    def foo(x, constrains):
+                        if x < constrains[0]:
+                            return 2 * constrains[0] - x
+                        elif x > constrains[1]:
+                            return 2 * constrains[1] - x
+                        else:
+                            return x
+
+                    return temp.apply(foo, args=(constrains,))
 
 
 if __name__ == "__main__":

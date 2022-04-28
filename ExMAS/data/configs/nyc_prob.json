@@ -45,7 +45,8 @@
 	},
 	"stepwise_probs": {
 		"mu_prob": 0,
-		"st_dev_prob": 2
+		"st_dev_prob": 5,
+		"constrains": [-10, 10]
 	}
 
 }
