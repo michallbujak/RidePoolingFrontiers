@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 10
+    topological_config.replications = 100
     topological_config.no_batches = 1
 
     """ Prepare data """
@@ -25,12 +25,17 @@ if __name__ == "__main__":
                                                      filter_function=lambda x: len(x.requests) > 20,
                                                      config=topological_config.initial_parameters)
 
+    """ Run ExMAS """
     dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
                                                                           noise_generator='wiener',
                                                                           topo_params=topological_config,
                                                                           replications=topological_config.replications,
                                                                           logger_level='INFO')
 
+    """ Noise analysis """
+    utils.analyse_noise(dotmaps_list_results, topological_config)
+    """ Edges storing & counting """
+    utils.analyse_edge_count(dotmaps_list_results, topological_config)
     """ Perform topological analysis """
     pool = mp.Pool(mp.cpu_count())
     graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in

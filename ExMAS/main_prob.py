@@ -1291,9 +1291,9 @@ def noise_generator(step=0, noise=None, params=None, batch_length=0, type=None, 
 
                     def foo(x, constrains):
                         if x < constrains[0]:
-                            return 2 * constrains[0] - x
+                            return constrains[0]
                         elif x > constrains[1]:
-                            return 2 * constrains[1] - x
+                            return constrains[1]
                         else:
                             return x
 

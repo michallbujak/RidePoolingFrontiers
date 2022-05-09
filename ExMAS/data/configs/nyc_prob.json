@@ -5,7 +5,7 @@
 	"WtS": 1.3,
 	"delay_value": 1,
 	"price": 1.5,
-	"matching_obj": "u_pax",
+	"matching_obj": "u_veh",
 	"pax_delay": 15,
 	"horizon": 1200,
 	"profitability": false,
@@ -45,8 +45,8 @@
 	},
 	"stepwise_probs": {
 		"mu_prob": 0,
-		"st_dev_prob": 5,
-		"constrains": [-10, 10]
+		"st_dev_prob": 0.2,
+		"constrains": [-5, 5]
 	}
 
 }

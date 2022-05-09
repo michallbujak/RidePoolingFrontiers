@@ -8,6 +8,7 @@ import collections
 import logging
 import sys
 import seaborn as sns
+import datetime
 
 
 def get_parameters(path, time_correction=False):
@@ -154,7 +155,8 @@ class GraphStatistics:
         if not self.bipartite:
             self.logger.info('The graph is not bipartite, hence the clustering coefficient is based on triangles.')
             self.average_clustering_coefficient = nx.average_clustering(self.G)
-            self.logger.info("Graph's average clustering coefficient is {}.".format(self.average_clustering_coefficient))
+            self.logger.info(
+                "Graph's average clustering coefficient is {}.".format(self.average_clustering_coefficient))
             if detailed:
                 self.logger.info('Clustering coefficients per node: \n', nx.clustering(self.G))
                 self.logger.info('Transitivity per node: \n', nx.transitivity(self.G))
@@ -257,17 +259,17 @@ def alternate_kpis(dataset):
     dataset['Proportion_pairs'] = dataset['PAIRS'] / dataset['nP']
     dataset['Proportion_triples'] = dataset['TRIPLES'] / dataset['nP']
     dataset['Proportion_triples_plus'] = (dataset['nP'] - dataset['SINGLE'] -
-                                               dataset['PAIRS']) / dataset['nP']
+                                          dataset['PAIRS']) / dataset['nP']
     dataset['Proportion_quadruples'] = dataset['QUADRIPLES'] / dataset['nP']
     dataset['Proportion_quintets'] = dataset['QUINTETS'] / dataset['nP']
     dataset['Proportion_six_plus'] = dataset['PLUS5'] / dataset['nP']
     dataset['SavedVehHours'] = (dataset['VehHourTrav_ns'] - dataset['VehHourTrav']) / \
-                                    dataset['VehHourTrav_ns']
+                               dataset['VehHourTrav_ns']
     dataset['AddedPasHours'] = (dataset['PassHourTrav'] - dataset['PassHourTrav_ns']) / \
-                                    dataset['PassHourTrav_ns']
+                               dataset['PassHourTrav_ns']
     dataset['UtilityGained'] = (dataset['PassUtility'] - dataset['PassUtility_ns']) / \
-                                    dataset['PassUtility_ns']
-    dataset['Fraction_isolated'] = dataset['No_isolated_pairs']/dataset['nP']
+                               dataset['PassUtility_ns']
+    dataset['Fraction_isolated'] = dataset['No_isolated_pairs'] / dataset['nP']
     return dataset
 
 
@@ -495,3 +497,49 @@ class APosterioriAnalysis:
         self.plot_kpis_properties()
         self.create_heatmap()
         self.save_grouped_results()
+
+
+def analyse_noise(list_dotmaps, config):
+    df = pd.DataFrame()
+    df['Passenger_ID'] = list(range(len(list_dotmaps[0].sblts.requests)))
+
+    def foo(df, num):
+        out_list = []
+        for j in range(num):
+            num = len(df[(df['i'] == j) | (df['j'] == j)])
+            out_list.append(num)
+        return out_list
+
+    for num, dmap in enumerate(list_dotmaps):
+        df['Noise ' + str(num)] = dmap.prob.noise
+        df['Possible pairs ' + str(num)] = foo(dmap.sblts.pairs, num=len(dmap.sblts.requests))
+
+    df.to_excel(config.path_results + 'noise_analysis_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx')
+    return df
+
+
+def analyse_edge_count(list_dotmaps, config):
+    shareable = []
+    for indata in list_dotmaps:
+        shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
+
+    my_dict = {tuple(i): shareable.count(i) for i in shareable}
+
+    json_save = {str(key): my_dict[key] for key in my_dict.keys()}
+    a_file = open(config.path_results + "shareable_" + str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
+    json.dump(json_save, a_file)
+    a_file.close()
+
+    scheduled = []
+    for indata in list_dotmaps:
+        scheduled.extend(np.unique(np.array(indata.sblts.schedule.indexes)))
+
+    my_dict = {tuple(i): scheduled.count(i) for i in scheduled}
+
+    json_save = {str(key): my_dict[key] for key in my_dict.keys()}
+    a_file = open(config.path_results + "final_matching_" +
+                  str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
+    json.dump(json_save, a_file)
+    a_file.close()
+
+    return my_dict
