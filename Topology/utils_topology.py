@@ -283,13 +283,16 @@ def amend_merged_file(merged_file, alter_kpis=False, inplace=True):
     return merged_file
 
 
-def merge_results(dotmaps_list_results, topo_dataframes, settings_list):
+def merge_results(dotmaps_list_results, topo_dataframes, settings_list, logger_level="INFO"):
+    logger = init_log(logger_level)
+    logger.warning("Merging results")
     res = [pd.concat([z, x, y.sblts.res]) for z, x, y in
            zip([pd.Series(k) for k in settings_list], topo_dataframes, dotmaps_list_results)]
     merged_file = pd.DataFrame()
     for item in res:
         merged_file = pd.concat([merged_file, item.T])
     amend_merged_file(merged_file)
+    logger.warning("Results merged")
     return merged_file
 
 
@@ -463,7 +466,8 @@ class APosterioriAnalysis:
         self.heatmap = round(self.heatmap, 3).style.background_gradient(cmap='coolwarm').set_precision(2)
 
     def save_grouped_results(self):
-        writer = pd.ExcelWriter(self.output_path + 'Final_results_' + '_'.join(self.input_variables) + '.xlsx',
+        writer = pd.ExcelWriter(self.output_path + 'Final_results_' + '_'.join(self.input_variables) + '_' +
+                                str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx',
                                 engine='xlsxwriter')
         self.dataset_grouped.min().to_excel(writer, sheet_name='Min')
         self.dataset_grouped.mean().to_excel(writer, sheet_name='Mean')
@@ -499,7 +503,9 @@ class APosterioriAnalysis:
         self.save_grouped_results()
 
 
-def analyse_noise(list_dotmaps, config):
+def analyse_noise(list_dotmaps, config, logger_level="INFO"):
+    logger = init_log(logger_level)
+    logger.warning("Analysing noise")
     df = pd.DataFrame()
     df['Passenger_ID'] = list(range(len(list_dotmaps[0].sblts.requests)))
 
@@ -515,10 +521,13 @@ def analyse_noise(list_dotmaps, config):
         df['Possible pairs ' + str(num)] = foo(dmap.sblts.pairs, num=len(dmap.sblts.requests))
 
     df.to_excel(config.path_results + 'noise_analysis_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx')
+    logger.warning("Noise analysed")
     return df
 
 
-def analyse_edge_count(list_dotmaps, config):
+def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
+    logger = init_log(logger_level)
+    logger.warning("Analysing edges")
     shareable = []
     for indata in list_dotmaps:
         shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
@@ -541,5 +550,6 @@ def analyse_edge_count(list_dotmaps, config):
                   str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
     json.dump(json_save, a_file)
     a_file.close()
+    logger.warning("Edges analysed")
 
     return my_dict
