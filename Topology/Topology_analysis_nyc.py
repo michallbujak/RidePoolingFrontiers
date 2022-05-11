@@ -17,8 +17,11 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 100
+    topological_config.replications = 1
     topological_config.no_batches = 1
+
+    """ Prepare folder """
+    utils.create_results_directory(topological_config)
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
@@ -28,6 +31,7 @@ if __name__ == "__main__":
     """ Run ExMAS """
     dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
                                                                           noise_generator='wiener',
+                                                                          stepwise=False,
                                                                           topo_params=topological_config,
                                                                           replications=topological_config.replications,
                                                                           logger_level='INFO')
@@ -36,27 +40,31 @@ if __name__ == "__main__":
     utils.analyse_noise(dotmaps_list_results, topological_config)
     """ Edges storing & counting """
     utils.analyse_edge_count(dotmaps_list_results, topological_config)
-    """ Perform topological analysis """
-    pool = mp.Pool(mp.cpu_count())
-    graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in
-                  dotmaps_list_results]
-    topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
-    topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)
-    pool.close()
 
-    """ Merge results """
-    merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
-    merged_file_path = topological_config.path_results + 'merged_files_' + \
-                       str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
-    merged_results.to_excel(merged_file_path, index=False)
+    utils.create_graph(dotmaps_list_results[0], ['bipartite_shareability'], params)
+    # exmas_make_graph(dotmaps_list_results[0].sblts.requests, dotmaps_list_results[0].sblts.rides)
 
-    """ Compute final results """
-    variables = ['Batch']
-    utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
-                              topological_config.path_results,
-                              topological_config.path_results + "/temp/",
-                              variables,
-                              topological_config.graph_topological_properties,
-                              topological_config.kpis,
-                              topological_config.graph_properties_against_inputs,
-                              topological_config.dictionary_variables).do_all()
+    # """ Perform topological analysis """
+    # pool = mp.Pool(mp.cpu_count())
+    # graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in
+    #               dotmaps_list_results]
+    # topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
+    # topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)
+    # pool.close()
+    #
+    # """ Merge results """
+    # merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
+    # merged_file_path = topological_config.path_results + 'merged_files_' + \
+    #                    str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
+    # merged_results.to_excel(merged_file_path, index=False)
+    #
+    # """ Compute final results """
+    # variables = ['Batch']
+    # utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
+    #                           topological_config.path_results,
+    #                           topological_config.path_results + "/temp/",
+    #                           variables,
+    #                           topological_config.graph_topological_properties,
+    #                           topological_config.kpis,
+    #                           topological_config.graph_properties_against_inputs,
+    #                           topological_config.dictionary_variables).do_all()

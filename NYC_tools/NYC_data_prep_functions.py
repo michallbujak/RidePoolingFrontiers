@@ -156,7 +156,7 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
 
 
 def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None,
-                          topo_params=DotMap({'variable': None}), replications=1, logger_level=None):
+                          topo_params=DotMap({'variable': None}), replications=1, logger_level=None, stepwise=False):
     logger = embed_logger(logger_level)
     results = []
     settings = []
@@ -166,16 +166,24 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
         logger.info(" Batch no. " + str(i))
         step = 0
         noise = stochastic_noise(step=0, noise=None, params=params, batch_length=len(indatas[i].requests),
-                                 constrains=params.stepwise_probs.get('constrains', None), type='wiener')
+                                 constrains=params.stepwise_probs.get('constrains', None), type=noise_generator)
         for j in tqdm(range(replications)):
             if topo_params.variable is None:
                 try:
                     temp = exmas_algorithm(indatas[i], params, noise, False)
                     results.append(temp.copy())
                     step += 1
-                    noise = stochastic_noise(step=step, noise=noise, params=params,
-                                             batch_length=len(indatas[i].requests),
-                                             constrains=None, type='wiener')
+                    if stepwise:
+                        noise = stochastic_noise(step=step, noise=noise, params=params,
+                                                 batch_length=len(indatas[i].requests),
+                                                 constrains=None, type=noise_generator)
+                    elif not stepwise:
+                        noise = stochastic_noise(step=0, noise=None, params=params,
+                                                 batch_length=len(indatas[i].requests),
+                                                 constrains=params.stepwise_probs.get('constrains', None),
+                                                 type=noise_generator)
+                    else:
+                        raise Exception('Incorrect type of stepwise (should be True/False)')
                     settings.append({'Replication_ID': j, 'Batch': i})
                 except:
                     logger.debug('Impossible to attach batch number: ' + str(i))

@@ -9,6 +9,8 @@ import logging
 import sys
 import seaborn as sns
 import datetime
+import os
+import math
 
 
 def get_parameters(path, time_correction=False):
@@ -553,3 +555,44 @@ def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
     logger.warning("Edges analysed")
 
     return my_dict
+
+
+def create_results_directory(topological_config):
+    today = str(datetime.date.today().strftime("%d-%m-%y"))
+    topological_config.path_results += today
+    try:
+        os.mkdir(topological_config.path_results)
+    except OSError as error:
+        print(error)
+        print('overwriting current files in the folder')
+    topological_config.path_results += '/'
+
+
+def create_graph(indata, list_types_of_graph, params, rep_no=0):
+    list_types_of_graph = list(map(lambda x: x.lower(), list_types_of_graph))
+    graph_list = ()
+    requests = indata.sblts.requests.copy()
+    rides = indata.sblts.rides.copy()
+    schedule = indata.sblts.schedule.copy()
+    while len(list_types_of_graph) > 0:
+        type_of_graph = list_types_of_graph[-1]
+        if type_of_graph in ['bipartite_shareability', 'bipartite_matching']:
+            bipartite_graph = nx.Graph()
+            shift = 10 ** (round(math.log10(requests.shape[0])) + 1)
+            if type_of_graph == 'bipartite_shareability':
+                _rides = rides.copy()
+            else:
+                _rides = schedule.copy()
+            _rides.index = _rides.index + shift
+
+            bipartite_graph.add_nodes_from(requests.index)
+            bipartite_graph.add_nodes_from(_rides.index)
+
+            edges = list()
+            for i, row in _rides.iterrows():
+                for j, pax in enumerate(row.indexes):
+                    edges.append((i, pax, {'u': row.u_paxes[j], 'true_u': row.true_u_paxes[j]}))
+
+            bipartite_graph.add_edges_from(edges)
+            x = 0
+
