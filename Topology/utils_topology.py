@@ -11,6 +11,7 @@ import seaborn as sns
 import datetime
 import os
 import math
+from scipy.stats import norm
 
 
 def get_parameters(path, time_correction=False):
@@ -507,7 +508,7 @@ class APosterioriAnalysis:
 
 def analyse_noise(list_dotmaps, config, logger_level="INFO"):
     logger = init_log(logger_level)
-    logger.warning("Analysing noise")
+    logger.info("Analysing noise")
     df = pd.DataFrame()
     df['Passenger_ID'] = list(range(len(list_dotmaps[0].sblts.requests)))
 
@@ -523,13 +524,13 @@ def analyse_noise(list_dotmaps, config, logger_level="INFO"):
         df['Possible pairs ' + str(num)] = foo(dmap.sblts.pairs, num=len(dmap.sblts.requests))
 
     df.to_excel(config.path_results + 'noise_analysis_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx')
-    logger.warning("Noise analysed")
+    logger.info("Noise analysed")
     return df
 
 
 def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
     logger = init_log(logger_level)
-    logger.warning("Analysing edges")
+    logger.info("Analysing edges")
     shareable = []
     for indata in list_dotmaps:
         shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
@@ -552,7 +553,7 @@ def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
                   str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
     json.dump(json_save, a_file)
     a_file.close()
-    logger.warning("Edges analysed")
+    logger.info("Edges analysed")
 
     return my_dict
 
@@ -569,8 +570,11 @@ def create_results_directory(topological_config):
 
 
 def create_graph(indata, list_types_of_graph, params, rep_no=0):
+    if list_types_of_graph == 'all':
+        list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
+                               'pairs_matching', 'probability_pairs']
     list_types_of_graph = list(map(lambda x: x.lower(), list_types_of_graph))
-    graph_list = ()
+    graph_list = []
     requests = indata.sblts.requests.copy()
     rides = indata.sblts.rides.copy()
     schedule = indata.sblts.schedule.copy()
@@ -594,5 +598,42 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                     edges.append((i, pax, {'u': row.u_paxes[j], 'true_u': row.true_u_paxes[j]}))
 
             bipartite_graph.add_edges_from(edges)
-            x = 0
+            graph_list.append(bipartite_graph)
 
+        if type_of_graph in ['pairs_shareability', 'pairs_matching']:
+            pairs_graph = nx.Graph()
+            pairs_graph.add_nodes_from(requests.index)
+            edges = list()
+            if type_of_graph == 'pairs_shareability':
+                _rides = rides.copy()
+            else:
+                _rides = schedule.copy()
+            for i, row in _rides.iterrows():
+                if len(row.indexes) > 1:
+                    for j, pax1 in enumerate(row.indexes):
+                        for k, pax2 in enumerate(row.indexes):
+                            if pax1 != pax2:
+                                edges.append((pax1, pax2, {'u': row.u_pax, 'true_u': row.true_u_pax,
+                                                           'u_paxes': row.true_u_paxes, 'true_u_paxes': row.true_u_paxes}))
+
+            pairs_graph.add_edges_from(edges)
+            graph_list.append(pairs_graph)
+
+        if type_of_graph == 'probability_pairs':
+            prob_graph = nx.Graph()
+            prob_graph.add_nodes_from(requests.index)
+            edges = list()
+            _rides = rides.copy()
+            for i, row in _rides.iterrows():
+                if len(row.indexes) > 1:
+                    for j, pax1 in enumerate(row.indexes):
+                        for k, pax2 in enumerate(row.indexes):
+                            if pax1 != pax2:
+                                prob = norm.cdf(row.true_u_paxes[0]) * norm.cdf(row.true_u_paxes[1])
+                                edges.append((pax1, pax2, {'probability': prob}))
+            prob_graph.add_edges_from(edges)
+            graph_list.append(prob_graph)
+
+        list_types_of_graph.pop()
+
+    return graph_list

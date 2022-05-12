@@ -41,7 +41,8 @@ if __name__ == "__main__":
     """ Edges storing & counting """
     utils.analyse_edge_count(dotmaps_list_results, topological_config)
 
-    utils.create_graph(dotmaps_list_results[0], ['bipartite_shareability'], params)
+    graph_list = utils.create_graph(dotmaps_list_results[0], 'all', params)
+    x = 0
     # exmas_make_graph(dotmaps_list_results[0].sblts.requests, dotmaps_list_results[0].sblts.rides)
 
     # """ Perform topological analysis """
