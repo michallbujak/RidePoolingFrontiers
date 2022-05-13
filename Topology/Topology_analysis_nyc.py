@@ -39,7 +39,7 @@ if __name__ == "__main__":
     """ Noise analysis """
     utils.analyse_noise(dotmaps_list_results, topological_config)
     """ Edges storing & counting """
-    utils.analyse_edge_count(dotmaps_list_results, topological_config)
+    rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
 
     graph_list = utils.create_graph(dotmaps_list_results[0], 'all', params)
     x = 0

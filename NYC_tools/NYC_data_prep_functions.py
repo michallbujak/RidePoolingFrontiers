@@ -148,7 +148,7 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
     pbar.close()
 
     os.chdir(copy_wd)
-    logger.warning("Batches READY! \n")
+    logger.info("Batches READY! \n")
     if output_params:
         return inDatas, params
     else:
@@ -161,7 +161,7 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
     results = []
     settings = []
     params.logger_level = "CRITICAL"
-    logger.warning(" Calculating ExMAS values \n ")
+    logger.info(" Calculating ExMAS values \n ")
     for i in range(len(indatas)):
         logger.info(" Batch no. " + str(i))
         step = 0
@@ -199,8 +199,8 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
                         logger.debug('Impossible to attach batch number: ' + str(i))
                         pass
 
-    logger.warning("Number of calculated results for batches is: ", len(results))
-    logger.warning("ExMAS calculated \n")
+    logger.info("Number of calculated results for batches is: ", len(results))
+    logger.info("ExMAS calculated \n")
     return results, settings
 
 

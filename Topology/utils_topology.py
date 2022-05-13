@@ -528,7 +528,7 @@ def analyse_noise(list_dotmaps, config, logger_level="INFO"):
     return df
 
 
-def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
+def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_level="INFO"):
     logger = init_log(logger_level)
     logger.info("Analysing edges")
     shareable = []
@@ -536,6 +536,7 @@ def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
         shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
 
     my_dict = {tuple(i): shareable.count(i) for i in shareable}
+    shareability_edges = my_dict.copy()
 
     json_save = {str(key): my_dict[key] for key in my_dict.keys()}
     a_file = open(config.path_results + "shareable_" + str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
@@ -547,6 +548,7 @@ def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
         scheduled.extend(np.unique(np.array(indata.sblts.schedule.indexes)))
 
     my_dict = {tuple(i): scheduled.count(i) for i in scheduled}
+    matching_edges = my_dict.copy()
 
     json_save = {str(key): my_dict[key] for key in my_dict.keys()}
     a_file = open(config.path_results + "final_matching_" +
@@ -555,7 +557,49 @@ def analyse_edge_count(list_dotmaps, config, logger_level="INFO"):
     a_file.close()
     logger.info("Edges analysed")
 
-    return my_dict
+    if list_types_of_graph is not None:
+        logger.warning("Current implementation for graph creation assumes that all runs are on the same batch")
+        indata = list_dotmaps[-1]
+        requests = indata.sblts.requests.copy()
+        graph_list = dict()
+        if list_types_of_graph == 'all':
+            list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
+                                   'pairs_matching']
+        while len(list_types_of_graph) > 0:
+            type_of_graph = list_types_of_graph[-1]
+            if type_of_graph in ['bipartite_shareability', 'bipartite_matching']:
+                bipartite_graph = nx.Graph()
+                bipartite_graph.add_nodes_from(requests.index)
+                if type_of_graph == 'bipartite_shareability':
+                    edge_dict = shareability_edges.copy()
+                else:
+                    edge_dict = matching_edges.copy()
+                bipartite_graph.add_nodes_from([(x) for x in edge_dict.keys()])
+                edges = []
+                for ride in edge_dict.keys():
+                    for traveler in ride:
+                        edges.append((traveler, ride, {'occurrences': edge_dict[ride]}))
+                bipartite_graph.add_edges_from(edges)
+                graph_list[type_of_graph] = bipartite_graph
+
+            if type_of_graph in ['pairs_shareability', 'pairs_matching']:
+                pairs_graph = nx.Graph()
+                pairs_graph.add_nodes_from(requests.index)
+                if type_of_graph == 'pairs_shareability':
+                    edge_dict = shareability_edges.copy()
+                else:
+                    edge_dict = matching_edges.copy()
+
+                edges = []
+                for ride in edge_dict.keys():
+                    if len(ride) == 2:
+                        edges.append(ride)
+                pairs_graph.add_edges_from(edges)
+                graph_list[type_of_graph] = pairs_graph
+
+            list_types_of_graph.pop()
+
+        return graph_list
 
 
 def create_results_directory(topological_config):
@@ -574,7 +618,7 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
         list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
                                'pairs_matching', 'probability_pairs']
     list_types_of_graph = list(map(lambda x: x.lower(), list_types_of_graph))
-    graph_list = []
+    graph_list = dict()
     requests = indata.sblts.requests.copy()
     rides = indata.sblts.rides.copy()
     schedule = indata.sblts.schedule.copy()
@@ -598,7 +642,7 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                     edges.append((i, pax, {'u': row.u_paxes[j], 'true_u': row.true_u_paxes[j]}))
 
             bipartite_graph.add_edges_from(edges)
-            graph_list.append(bipartite_graph)
+            graph_list[type_of_graph] = bipartite_graph
 
         if type_of_graph in ['pairs_shareability', 'pairs_matching']:
             pairs_graph = nx.Graph()
@@ -614,10 +658,11 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                         for k, pax2 in enumerate(row.indexes):
                             if pax1 != pax2:
                                 edges.append((pax1, pax2, {'u': row.u_pax, 'true_u': row.true_u_pax,
-                                                           'u_paxes': row.true_u_paxes, 'true_u_paxes': row.true_u_paxes}))
+                                                           'u_paxes': row.true_u_paxes,
+                                                           'true_u_paxes': row.true_u_paxes}))
 
             pairs_graph.add_edges_from(edges)
-            graph_list.append(pairs_graph)
+            graph_list[type_of_graph] = pairs_graph
 
         if type_of_graph == 'probability_pairs':
             prob_graph = nx.Graph()
@@ -632,7 +677,7 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                                 prob = norm.cdf(row.true_u_paxes[0]) * norm.cdf(row.true_u_paxes[1])
                                 edges.append((pax1, pax2, {'probability': prob}))
             prob_graph.add_edges_from(edges)
-            graph_list.append(prob_graph)
+            graph_list[type_of_graph] = prob_graph
 
         list_types_of_graph.pop()
 
