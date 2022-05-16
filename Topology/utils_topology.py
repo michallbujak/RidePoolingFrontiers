@@ -578,7 +578,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
                 edges = []
                 for ride in edge_dict.keys():
                     for traveler in ride:
-                        edges.append((traveler, ride, {'occurrences': edge_dict[ride]}))
+                        edges.append((traveler, ride, {'weight': edge_dict[ride]}))
                 bipartite_graph.add_edges_from(edges)
                 graph_list[type_of_graph] = bipartite_graph
 
@@ -593,12 +593,14 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
                 edges = []
                 for ride in edge_dict.keys():
                     if len(ride) == 2:
+                        ride = (ride[0], ride[1], {'weight': edge_dict[ride]})
                         edges.append(ride)
                 pairs_graph.add_edges_from(edges)
                 graph_list[type_of_graph] = pairs_graph
 
             list_types_of_graph.pop()
 
+        logger.info('Graph list created')
         return graph_list
 
 
@@ -610,6 +612,11 @@ def create_results_directory(topological_config):
     except OSError as error:
         print(error)
         print('overwriting current files in the folder')
+    try:
+        os.mkdir(os.path.join(topological_config.path_results, 'temp'))
+    except OSError as error:
+        print(error)
+        print('temp folder already exists')
     topological_config.path_results += '/'
 
 
@@ -675,7 +682,7 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                         for k, pax2 in enumerate(row.indexes):
                             if pax1 != pax2:
                                 prob = norm.cdf(row.true_u_paxes[0]) * norm.cdf(row.true_u_paxes[1])
-                                edges.append((pax1, pax2, {'probability': prob}))
+                                edges.append((pax1, pax2, {'weight': prob}))
             prob_graph.add_edges_from(edges)
             graph_list[type_of_graph] = prob_graph
 

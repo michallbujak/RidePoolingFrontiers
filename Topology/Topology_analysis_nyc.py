@@ -7,6 +7,8 @@ import pandas as pd
 import multiprocessing as mp
 import os
 import datetime
+from netwulf import visualize
+import pickle
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
@@ -17,7 +19,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 1
+    topological_config.replications = 100
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -25,7 +27,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) > 20,
+                                                     filter_function=lambda x: len(x.requests) < 120,
                                                      config=topological_config.initial_parameters)
 
     """ Run ExMAS """
@@ -40,10 +42,13 @@ if __name__ == "__main__":
     utils.analyse_noise(dotmaps_list_results, topological_config)
     """ Edges storing & counting """
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
+    with open(topological_config.path_results + 'rep_graphs.obj', 'wb') as file:
+        pickle.dump(rep_graphs, file)
 
-    graph_list = utils.create_graph(dotmaps_list_results[0], 'all', params)
-    x = 0
-    # exmas_make_graph(dotmaps_list_results[0].sblts.requests, dotmaps_list_results[0].sblts.rides)
+    all_graphs_list = utils.create_graph(dotmaps_list_results[0], 'all', params)
+    with open(topological_config.path_results + 'all_graphs_list.obj', 'wb') as file:
+        pickle.dump(all_graphs_list, file)
+    # visualize(rep_graphs['pairs_matching'])
 
     # """ Perform topological analysis """
     # pool = mp.Pool(mp.cpu_count())
@@ -63,7 +68,7 @@ if __name__ == "__main__":
     # variables = ['Batch']
     # utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
     #                           topological_config.path_results,
-    #                           topological_config.path_results + "/temp/",
+    #                           topological_config.path_results + "temp/",
     #                           variables,
     #                           topological_config.graph_topological_properties,
     #                           topological_config.kpis,

@@ -33,7 +33,7 @@
 	"max_degree": 8,
 	"t0": "15:00",
 	"date": "20160101",
-	"freq": "10min",
+	"freq": "30min",
 	"speed": {},
 	"speeds": {
 		"ride": {}
