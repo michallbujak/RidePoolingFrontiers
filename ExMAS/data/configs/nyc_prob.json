@@ -41,7 +41,7 @@
 	"logger_level": "INFO",
 	"starting_probs": {
 		"mu_prob": 0,
-		"st_dev_prob": 2
+		"st_dev_prob": 1
 	},
 	"stepwise_probs": {
 		"mu_prob": 0,

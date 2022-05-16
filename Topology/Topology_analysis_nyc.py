@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 100
+    topological_config.replications = 200
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) < 120,
+                                                     filter_function=lambda x: len(x.requests) < 150,
                                                      config=topological_config.initial_parameters)
 
     """ Run ExMAS """
@@ -45,9 +45,11 @@ if __name__ == "__main__":
     with open(topological_config.path_results + 'rep_graphs.obj', 'wb') as file:
         pickle.dump(rep_graphs, file)
 
-    all_graphs_list = utils.create_graph(dotmaps_list_results[0], 'all', params)
-    with open(topological_config.path_results + 'all_graphs_list.obj', 'wb') as file:
-        pickle.dump(all_graphs_list, file)
+    # pool = mp.Pool(mp.cpu_count())
+    # all_graphs_list = [pool.apply(utils.create_graph, args=indata) for indata in dotmaps_list_results]
+    # with open(topological_config.path_results + 'all_graphs_list.obj', 'wb') as file:
+    #     pickle.dump(all_graphs_list, file)
+    # pool.close()
     # visualize(rep_graphs['pairs_matching'])
 
     # """ Perform topological analysis """

@@ -12,6 +12,8 @@ import datetime
 import os
 import math
 from scipy.stats import norm
+from tqdm import tqdm
+from collections import Counter
 
 
 def get_parameters(path, time_correction=False):
@@ -532,10 +534,18 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     logger = init_log(logger_level)
     logger.info("Analysing edges")
     shareable = []
+    logger.info("Counting shareability")
+    pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
-        shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
+        # shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
+        shareable.extend([str(x) for x in np.unique(np.array(indata.sblts.rides.indexes))])
+        pbar.update(1)
 
-    my_dict = {tuple(i): shareable.count(i) for i in shareable}
+    my_dict = Counter(shareable)
+
+    # my_dict = {tuple(i): shareable.count(i) for i in shareable}
+    my_dict = {tuple(eval(i[0])): i[1] for i in my_dict.items()}
+    logger.info("Shareability counted")
     shareability_edges = my_dict.copy()
 
     json_save = {str(key): my_dict[key] for key in my_dict.keys()}
@@ -543,11 +553,19 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     json.dump(json_save, a_file)
     a_file.close()
 
+    logger.info("Counting matched")
     scheduled = []
+    pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
-        scheduled.extend(np.unique(np.array(indata.sblts.schedule.indexes)))
+        # shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
+        shareable.extend([str(x) for x in np.unique(np.array(indata.sblts.rides.indexes))])
+        pbar.update(1)
 
-    my_dict = {tuple(i): scheduled.count(i) for i in scheduled}
+    my_dict = Counter(shareable)
+
+    # my_dict = {tuple(i): shareable.count(i) for i in shareable}
+    my_dict = {tuple(eval(i[0])): i[1] for i in my_dict.items()}
+    logger.info("Matched counted")
     matching_edges = my_dict.copy()
 
     json_save = {str(key): my_dict[key] for key in my_dict.keys()}
@@ -565,9 +583,11 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
         if list_types_of_graph == 'all':
             list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
                                    'pairs_matching']
+        pbar = tqdm(total=2*len(list_types_of_graph))
         while len(list_types_of_graph) > 0:
             type_of_graph = list_types_of_graph[-1]
             if type_of_graph in ['bipartite_shareability', 'bipartite_matching']:
+                pbar.update(1)
                 bipartite_graph = nx.Graph()
                 bipartite_graph.add_nodes_from(requests.index)
                 if type_of_graph == 'bipartite_shareability':
@@ -581,8 +601,10 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
                         edges.append((traveler, ride, {'weight': edge_dict[ride]}))
                 bipartite_graph.add_edges_from(edges)
                 graph_list[type_of_graph] = bipartite_graph
+                pbar.update(1)
 
             if type_of_graph in ['pairs_shareability', 'pairs_matching']:
+                pbar.update(1)
                 pairs_graph = nx.Graph()
                 pairs_graph.add_nodes_from(requests.index)
                 if type_of_graph == 'pairs_shareability':
@@ -597,6 +619,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
                         edges.append(ride)
                 pairs_graph.add_edges_from(edges)
                 graph_list[type_of_graph] = pairs_graph
+                pbar.update(1)
 
             list_types_of_graph.pop()
 
