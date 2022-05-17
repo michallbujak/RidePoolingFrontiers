@@ -41,5 +41,6 @@
 		"Batch": "Dataset"
 	},
 	"initial_parameters": "ExMAS/data/configs/nyc_prob.json",
-	"path_results": "data/results/"
+	"path_results": "data/results/",
+	"netwulf_config": "data/configs/netwulf_config.json"
 }

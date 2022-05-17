@@ -9,6 +9,8 @@ import os
 import datetime
 from netwulf import visualize
 import pickle
+import networkx as nx
+import json
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
@@ -19,7 +21,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 200
+    topological_config.replications = 4
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -44,6 +46,9 @@ if __name__ == "__main__":
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
     with open(topological_config.path_results + 'rep_graphs.obj', 'wb') as file:
         pickle.dump(rep_graphs, file)
+
+
+    # visualize(utils.create_graph(dotmaps_list_results[0], 'all')['bipartite_matching'])
 
     # pool = mp.Pool(mp.cpu_count())
     # all_graphs_list = [pool.apply(utils.create_graph, args=indata) for indata in dotmaps_list_results]

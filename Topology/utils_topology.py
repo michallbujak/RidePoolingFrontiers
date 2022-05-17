@@ -557,11 +557,11 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     scheduled = []
     pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
-        # shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
-        shareable.extend([str(x) for x in np.unique(np.array(indata.sblts.rides.indexes))])
+        # scheduled.extend(np.unique(np.array(indata.sblts.schedule.indexes)))
+        scheduled.extend([str(x) for x in np.unique(np.array(indata.sblts.schedule.indexes))])
         pbar.update(1)
 
-    my_dict = Counter(shareable)
+    my_dict = Counter(scheduled)
 
     # my_dict = {tuple(i): shareable.count(i) for i in shareable}
     my_dict = {tuple(eval(i[0])): i[1] for i in my_dict.items()}
@@ -589,18 +589,18 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
             if type_of_graph in ['bipartite_shareability', 'bipartite_matching']:
                 pbar.update(1)
                 bipartite_graph = nx.Graph()
-                bipartite_graph.add_nodes_from(requests.index)
+                bipartite_graph.add_nodes_from(requests.index, bipartite=1)
                 if type_of_graph == 'bipartite_shareability':
                     edge_dict = shareability_edges.copy()
                 else:
                     edge_dict = matching_edges.copy()
-                bipartite_graph.add_nodes_from([(x) for x in edge_dict.keys()])
+                bipartite_graph.add_nodes_from([(x) for x in edge_dict.keys()], bipartite=0)
                 edges = []
                 for ride in edge_dict.keys():
                     for traveler in ride:
                         edges.append((traveler, ride, {'weight': edge_dict[ride]}))
                 bipartite_graph.add_edges_from(edges)
-                graph_list[type_of_graph] = bipartite_graph
+                graph_list[type_of_graph] = bipartite_graph.copy()
                 pbar.update(1)
 
             if type_of_graph in ['pairs_shareability', 'pairs_matching']:
@@ -618,7 +618,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
                         ride = (ride[0], ride[1], {'weight': edge_dict[ride]})
                         edges.append(ride)
                 pairs_graph.add_edges_from(edges)
-                graph_list[type_of_graph] = pairs_graph
+                graph_list[type_of_graph] = pairs_graph.copy()
                 pbar.update(1)
 
             list_types_of_graph.pop()
@@ -643,7 +643,7 @@ def create_results_directory(topological_config):
     topological_config.path_results += '/'
 
 
-def create_graph(indata, list_types_of_graph, params, rep_no=0):
+def create_graph(indata, list_types_of_graph):
     if list_types_of_graph == 'all':
         list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
                                'pairs_matching', 'probability_pairs']
@@ -663,8 +663,8 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                 _rides = schedule.copy()
             _rides.index = _rides.index + shift
 
-            bipartite_graph.add_nodes_from(requests.index)
-            bipartite_graph.add_nodes_from(_rides.index)
+            bipartite_graph.add_nodes_from(requests.index, bipartite=1)
+            bipartite_graph.add_nodes_from(_rides.index, bipartite=0)
 
             edges = list()
             for i, row in _rides.iterrows():
@@ -672,7 +672,7 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                     edges.append((i, pax, {'u': row.u_paxes[j], 'true_u': row.true_u_paxes[j]}))
 
             bipartite_graph.add_edges_from(edges)
-            graph_list[type_of_graph] = bipartite_graph
+            graph_list[type_of_graph] = bipartite_graph.copy()
 
         if type_of_graph in ['pairs_shareability', 'pairs_matching']:
             pairs_graph = nx.Graph()
@@ -692,7 +692,7 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
                                                            'true_u_paxes': row.true_u_paxes}))
 
             pairs_graph.add_edges_from(edges)
-            graph_list[type_of_graph] = pairs_graph
+            graph_list[type_of_graph] = pairs_graph.copy()
 
         if type_of_graph == 'probability_pairs':
             prob_graph = nx.Graph()
@@ -712,3 +712,32 @@ def create_graph(indata, list_types_of_graph, params, rep_no=0):
         list_types_of_graph.pop()
 
     return graph_list
+
+
+def draw_bipartite_graph(graph, max_weight, figsize=(5, 12), dpi=100, edge_proportions=10, node_size=1):
+    # G1 = nx.convert_node_labels_to_integers(graph)
+    G1 = graph
+    x = G1.nodes._nodes
+    l = []
+    r = []
+    for i in x:
+        j = x[i]
+        if j['bipartite'] == 1:
+            l.append(i)
+        else:
+            r.append(i)
+
+    r.sort(key=lambda x: len(x))
+    colour_list = len(l) * ['g'] + len(r) * ['b']
+
+    pos = nx.bipartite_layout(G1, l)
+
+    plt.figure(figsize=figsize, dpi=dpi)
+
+    nx.draw_networkx_nodes(G1, pos=pos, node_color=colour_list, node_size=node_size)
+
+    for k in range(1, max_weight + 1):
+        edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == k]
+        nx.draw_networkx_edges(G1, pos, edgelist=edge_list, width=k / edge_proportions)
+
+    plt.show()
