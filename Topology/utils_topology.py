@@ -14,6 +14,7 @@ import math
 from scipy.stats import norm
 from tqdm import tqdm
 from collections import Counter
+import pickle
 
 
 def get_parameters(path, time_correction=False):
@@ -163,9 +164,9 @@ class GraphStatistics:
             self.logger.info(
                 "Graph's average clustering coefficient is {}.".format(self.average_clustering_coefficient))
             if detailed:
-                self.logger.info('Clustering coefficients per node: \n', nx.clustering(self.G))
-                self.logger.info('Transitivity per node: \n', nx.transitivity(self.G))
-                self.logger.info('Triangles per node: \n', nx.triangles(self.G))
+                self.logger.info('Clustering coefficients per node: {}\n'.format(nx.clustering(self.G)))
+                self.logger.info('Transitivity per node: {}\n'.format(nx.transitivity(self.G)))
+                self.logger.info('Triangles per node: {}\n'.format(nx.triangles(self.G)))
         else:
             self.logger.info('The graph is bipartite, hence the clustering coefficient in based on squares.')
             sq_coefficient = nx.square_clustering(self.G)
@@ -177,9 +178,9 @@ class GraphStatistics:
                 self.average_clustering_coefficient = 0
             self.average_clustering_group0 = sum(group0.values()) / len(group0)
             self.average_clustering_group1 = sum(group1.values()) / len(group1)
-            self.logger.info('Average clustering coefficient: ', self.average_clustering_coefficient)
-            self.logger.info('Average clustering coefficient in group 0: ', self.average_clustering_group0)
-            self.logger.info('Average clustering coefficient in group 1: ', self.average_clustering_group1)
+            self.logger.info('Average clustering coefficient: ' + str(self.average_clustering_coefficient))
+            self.logger.info('Average clustering coefficient in group 0: ' + str(self.average_clustering_group0))
+            self.logger.info('Average clustering coefficient in group 1: ' + str(self.average_clustering_group1))
 
             # Reduced graphs by nodes in group1 whose degree is equal to 1
             sq_coefficient = nx.square_clustering(self.reduced_graph)
@@ -198,8 +199,8 @@ class GraphStatistics:
         g_components = list(nx.connected_components(self.G))
         g_components.sort(key=len, reverse=True)
         self.components = g_components
-        self.logger.info('Number of connected components: ', len(self.components))
-        self.logger.info('Sizes of the components: ', [len(i) for i in self.components])
+        self.logger.info('Number of connected components: {}'.format(len(self.components)))
+        self.logger.info('Sizes of the components: '+str([len(i) for i in self.components]))
         self.proportion_max_component = len(self.components[0]) / self.G.number_of_nodes()
         self.number_of_isolated_pairs = sum(1 if x == 2 else 0 for x in [len(i) for i in self.components])
         if plot:
@@ -583,7 +584,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
         if list_types_of_graph == 'all':
             list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
                                    'pairs_matching']
-        pbar = tqdm(total=2*len(list_types_of_graph))
+        pbar = tqdm(total=2 * len(list_types_of_graph))
         while len(list_types_of_graph) > 0:
             type_of_graph = list_types_of_graph[-1]
             if type_of_graph in ['bipartite_shareability', 'bipartite_matching']:
@@ -741,3 +742,85 @@ def draw_bipartite_graph(graph, max_weight, figsize=(5, 12), dpi=100, edge_propo
         nx.draw_networkx_edges(G1, pos, edgelist=edge_list, width=k / edge_proportions)
 
     plt.show()
+
+
+def graph_mini_graphstatistics(graph):
+    z = GraphStatistics(graph, logging_level='WARNING')
+    z.initial_analysis()
+    z.colouring_graph()
+    z.nodes_per_colour()
+    z.degree_distribution()
+    z.component_analysis()
+    return z
+
+
+def concat_all_graph_list(list_of_all_graphs):
+    pairs_matching = []
+    pairs_shareability = []
+    bipartite_matching = []
+    bipartite_shareability = []
+
+    for rep_no in list_of_all_graphs:
+        graph_temp = graph_mini_graphstatistics(rep_no['bipartite_shareability'])
+        bipartite_shareability.append((len(graph_temp.G.nodes), len(graph_temp.G.edges), graph_temp.average_degree,
+                                       graph_temp.average_degree_group0, graph_temp.average_degree_group1,
+                                       graph_temp.proportion_max_component))
+        graph_temp = graph_mini_graphstatistics(rep_no['bipartite_matching'])
+        bipartite_matching.append((len(graph_temp.G.nodes), len(graph_temp.G.edges), graph_temp.average_degree,
+                                   graph_temp.average_degree_group0, graph_temp.average_degree_group1,
+                                   graph_temp.proportion_max_component))
+        graph_temp = graph_mini_graphstatistics(rep_no['pairs_shareability'])
+        pairs_shareability.append((len(graph_temp.G.nodes), len(graph_temp.G.edges), graph_temp.average_degree,
+                                   graph_temp.proportion_max_component))
+        graph_temp = graph_mini_graphstatistics(rep_no['pairs_matching'])
+        pairs_matching.append((len(graph_temp.G.nodes), len(graph_temp.G.edges), graph_temp.average_degree,
+                               graph_temp.proportion_max_component))
+
+    return {'bipartite_shareability': bipartite_shareability, 'bipartite_matching': bipartite_matching,
+            'pairs_shareability': pairs_shareability, 'pairs_matching': pairs_matching}
+
+
+def analyse_concatenated_all_graph_list(concatenated_list):
+    def func(num, bipartite_only=False):
+        if not bipartite_only:
+            return (([np.mean([x[num] for x in concatenated_list['bipartite_shareability']]),
+                     np.mean([x[num] for x in concatenated_list['bipartite_matching']]),
+                     np.mean([x[num] for x in concatenated_list['pairs_shareability']]),
+                     np.mean([x[num] for x in concatenated_list['pairs_matching']])]),
+                    ([np.std([x[num] for x in concatenated_list['bipartite_shareability']]),
+                      np.std([x[num] for x in concatenated_list['bipartite_matching']]),
+                      np.std([x[num] for x in concatenated_list['pairs_shareability']]),
+                      np.std([x[num] for x in concatenated_list['pairs_matching']])]))
+        else:
+            return (([np.mean([x[num] for x in concatenated_list['bipartite_shareability']]),
+                     np.mean([x[num] for x in concatenated_list['bipartite_matching']]),
+                     0,
+                     0]),
+                    ([np.std([x[num] for x in concatenated_list['bipartite_shareability']]),
+                      np.std([x[num] for x in concatenated_list['bipartite_matching']]),
+                      0,
+                      0]))
+
+    nodes_mean, nodes_std = func(0)
+    edges_mean, edges_std = func(1)
+    degree_mean, degree_std = func(2)
+    degree_0_mean, degree_0_std = func(3, True)
+    degree_1_mean, degree_1_std = func(4, True)
+    max_component_mean, max_component_std = func(-1)
+    return pd.DataFrame(list(zip(nodes_mean, nodes_std, edges_mean, edges_std, degree_mean, degree_std, degree_0_mean,
+                                 degree_0_std, degree_1_mean, degree_1_std, max_component_mean, max_component_std)),
+                        columns=['nodes mean', 'nodes std', 'edges mean', 'edges std', 'degree mean', 'degree std',
+                                 'degree travellers mean', 'degree travellers std', 'degree rides mean',
+                                 'degree rides std', 'max component mean', 'max component std'])
+
+
+def analysis_all_graphs(graph_list, config):
+    t = concat_all_graph_list(graph_list)
+    t = analyse_concatenated_all_graph_list(t)
+    t.to_excel(config.path_results + 'all_graphs_properties_'+str(datetime.date.today().strftime("%d-%m-%y"))+'.xlsx')
+    return t
+
+
+def save_with_pickle(obj, name, config):
+    with open(config.path_results + name + '_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.obj', 'wb') as file:
+        pickle.dump(obj, file)

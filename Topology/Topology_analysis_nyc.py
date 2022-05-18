@@ -44,18 +44,17 @@ if __name__ == "__main__":
     utils.analyse_noise(dotmaps_list_results, topological_config)
     """ Edges storing & counting """
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
-    with open(topological_config.path_results + 'rep_graphs.obj', 'wb') as file:
-        pickle.dump(rep_graphs, file)
+    utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
 
+    pool = mp.Pool(mp.cpu_count())
+    all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all')) for indata in dotmaps_list_results]
+    pool.close()
+    utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
 
-    # visualize(utils.create_graph(dotmaps_list_results[0], 'all')['bipartite_matching'])
+    utils.analysis_all_graphs(all_graphs_list, topological_config)
 
-    # pool = mp.Pool(mp.cpu_count())
-    # all_graphs_list = [pool.apply(utils.create_graph, args=indata) for indata in dotmaps_list_results]
-    # with open(topological_config.path_results + 'all_graphs_list.obj', 'wb') as file:
-    #     pickle.dump(all_graphs_list, file)
-    # pool.close()
     # visualize(rep_graphs['pairs_matching'])
+    # visualize(utils.create_graph(dotmaps_list_results[0], 'all')['bipartite_matching'])
 
     # """ Perform topological analysis """
     # pool = mp.Pool(mp.cpu_count())

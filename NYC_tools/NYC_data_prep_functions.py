@@ -125,7 +125,7 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
 
     batches, trips = nyc_csv_prepare_batches(inData, params)
 
-    logger.warning("Preparing NYC batches \n")
+    logger.info("Preparing NYC batches \n")
     inDatas = []
     pbar = tqdm(total=number_of_batches)
     counter = 0
