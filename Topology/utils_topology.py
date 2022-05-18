@@ -811,7 +811,8 @@ def analyse_concatenated_all_graph_list(concatenated_list):
                                  degree_0_std, degree_1_mean, degree_1_std, max_component_mean, max_component_std)),
                         columns=['nodes mean', 'nodes std', 'edges mean', 'edges std', 'degree mean', 'degree std',
                                  'degree travellers mean', 'degree travellers std', 'degree rides mean',
-                                 'degree rides std', 'max component mean', 'max component std'])
+                                 'degree rides std', 'max component mean', 'max component std'],
+                        index=['bipartite shareability', 'bipartite matching', 'pairs shareability', 'pairs matching'])
 
 
 def analysis_all_graphs(graph_list, config):
