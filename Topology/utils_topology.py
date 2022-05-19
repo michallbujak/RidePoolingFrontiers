@@ -200,7 +200,7 @@ class GraphStatistics:
         g_components.sort(key=len, reverse=True)
         self.components = g_components
         self.logger.info('Number of connected components: {}'.format(len(self.components)))
-        self.logger.info('Sizes of the components: '+str([len(i) for i in self.components]))
+        self.logger.info('Sizes of the components: ' + str([len(i) for i in self.components]))
         self.proportion_max_component = len(self.components[0]) / self.G.number_of_nodes()
         self.number_of_isolated_pairs = sum(1 if x == 2 else 0 for x in [len(i) for i in self.components])
         if plot:
@@ -715,7 +715,7 @@ def create_graph(indata, list_types_of_graph):
     return graph_list
 
 
-def draw_bipartite_graph(graph, max_weight, figsize=(5, 12), dpi=100, edge_proportions=10, node_size=1):
+def draw_bipartite_graph(graph, max_weight, figsize=(5, 12), dpi=100, node_size=1, batch_size=147):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -728,18 +728,30 @@ def draw_bipartite_graph(graph, max_weight, figsize=(5, 12), dpi=100, edge_propo
         else:
             r.append(i)
 
-    r.sort(key=lambda x: len(x))
+    dict_weights = {tuple(edge_data[:-1]): edge_data[-1]["weight"] for edge_data in G1.edges(data=True)}
+    r_weighted = {v[-1]: dict_weights[v] for v in dict_weights.keys() if v[-1] in r}
+    r_weighted_sorted = {k: v for k, v in sorted(r_weighted.items(), key=lambda x: x[1])}
+
+    r = list(r_weighted_sorted.keys())
+
     colour_list = len(l) * ['g'] + len(r) * ['b']
 
     pos = nx.bipartite_layout(G1, l)
 
+    new_pos = dict()
+    for num, key in enumerate(pos.keys()):
+        if num <= batch_size-1:
+            new_pos[key] = pos[key]
+        else:
+            new_pos[r[num-batch_size]] = pos[key]
+
     plt.figure(figsize=figsize, dpi=dpi)
 
-    nx.draw_networkx_nodes(G1, pos=pos, node_color=colour_list, node_size=node_size)
+    nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size)
 
-    for k in range(1, max_weight + 1):
-        edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == k]
-        nx.draw_networkx_edges(G1, pos, edgelist=edge_list, width=k / edge_proportions)
+    for weight in range(1, max_weight + 1):
+        edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
+        nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list, width=np.power(weight, 2/3) / np.power(max_weight, 2/3))
 
     plt.show()
 
@@ -784,18 +796,18 @@ def analyse_concatenated_all_graph_list(concatenated_list):
     def func(num, bipartite_only=False):
         if not bipartite_only:
             return (([np.mean([x[num] for x in concatenated_list['bipartite_shareability']]),
-                     np.mean([x[num] for x in concatenated_list['bipartite_matching']]),
-                     np.mean([x[num] for x in concatenated_list['pairs_shareability']]),
-                     np.mean([x[num] for x in concatenated_list['pairs_matching']])]),
+                      np.mean([x[num] for x in concatenated_list['bipartite_matching']]),
+                      np.mean([x[num] for x in concatenated_list['pairs_shareability']]),
+                      np.mean([x[num] for x in concatenated_list['pairs_matching']])]),
                     ([np.std([x[num] for x in concatenated_list['bipartite_shareability']]),
                       np.std([x[num] for x in concatenated_list['bipartite_matching']]),
                       np.std([x[num] for x in concatenated_list['pairs_shareability']]),
                       np.std([x[num] for x in concatenated_list['pairs_matching']])]))
         else:
             return (([np.mean([x[num] for x in concatenated_list['bipartite_shareability']]),
-                     np.mean([x[num] for x in concatenated_list['bipartite_matching']]),
-                     0,
-                     0]),
+                      np.mean([x[num] for x in concatenated_list['bipartite_matching']]),
+                      0,
+                      0]),
                     ([np.std([x[num] for x in concatenated_list['bipartite_shareability']]),
                       np.std([x[num] for x in concatenated_list['bipartite_matching']]),
                       0,
@@ -818,7 +830,7 @@ def analyse_concatenated_all_graph_list(concatenated_list):
 def analysis_all_graphs(graph_list, config):
     t = concat_all_graph_list(graph_list)
     t = analyse_concatenated_all_graph_list(t)
-    t.to_excel(config.path_results + 'all_graphs_properties_'+str(datetime.date.today().strftime("%d-%m-%y"))+'.xlsx')
+    t.to_excel(config.path_results + 'all_graphs_properties_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx')
     return t
 
 
