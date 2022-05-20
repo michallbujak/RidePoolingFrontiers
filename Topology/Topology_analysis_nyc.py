@@ -39,6 +39,7 @@ if __name__ == "__main__":
                                                                           topo_params=topological_config,
                                                                           replications=topological_config.replications,
                                                                           logger_level='INFO')
+    utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
 
     """ Noise analysis """
     utils.analyse_noise(dotmaps_list_results, topological_config)
