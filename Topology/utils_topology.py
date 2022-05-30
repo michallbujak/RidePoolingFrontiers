@@ -715,7 +715,7 @@ def create_graph(indata, list_types_of_graph):
     return graph_list
 
 
-def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0,
+def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power = 2/3,
                          figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
@@ -752,7 +752,8 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
 
     for weight in range(1, max_weight + 1):
         edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
-        nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list, width=np.power(weight, 2/3) / np.power(max_weight, 2/3))
+        nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list,
+                               width=np.power(weight, width_power) / np.power(max_weight, 2/3))
 
     if save:
         plt.savefig(config.path_results + "temp/graph_" + str(datetime.date.today().strftime("%d-%m-%y"))
