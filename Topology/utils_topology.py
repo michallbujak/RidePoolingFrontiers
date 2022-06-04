@@ -531,7 +531,7 @@ def analyse_noise(list_dotmaps, config, logger_level="INFO"):
     return df
 
 
-def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_level="INFO"):
+def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_level="INFO", save=True):
     logger = init_log(logger_level)
     logger.info("Analysing edges")
     shareable = []
@@ -549,10 +549,11 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     logger.info("Shareability counted")
     shareability_edges = my_dict.copy()
 
-    json_save = {str(key): my_dict[key] for key in my_dict.keys()}
-    a_file = open(config.path_results + "shareable_" + str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
-    json.dump(json_save, a_file)
-    a_file.close()
+    if save:
+        json_save = {str(key): my_dict[key] for key in my_dict.keys()}
+        a_file = open(config.path_results + "shareable_" + str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
+        json.dump(json_save, a_file)
+        a_file.close()
 
     logger.info("Counting matched")
     scheduled = []
@@ -569,11 +570,13 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     logger.info("Matched counted")
     matching_edges = my_dict.copy()
 
-    json_save = {str(key): my_dict[key] for key in my_dict.keys()}
-    a_file = open(config.path_results + "final_matching_" +
-                  str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
-    json.dump(json_save, a_file)
-    a_file.close()
+    if save:
+        json_save = {str(key): my_dict[key] for key in my_dict.keys()}
+        a_file = open(config.path_results + "final_matching_" +
+                      str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
+        json.dump(json_save, a_file)
+        a_file.close()
+
     logger.info("Edges analysed")
 
     if list_types_of_graph is not None:
@@ -833,13 +836,30 @@ def analyse_concatenated_all_graph_list(concatenated_list):
                         index=['bipartite shareability', 'bipartite matching', 'pairs shareability', 'pairs matching'])
 
 
-def analysis_all_graphs(graph_list, config):
+def analysis_all_graphs(graph_list, config=None, save=True, logger_level='INFO', save_num='', date=None):
+    logger = init_log(logger_level)
+    logger.info("Analysing list of graphs")
     t = concat_all_graph_list(graph_list)
     t = analyse_concatenated_all_graph_list(t)
-    t.to_excel(config.path_results + 'all_graphs_properties_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx')
+    if save:
+        if save_num is None:
+            save_num = ''
+        else:
+            save_num = str(save_num)
+        if date is None:
+            date = str(datetime.date.today().strftime("%d-%m-%y"))
+        else:
+            assert isinstance(date, str), "Wrong type of 'date' variable passed, should be string"
+        t.to_excel(config.path_results + 'all_graphs_properties_' + str(save_num) + '_' + date + '.xlsx')
+    logger.info("Analysing list of graphs finalised")
     return t
 
 
-def save_with_pickle(obj, name, config):
-    with open(config.path_results + name + '_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.obj', 'wb') as file:
+def save_with_pickle(obj, name, config, date=None):
+    if date is None:
+        date = str(datetime.date.today().strftime("%d-%m-%y"))
+    else:
+        assert isinstance(date, str), "Wrong type of 'date' variable passed, should be string"
+        date = date
+    with open(config.path_results + name + '_' + date + '.obj', 'wb') as file:
         pickle.dump(obj, file)
