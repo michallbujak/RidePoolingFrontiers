@@ -10,23 +10,30 @@ import matplotlib.pyplot as plt
 import datetime
 import matplotlib.image as mpimg
 
-with open('data/results/31-05-22/dotmap_list_31-05-22.obj', 'rb') as file:
+with open('data/results/06-06-22/rep_graphs_06-06-22.obj', 'rb') as file:
     e = pickle.load(file)
+
+# with open('data/results/06-06-22/dotmap_list_06-06-22.obj', 'rb') as file:
+#     e = pickle.load(file)
 
 topological_config = utils.get_parameters('data/configs/topology_settings.json')
 # utils.create_results_directory(topological_config)
+topological_config.path_results = 'data/results/06-06-22/'
 
-# num_list = [1] + list(range(100, 1000, 100))
+# visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
+draw_bipartite_graph(e['bipartite_matching'], 1000, topological_config, date='06-06-22', save=True)
+
+# num_list = [1, 5, 10, 100, 900]
 # for num in num_list:
 #     if num == 1:
-#         obj = [e[0]]
+#         obj = [e[1]]
 #     else:
 #         obj = e[:num]
 #     draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
 #                                                   list_types_of_graph=['bipartite_matching'], logger_level='WARNING')[
 #                              'bipartite_matching'],
 #                          num, node_size=1, dpi=200, figsize=(10, 24), plot=False, width_power=1,
-#                          config=topological_config, save=True, saving_number=num)
+#                          config=topological_config, save=True, saving_number=num, date='06-06-22')
 #
 #
 # fig, axes = plt.subplots(nrows=2, ncols=5, sharex='col', sharey='row')
@@ -57,22 +64,22 @@ topological_config.path_results = 'data/results/31-05-22/'
 #
 # df.to_excel(topological_config.path_results + 'all_graphs_properties_' + '31-05-22' + '.xlsx')
 
-num_list = list(range(1000))
-df = pd.DataFrame()
-for num in num_list:
-    if num == 0:
-        obj = [e[0]]
-    else:
-        obj = e[:num]
-    temp_graph = utils.analyse_edge_count(obj, topological_config, list_types_of_graph=['pairs_matching'],
-                             logger_level='WARNING')['pairs_matching']
-    t = utils.graph_mini_graphstatistics(temp_graph)
-    temp_df = pd.DataFrame.from_dict({'average_degree': [t.average_degree], 'max_comp': [t.proportion_max_component]})
-    df = pd.concat([df, temp_df])
-
-df.reset_index(inplace=True)
-df.drop(columns=['index'], inplace=True)
-df.to_excel(topological_config.path_results + 'frame_evolution_31-05-22.xlsx', index=False)
+# num_list = list(range(1000))
+# df = pd.DataFrame()
+# for num in num_list:
+#     if num == 0:
+#         obj = [e[0]]
+#     else:
+#         obj = e[:num]
+#     temp_graph = utils.analyse_edge_count(obj, topological_config, list_types_of_graph=['pairs_matching'],
+#                              logger_level='WARNING')['pairs_matching']
+#     t = utils.graph_mini_graphstatistics(temp_graph)
+#     temp_df = pd.DataFrame.from_dict({'average_degree': [t.average_degree], 'max_comp': [t.proportion_max_component]})
+#     df = pd.concat([df, temp_df])
+#
+# df.reset_index(inplace=True)
+# df.drop(columns=['index'], inplace=True)
+# df.to_excel(topological_config.path_results + 'frame_evolution_31-05-22.xlsx', index=False)
 
 
 

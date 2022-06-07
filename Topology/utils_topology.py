@@ -305,7 +305,7 @@ def merge_results(dotmaps_list_results, topo_dataframes, settings_list, logger_l
 class APosterioriAnalysis:
     def __init__(self, dataset: pd.DataFrame, output_path: str, output_temp: str, input_variables: list,
                  all_graph_properties: list, kpis: list, graph_properties_to_plot: list, labels: dict,
-                 err_style: str = "band"):
+                 err_style: str = "band", date: str = '000'):
         """
         Class designed to performed analysis on merged results from shareability graph properties.
         :param dataset: input merged datasets from replications
@@ -329,6 +329,7 @@ class APosterioriAnalysis:
         self.labels = labels
         self.err_style = err_style
         self.heatmap = None
+        self.date = date
 
     def alternate_kpis(self):
         if 'nP' in self.dataset.columns:
@@ -472,9 +473,10 @@ class APosterioriAnalysis:
         self.heatmap = round(self.heatmap, 3).style.background_gradient(cmap='coolwarm').set_precision(2)
 
     def save_grouped_results(self):
+        if self.date == '000':
+            date = str(datetime.date.today().strftime("%d-%m-%y"))
         writer = pd.ExcelWriter(self.output_path + 'Final_results_' + '_'.join(self.input_variables) + '_' +
-                                str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx',
-                                engine='xlsxwriter')
+                                self.date + '.xlsx', engine='xlsxwriter')
         self.dataset_grouped.min().to_excel(writer, sheet_name='Min')
         self.dataset_grouped.mean().to_excel(writer, sheet_name='Mean')
         self.dataset_grouped.max().to_excel(writer, sheet_name='Max')
@@ -509,7 +511,7 @@ class APosterioriAnalysis:
         self.save_grouped_results()
 
 
-def analyse_noise(list_dotmaps, config, logger_level="INFO"):
+def analyse_noise(list_dotmaps, config, logger_level="INFO", date=None):
     logger = init_log(logger_level)
     logger.info("Analysing noise")
     df = pd.DataFrame()
@@ -525,6 +527,11 @@ def analyse_noise(list_dotmaps, config, logger_level="INFO"):
     for num, dmap in enumerate(list_dotmaps):
         df['Noise ' + str(num)] = dmap.prob.noise
         df['Possible pairs ' + str(num)] = foo(dmap.sblts.pairs, num=len(dmap.sblts.requests))
+
+    if date is None:
+        date = str(datetime.date.today().strftime("%d-%m-%y"))
+    else:
+        date = str(date)
 
     df.to_excel(config.path_results + 'noise_analysis_' + str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx')
     logger.info("Noise analysed")
@@ -718,8 +725,8 @@ def create_graph(indata, list_types_of_graph):
     return graph_list
 
 
-def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power = 2/3,
-                         figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True):
+def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power=1,
+                         figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -756,11 +763,14 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
     for weight in range(1, max_weight + 1):
         edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
         nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list,
-                               width=np.power(weight, width_power) / np.power(max_weight, 2/3))
+                               width=np.power(weight, width_power) / np.power(max_weight, width_power))
 
     if save:
-        plt.savefig(config.path_results + "temp/graph_" + str(datetime.date.today().strftime("%d-%m-%y"))
-                    + "_no_" + str(saving_number) + ".png")
+        if date is None:
+            date = str(datetime.date.today().strftime("%d-%m-%y"))
+        else:
+            date = str(date)
+        plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png")
     if plot:
         plt.show()
 
