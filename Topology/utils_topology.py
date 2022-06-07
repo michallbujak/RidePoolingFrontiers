@@ -558,7 +558,8 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
 
     if save:
         json_save = {str(key): my_dict[key] for key in my_dict.keys()}
-        a_file = open(config.path_results + "shareable_" + str(datetime.date.today().strftime("%d-%m-%y")) + ".json", "w")
+        a_file = open(config.path_results + "shareable_" + str(datetime.date.today().strftime("%d-%m-%y")) + ".json",
+                      "w")
         json.dump(json_save, a_file)
         a_file.close()
 
@@ -726,7 +727,8 @@ def create_graph(indata, list_types_of_graph):
 
 
 def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power=1,
-                         figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None):
+                         figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None,
+                         default_edge_size=1):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -739,11 +741,11 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
         else:
             r.append(i)
 
-    dict_weights = {tuple(edge_data[:-1]): edge_data[-1]["weight"] for edge_data in G1.edges(data=True)}
-    r_weighted = {v[-1]: dict_weights[v] for v in dict_weights.keys() if v[-1] in r}
-    r_weighted_sorted = {k: v for k, v in sorted(r_weighted.items(), key=lambda x: x[1])}
-
-    r = list(r_weighted_sorted.keys())
+    if nx.is_weighted(G1):
+        dict_weights = {tuple(edge_data[:-1]): edge_data[-1]["weight"] for edge_data in G1.edges(data=True)}
+        r_weighted = {v[-1]: dict_weights[v] for v in dict_weights.keys() if v[-1] in r}
+        r_weighted_sorted = {k: v for k, v in sorted(r_weighted.items(), key=lambda x: x[1])}
+        r = list(r_weighted_sorted.keys())
 
     colour_list = len(l) * ['g'] + len(r) * ['b']
 
@@ -751,19 +753,23 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
 
     new_pos = dict()
     for num, key in enumerate(pos.keys()):
-        if num <= batch_size-1:
+        if num <= batch_size - 1:
             new_pos[key] = pos[key]
         else:
-            new_pos[r[num-batch_size]] = pos[key]
+            new_pos[r[num - batch_size]] = pos[key]
 
     plt.figure(figsize=figsize, dpi=dpi)
 
     nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size)
 
-    for weight in range(1, max_weight + 1):
-        edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
-        nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list,
-                               width=np.power(weight, width_power) / np.power(max_weight, width_power))
+    if nx.is_weighted(G1):
+        for weight in range(1, max_weight + 1):
+            edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
+            nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list,
+                                   width=default_edge_size * np.power(weight, width_power)
+                                         / np.power(max_weight, width_power))
+    else:
+        nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size)
 
     if save:
         if date is None:
