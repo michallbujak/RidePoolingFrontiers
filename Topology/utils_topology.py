@@ -728,7 +728,7 @@ def create_graph(indata, list_types_of_graph):
 
 def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power=1,
                          figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None,
-                         default_edge_size=1):
+                         default_edge_size=1, name=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -776,7 +776,10 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
             date = str(datetime.date.today().strftime("%d-%m-%y"))
         else:
             date = str(date)
-        plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png")
+        if name is None:
+            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png")
+        else:
+            plt.savefig(config.path_results + "temp/" + name + ".png")
     if plot:
         plt.show()
 
