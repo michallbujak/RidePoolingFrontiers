@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 import datetime
 import matplotlib.image as mpimg
 
-with open('data/results/06-06-22/rep_graphs_06-06-22.obj', 'rb') as file:
-    e = pickle.load(file)
-
-# with open('data/results/06-06-22/dotmap_list_06-06-22.obj', 'rb') as file:
+# with open('data/results/06-06-22/rep_graphs_06-06-22.obj', 'rb') as file:
 #     e = pickle.load(file)
+
+with open('data/results/06-06-22/dotmap_list_06-06-22.obj', 'rb') as file:
+    e = pickle.load(file)
 
 # with open('data/results/06-06-22/all_graphs_list_06-06-22.obj', 'rb') as file:
 #     e = pickle.load(file)[0]
@@ -85,3 +85,6 @@ visualize(e['pairs_shareability'], config=json.load(open('data/configs/netwulf_c
 # df.reset_index(inplace=True)
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
+
+
+

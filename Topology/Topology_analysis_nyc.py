@@ -1,3 +1,4 @@
+import ExMAS.utils
 import utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.main_prob import main as exmas_algo
@@ -21,7 +22,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 1000
+    topological_config.replications = 2
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -31,6 +32,8 @@ if __name__ == "__main__":
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
                                                      filter_function=lambda x: len(x.requests) < 150,
                                                      config=topological_config.initial_parameters)
+
+    # ExMAS.utils.plot_demand(dotmaps_list[0], params)
 
     """ Run ExMAS """
     dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,

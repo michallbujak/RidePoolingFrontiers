@@ -17,7 +17,8 @@ import pandas as pd
 import osmnx as ox
 import networkx as nx
 import numpy as np
-from osmnx.distance import get_nearest_node
+# from osmnx.distance import get_nearest_node
+from osmnx.distance import nearest_nodes
 import matplotlib.pyplot as plt
 
 # DataFrame skeletons
@@ -293,7 +294,8 @@ def networkstats(inData):
     center_x = pd.DataFrame((inData.G.nodes(data='x')))[1].mean()
     center_y = pd.DataFrame((inData.G.nodes(data='y')))[1].mean()
 
-    nearest = get_nearest_node(inData.G, (center_y, center_x))
+    # nearest = get_nearest_node(inData.G, (center_y, center_x))
+    nearest = nearest_nodes(inData.G, center_x, center_y)
     ret = DotMap({'center': nearest, 'radius': inData.skim[nearest].quantile(0.75)})
     return ret
 
@@ -662,7 +664,7 @@ def load_requests(path):
     return requests
 
 
-def plot_demand(inData, params, t0=None, vehicles=False, s=10):
+def plot_demand(inData, params, t0=None, vehicles=False, s=40):
     if t0 is None:
         t0 = inData.requests.treq.mean()
 
@@ -674,20 +676,21 @@ def plot_demand(inData, params, t0=None, vehicles=False, s=10):
     inData.requests.dist.plot(kind='box', title='Trips distance [m]', ax=ax[2])
     # (inData.requests.ttrav / np.timedelta64(1, 'm')).describe().to_frame().T
     plt.show()
-    fig, ax = ox.plot_graph(inData.G, figsize=(10, 10), node_size=0, edge_linewidth=0.5,
+    fig, ax = ox.plot_graph(inData.G, figsize=(s, s), node_size=0, edge_linewidth=0.5,
                             show=False, close=False,
-                            edge_color='grey', bgcolor='white')
+                            edge_color='grey', bgcolor='white', dpi=600)
     for _, r in inData.requests.iterrows():
-        ax.scatter(inData.G.nodes[r.origin]['x'], inData.G.nodes[r.origin]['y'], c='green', s=s, marker='D')
-        ax.scatter(inData.G.nodes[r.destination]['x'], inData.G.nodes[r.destination]['y'], c='orange', s=s)
+        ax.scatter(inData.G.nodes[r.origin]['x'], inData.G.nodes[r.origin]['y'], c='green', s=4*s, marker='D')
+        ax.scatter(inData.G.nodes[r.destination]['x'], inData.G.nodes[r.destination]['y'], c='orange', s=4*s)
     if vehicles:
         for _, r in inData.vehicles.iterrows():
             ax.scatter(inData.G.nodes[r.pos]['x'], inData.G.nodes[r.pos]['y'], c='blue', s=s, marker='x')
-    ax.scatter(inData.G.nodes[inData.stats['center']]['x'], inData.G.nodes[inData.stats['center']]['y'], c='red',
-               s=10 * s, marker='+')
-    plt.title(
-        'Demand in {} with origins marked in green, destinations in orange'.format(params.city))
-    plt.show()
+    # ax.scatter(inData.G.nodes[inData.stats['center']]['x'], inData.G.nodes[inData.stats['center']]['y'], c='red',
+    #            s=10 * s, marker='+')
+    # plt.title(
+    #     'Demand in {} with origins marked in green, destinations in orange'.format(params.city))
+    plt.savefig(params.path_results + 'AAAAAAAAAA.png')
+    # plt.show()
 
 
 def make_shareability_graph(requests, rides):
