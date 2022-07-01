@@ -18,6 +18,5 @@ topological_config.path_results = 'data/results/06-06-22/'
 G = e['pairs_matching']
 
 """ Centrality measures """
-# Basic
 print(ut.centrality_degree(G, False, 2))
 

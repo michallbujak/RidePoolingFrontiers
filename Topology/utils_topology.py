@@ -928,3 +928,19 @@ def centrality_degree(graph, tuned=True, alpha=1):
     else:
         raise Exception("Invalid arguments")
 
+
+class StructuralProperties:
+    """
+    Aggregated functions designed to calculate structural properties of the networks
+    """
+    def __init__(self, graph):
+        self.G = graph
+        self.centrality_degree = None
+        self.eigenvector_centrality = None
+
+    def centrality_measures(self, tuned_degree_centrality=True, alpha_degree_centrality=1):
+        self.centrality_degree = centrality_degree(self.G, tuned_degree_centrality, alpha_degree_centrality)
+        if nx.is_weighted(self.G):
+            self.eigenvector_centrality = nx.eigenvector_centrality_numpy(self.G, weight='weight')
+        else:
+            self.eigenvector_centrality = nx.eigenvector_centrality_numpy(self.G)
