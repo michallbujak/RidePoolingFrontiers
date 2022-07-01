@@ -882,3 +882,49 @@ def save_with_pickle(obj, name, config, date=None):
         date = date
     with open(config.path_results + name + '_' + date + '.obj', 'wb') as file:
         pickle.dump(obj, file)
+
+
+def read_pickle(file_path: str):
+    try:
+        with open(file_path, 'rb') as file:
+            e = pickle.load(file)
+        return e
+
+    except:
+        raise Exception("Cannot read the file. Make sure the path is correct.")
+
+
+def centrality_degree(graph, tuned=True, alpha=1):
+    """
+    Refined function given in a networkx package allowing to calculate centrality degree on weighted networks
+    @param graph: networkx graph
+    @param tuned: choose whether to use refined version proposed in
+    "Node centrality in weighted networks: Generalizing degree and shortest paths" by Tore Opsahla, Filip Agneessensb,
+    John Skvoretzc or more straightforward approach (tuned=True => article version)
+    @param alpha: parameter used in refined version of the tuned model
+    @return: dictionary with centrality degree per node
+    """
+    if len(graph) <= 1:
+        return {n: 1 for n in graph}
+    if not nx.is_weighted(graph):
+        return nx.degree_centrality(graph)
+
+    elif nx.is_weighted(graph) and not tuned:
+        max_degree_corr = 1 / (max([i[1] for i in graph.degree(weight='weight')]) * (len(graph) - 1))
+        return {n: max_degree_corr * d for n, d in graph.degree(weight='weight')}
+
+    elif nx.is_weighted(graph) and tuned:
+        degrees_strength = zip(graph.degree(), graph.degree(weight='weight'))
+        degrees_strength = [(x[0][0], x[0][1], x[1][1]) for x in degrees_strength]
+
+        def foo(s, k, alpha):
+            if k == 0:
+                return 0
+            else:
+                return k * np.power(s / k, alpha)
+
+        return {n: foo(s, k, alpha) for (n, k, s) in degrees_strength}
+
+    else:
+        raise Exception("Invalid arguments")
+
