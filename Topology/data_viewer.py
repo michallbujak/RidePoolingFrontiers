@@ -9,6 +9,7 @@ import utils_topology as utils
 import matplotlib.pyplot as plt
 import datetime
 import matplotlib.image as mpimg
+import netwulf
 
 # with open('data/results/06-06-22/rep_graphs_06-06-22.obj', 'rb') as file:
 #     e = pickle.load(file)
@@ -23,23 +24,49 @@ topological_config = utils.get_parameters('data/configs/topology_settings.json')
 # utils.create_results_directory(topological_config)
 topological_config.path_results = 'data/results/06-06-22/'
 
-visualize(e['pairs_shareability'], config=json.load(open('data/configs/netwulf_config.json')))
-# draw_bipartite_graph(e['bipartite_shareability'], 1000, topological_config, date='06-06-22', save=True,
-#                      name="bipartite_shareability_prob", dpi=500)
-
-# num_list = [1, 5, 10, 100, 900]
-# for num in num_list:
-#     if num == 1:
-#         obj = [e[1]]
+# """ Instead of netwulf """
+# G = e['pairs_matching']
+#
+# colours = []
+# for item in G.nodes:
+#     if item == 0:
+#         colours.append("red")
 #     else:
-#         obj = e[:num]
-#     draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
-#                                                   list_types_of_graph=['bipartite_matching'], logger_level='WARNING')[
-#                              'bipartite_matching'],
-#                          num, node_size=1, dpi=500, figsize=(10, 24), plot=False, width_power=1,
-#                          config=topological_config, save=True, saving_number=num, date='06-06-22')
+#         colours.append("black")
+# nx.set_node_attributes(G, dict(zip(list(G.nodes), colours)), "group")
+# visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 #
+# edge_colours = []
+# for item in G.edges:
+#     if item[0] == 0 or item[1] == 0:
+#         edge_colours.append("red")
+#     else:
+#         edge_colours.append("black")
+# nx.set_edge_attributes(G, dict(zip(list(G.edges), colours)), "colour")
 #
+# nx.draw_networkx_nodes(G, pos=nx.spring_layout(G), node_size=5, node_color="black")
+# nx.draw_networkx_edges(G, pos=nx.spring_layout(G), width=5, edge_color="black")
+# plt.show()
+# """ """
+
+
+# visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
+# draw_bipartite_graph(e['bipartite_shareability'], 1, topological_config, date='06-06-22', save=True,
+#                      name="bipartite_shareability_single", dpi=200, colour_specific_node=0)
+
+num_list = [1, 5, 10, 100, 900]
+for num in num_list:
+    if num == 1:
+        obj = [e[1]]
+    else:
+        obj = e[:num]
+    draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
+                                                  list_types_of_graph=['bipartite_matching'], logger_level='WARNING')[
+                             'bipartite_matching'],
+                         num, node_size=1, dpi=80, figsize=(10, 24), plot=False, width_power=1,
+                         config=topological_config, save=True, saving_number=num, date='06-06-22')
+
+
 # fig, axes = plt.subplots(nrows=2, ncols=5, sharex='col', sharey='row')
 #
 # for col in range(2):

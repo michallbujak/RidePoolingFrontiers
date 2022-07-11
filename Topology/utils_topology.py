@@ -728,7 +728,7 @@ def create_graph(indata, list_types_of_graph):
 
 def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power=1,
                          figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None,
-                         default_edge_size=1, name=None):
+                         default_edge_size=1, name=None, colour_specific_node=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -758,6 +758,10 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
         else:
             new_pos[r[num - batch_size]] = pos[key]
 
+    if colour_specific_node is not None:
+        assert isinstance(colour_specific_node, int), "Passed node number is not an integer"
+        colour_list[colour_specific_node] = "r"
+
     plt.figure(figsize=figsize, dpi=dpi)
 
     nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size)
@@ -769,7 +773,18 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
                                    width=default_edge_size * np.power(weight, width_power)
                                          / np.power(max_weight, width_power))
     else:
-        nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size)
+        if colour_specific_node is None:
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size)
+        else:
+            assert isinstance(colour_specific_node, int), "Passed node number is not an integer"
+            colour_list = []
+            for item in G1.edges:
+                if item[0] == colour_specific_node or item[1] == colour_specific_node:
+                    colour_list.append("red")
+                else:
+                    colour_list.append("black")
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size/5, edge_color=colour_list)
+
 
     if save:
         if date is None:
@@ -933,13 +948,15 @@ class StructuralProperties:
     """
     Aggregated functions designed to calculate structural properties of the networks
     """
-    def __init__(self, graph):
+    def __init__(self, graph, tuned_degree_centrality=True, alpha_degree_centrality=1):
         self.G = graph
+        self.tuned_degree_centrality = tuned_degree_centrality
+        self.alpha_degree_centrality = alpha_degree_centrality
         self.centrality_degree = None
         self.eigenvector_centrality = None
 
     def centrality_measures(self, tuned_degree_centrality=True, alpha_degree_centrality=1):
-        self.centrality_degree = centrality_degree(self.G, tuned_degree_centrality, alpha_degree_centrality)
+        self.centrality_degree = centrality_degree(self.G, self.tuned_degree_centrality, self.alpha_degree_centrality)
         if nx.is_weighted(self.G):
             self.eigenvector_centrality = nx.eigenvector_centrality_numpy(self.G, weight='weight')
         else:
