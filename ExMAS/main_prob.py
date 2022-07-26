@@ -58,6 +58,7 @@ import pandas as pd
 import networkx as nx
 import pulp
 from scipy.stats import norm
+import platform
 
 import matplotlib.pyplot as plt
 
@@ -1024,10 +1025,11 @@ def match(im, r, params, plot=False, make_assertion=True, logger=None):
     for imr in m:
         j += 1
         prob += pulp.lpSum([imr[i] * variables[i] for i in variables if imr[i] > 0]) == 1, 'c' + str(j)
-    solver = pulp.get_solver('GLPK_CMD')
+
+    solver = pulp.get_solver(solver_for_pulp())
     solver.msg = False
-    prob.solve(solver)  # main otpimization call
-    # prob.solve()  # main otpimization call
+    prob.solve(solver)  # main optimization call
+    # prob.solve()  # main optimization call
 
     logger.info('Problem solution: {}. \n'
                 'Total costs for single trips:  {:13,} '
@@ -1310,6 +1312,14 @@ def noise_generator(step=0, noise=None, params=None, batch_length=0, type=None, 
                             return x
 
                     return temp.apply(foo, args=(constrains,))
+
+
+def solver_for_pulp():
+    system = platform.system()
+    if system == "Windows":
+        return "GLPK_CMD"
+    else:
+        return "PULP_CBC_CMD"
 
 
 if __name__ == "__main__":
