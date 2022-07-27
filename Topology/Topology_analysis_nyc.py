@@ -1,17 +1,20 @@
-import ExMAS.utils
-import utils_topology as utils
-import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main_prob import main as exmas_algo
-from ExMAS.utils import make_graph as exmas_make_graph
-
 import pandas as pd
 import multiprocessing as mp
-import os
 import datetime
 from netwulf import visualize
 import pickle
 import networkx as nx
 import json
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.getcwd()))
+sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
+
+import utils_topology as utils
+import NYC_tools.NYC_data_prep_functions as nyc_tools
+from ExMAS.main_prob import main as exmas_algo
+from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
@@ -60,27 +63,27 @@ if __name__ == "__main__":
     # visualize(rep_graphs['pairs_matching'])
     # visualize(utils.create_graph(dotmaps_list_results[0], 'all')['bipartite_matching'])
 
-    # """ Perform topological analysis """
-    # pool = mp.Pool(mp.cpu_count())
-    # graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in
-    #               dotmaps_list_results]
-    # topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
-    # topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)
-    # pool.close()
-    #
-    # """ Merge results """
-    # merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
-    # merged_file_path = topological_config.path_results + 'merged_files_' + \
-    #                    str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
-    # merged_results.to_excel(merged_file_path, index=False)
-    #
-    # """ Compute final results """
-    # variables = ['Batch']
-    # utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
-    #                           topological_config.path_results,
-    #                           topological_config.path_results + "temp/",
-    #                           variables,
-    #                           topological_config.graph_topological_properties,
-    #                           topological_config.kpis,
-    #                           topological_config.graph_properties_against_inputs,
-    #                           topological_config.dictionary_variables).do_all()
+    """ Perform topological analysis """
+    pool = mp.Pool(mp.cpu_count())
+    graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in
+                  dotmaps_list_results]
+    topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
+    topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)
+    pool.close()
+
+    """ Merge results """
+    merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
+    merged_file_path = topological_config.path_results + 'merged_files_' + \
+                       str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
+    merged_results.to_excel(merged_file_path, index=False)
+
+    """ Compute final results """
+    variables = ['Batch']
+    utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
+                              topological_config.path_results,
+                              topological_config.path_results + "temp/",
+                              variables,
+                              topological_config.graph_topological_properties,
+                              topological_config.kpis,
+                              topological_config.graph_properties_against_inputs,
+                              topological_config.dictionary_variables).do_all()

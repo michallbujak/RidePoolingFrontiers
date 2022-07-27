@@ -66,7 +66,6 @@ draw_bipartite_graph(e['bipartite_matching'], 1, topological_config, date='06-06
 #                          num, node_size=1, dpi=80, figsize=(10, 24), plot=False, width_power=1,
 #                          config=topological_config, save=True, saving_number=num, date='06-06-22')
 
-
 # fig, axes = plt.subplots(nrows=2, ncols=5, sharex='col', sharey='row')
 #
 # for col in range(2):
@@ -112,6 +111,3 @@ draw_bipartite_graph(e['bipartite_matching'], 1, topological_config, date='06-06
 # df.reset_index(inplace=True)
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
-
-
-
