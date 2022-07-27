@@ -639,20 +639,21 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
         return graph_list
 
 
-def create_results_directory(topological_config):
+def create_results_directory(config):
     today = str(datetime.date.today().strftime("%d-%m-%y"))
-    topological_config.path_results += today
+    config.path_results += today
     try:
-        os.mkdir(topological_config.path_results)
+        os.mkdir(config.path_results)
     except OSError as error:
         print(error)
         print('overwriting current files in the folder')
     try:
-        os.mkdir(os.path.join(topological_config.path_results, 'temp'))
+        os.mkdir(os.path.join(config.path_results, 'temp'))
     except OSError as error:
         print(error)
         print('temp folder already exists')
-    topological_config.path_results += '/'
+    config.path_results += '/'
+    return config
 
 
 def create_graph(indata, list_types_of_graph):

@@ -130,7 +130,7 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
     pbar = tqdm(total=number_of_batches)
     counter = 0
     batch_no = 0
-    while counter < number_of_batches:
+    while counter < number_of_batches and batch_no < 8736:
         try:
             temp = nyc_pick_batch(batches, trips, inData, params, batch_no)
             if filter_function(temp):
@@ -162,12 +162,14 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
     settings = []
     params.logger_level = "CRITICAL"
     logger.info(" Calculating ExMAS values \n ")
+    pbar = tqdm(total=len(indatas)*replications)
     for i in range(len(indatas)):
         logger.info(" Batch no. " + str(i))
         step = 0
         noise = stochastic_noise(step=0, noise=None, params=params, batch_length=len(indatas[i].requests),
                                  constrains=params.stepwise_probs.get('constrains', None), type=noise_generator)
-        for j in tqdm(range(replications)):
+        for j in range(replications):
+            pbar.update(1)
             if topo_params.variable is None:
                 try:
                     temp = exmas_algorithm(indatas[i], params, noise, False)
@@ -194,11 +196,15 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
                     try:
                         temp = exmas_algorithm(indatas[i], params, None, False)
                         results.append(temp.copy())
-                        settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
+                        settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k],
+                                         'Start_time': indatas[i].requests.iloc[0, ]['pickup_datetime'],
+                                         'End_time': indatas[i].requests.iloc[-1, ]['pickup_datetime'],
+                                         'Demand_size': len(indatas[i].requests)})
                     except:
                         logger.debug('Impossible to attach batch number: ' + str(i))
                         pass
 
+    pbar.close()
     logger.info("Number of calculated results for batches is: ", len(results))
     logger.info("ExMAS calculated \n")
     return results, settings

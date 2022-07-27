@@ -13,15 +13,18 @@ import networkx as nx
 from networkx.algorithms import bipartite
 import datetime
 
-num_list = [1] + list(range(100, 1000, 100))
+# num_list = [1] + list(range(100, 1000, 100))
+#
+# topological_config = utils.get_parameters('data/configs/topology_settings.json')
+# utils.create_results_directory(topological_config)
 
-topological_config = utils.get_parameters('data/configs/topology_settings.json')
-utils.create_results_directory(topological_config)
+os.chdir(r'C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts')
 
-os.chdir(r'C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\06-06-22')
-
-with open('all_graphs_list_06-06-22.obj', 'rb') as file:
+with open('final_res_27-07-22.obj', 'rb') as file:
     e = pickle.load(file)
+
+q = list(e)
+x = 0
 
 
 
