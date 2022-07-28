@@ -956,6 +956,10 @@ class StructuralProperties:
         self.centrality_degree = None
         self.eigenvector_centrality = None
 
+    def __repr__(self):
+        return "StructuralProperties of the graph (tuned centrality = %r, alpha = %r)" % (self.tuned_degree_centrality,
+                                                                                          self.alpha_degree_centrality)
+
     def centrality_measures(self, tuned_degree_centrality=True, alpha_degree_centrality=1):
         self.centrality_degree = centrality_degree(self.G, self.tuned_degree_centrality, self.alpha_degree_centrality)
         if nx.is_weighted(self.G):

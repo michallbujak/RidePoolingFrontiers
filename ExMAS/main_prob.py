@@ -1285,7 +1285,7 @@ def noise_generator(step=0, noise=None, params=None, batch_length=0, type=None, 
     @return: noise
     """
     if type is not None:
-        type = type.to_lower()
+        type = type.lower()
 
     normal_list = ['wiener', 'normal', 'brownian']
     if type is None:
