@@ -20,11 +20,13 @@ import datetime
 
 os.chdir(r'C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts')
 
-with open('final_res_27-07-22.obj', 'rb') as file:
-    e = pickle.load(file)
+import pickle
 
-q = list(e)
+with open('final_res_27-07-22.obj', 'rb') as file:
+    data = list(pickle.load(file))
+
 x = 0
+xx = 00
 
 
 

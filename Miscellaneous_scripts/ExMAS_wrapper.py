@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     """ Run parameters """
     config.replications = 1
-    config.no_batches = 20000
+    config.no_batches = 6
 
     """ Prepare folder """
     utils.create_results_directory(config)
