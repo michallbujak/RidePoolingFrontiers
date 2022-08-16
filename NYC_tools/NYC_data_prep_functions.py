@@ -170,7 +170,7 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
                                  constrains=params.stepwise_probs.get('constrains', None), type=noise_generator)
         for j in range(replications):
             pbar.update(1)
-            if topo_params.variable is None:
+            if topo_params.get("variable", None) is None:
                 try:
                     temp = exmas_algorithm(indatas[i], params, noise, False)
                     results.append(temp.copy())

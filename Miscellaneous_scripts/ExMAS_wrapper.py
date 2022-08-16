@@ -6,12 +6,12 @@ sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
 import Topology.utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main_prob import main as exmas_algo
+from ExMAS.main_prob_coeffs import main as exmas_algo
 
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    config = utils.get_parameters('config_olha.json')
+    config = utils.get_parameters('configs/test_config.json')
 
     """ Set up varying parameters (optional) """
     # config.variable = 'shared_discount'
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     """ Run parameters """
     config.replications = 1
-    config.no_batches = 20000
+    config.no_batches = 1
 
     """ Prepare folder """
     utils.create_results_directory(config)
