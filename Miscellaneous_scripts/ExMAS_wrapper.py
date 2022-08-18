@@ -30,9 +30,7 @@ if __name__ == "__main__":
                                                      config=config.initial_parameters)
 
     """ Run ExMAS """
-    dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
-                                                                          noise_generator=None,
-                                                                          stepwise=False,
+    dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
                                                                           topo_params=config,
                                                                           replications=config.replications,
                                                                           logger_level='INFO')

@@ -270,8 +270,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
                         r.t_oo + r.t_od + 2 * params.pax_delay + r.t_dd + params.delay_value * abs(r.delay_i))))
 
     def utility_j_LIFO():
-        # utility of LIFO trip for i
-        return (params.price * r.dist_i / 1000 * params.shared_discount
+        # utility of LIFO trip for j
+        return (params.price * r.dist_j / 1000 * params.shared_discount
                 + r.VoT_j * (r.ttrav_j - params.WtS * (r.t_od + params.delay_value * abs(r.delay_j))))
 
     def utility_sh_i_LIFO():

@@ -171,7 +171,7 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
         for j in range(replications):
             pbar.update(1)
             if topo_params.get("variable", None) is None:
-                try:
+                # try:
                     temp = exmas_algorithm(indatas[i], params, noise, False)
                     results.append(temp.copy())
                     step += 1
@@ -187,9 +187,9 @@ def run_exmas_nyc_batches(exmas_algorithm, params, indatas, noise_generator=None
                     else:
                         raise Exception('Incorrect type of stepwise (should be True/False)')
                     settings.append({'Replication_ID': j, 'Batch': i})
-                except:
-                    logger.debug('Impossible to attach batch number: ' + str(i))
-                    pass
+                # except:
+                #     logger.debug('Impossible to attach batch number: ' + str(i))
+                #     pass
             else:
                 for k in range(len(topo_params['values'])):
                     params[topo_params['variable']] = topo_params['values'][k]
@@ -241,3 +241,42 @@ def embed_logger(log):
         return init_log(log)
     else:
         raise Exception("Not accepted logger level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
+
+
+def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'variable': None}),
+                        replications=1, logger_level=None):
+    logger = embed_logger(logger_level)
+    results = []
+    settings = []
+    params.logger_level = "CRITICAL"
+    logger.info(" Calculating ExMAS values \n ")
+    pbar = tqdm(total=len(indatas)*replications)
+    for i in range(len(indatas)):
+        logger.info(" Batch no. " + str(i))
+        step = 0
+        for j in range(replications):
+            pbar.update(1)
+            if topo_params.get("variable", None) is None:
+                # try:
+                    temp = exmas_algorithm(indatas[i], params, False)
+                    results.append(temp.copy())
+                    step += 1
+                    settings.append({'Replication_ID': j, 'Batch': i})
+                # except:
+                #     logger.debug('Impossible to attach batch number: ' + str(i))
+                #     pass
+            else:
+                for k in range(len(topo_params['values'])):
+                    params[topo_params['variable']] = topo_params['values'][k]
+                    try:
+                        temp = exmas_algorithm(indatas[i], params, None, False)
+                        results.append(temp.copy())
+                        settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
+                    except:
+                        logger.debug('Impossible to attach batch number: ' + str(i))
+                        pass
+
+    pbar.close()
+    logger.info("Number of calculated results for batches is: ", len(results))
+    logger.info("ExMAS calculated \n")
+    return results, settings

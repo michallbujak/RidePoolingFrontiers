@@ -70,8 +70,10 @@ np.warnings.filterwarnings('ignore')
 ##########
 
 # columns of ride-candidates DataFrame
-RIDE_COLS = ['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'indexes_orig', 'indexes_dest', 'true_u_pax',
-             'true_u_paxes']
+# RIDE_COLS = ['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'indexes_orig', 'indexes_dest', 'true_u_pax',
+#              'true_u_paxes']
+
+RIDE_COLS = ['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'indexes_orig', 'indexes_dest']
 
 
 class SbltType(Enum):  # type of shared ride. first digit is the degree, second is type (FIFO/LIFO/other)
@@ -96,7 +98,7 @@ class SbltType(Enum):  # type of shared ride. first digit is the degree, second 
 ##############
 
 # ALGORITHM 3
-def main(_inData, params, noise_prior=None, plot=False):
+def main(_inData, params, plot=False):
     """
     main call
     :param _inData: input (graph, requests, .. )
@@ -112,7 +114,6 @@ def main(_inData, params, noise_prior=None, plot=False):
     _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
 
     degree = 1
-    _inData = add_noise(_inData, params, noise_prior)
     _inData = sample_random_parameters(_inData, params)
 
     _inData = pairs(_inData, params, plot=plot)
@@ -215,8 +216,8 @@ def single_rides(_inData, params):
     df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times']]
     df['indexes_orig'] = df.indexes  # copy order of origins for single rides
     df['indexes_dest'] = df.indexes  # and dest
-    df['true_u_pax'] = df['u_pax']
-    df['true_u_paxes'] = df['u_paxes']
+    # df['true_u_pax'] = df['u_pax']
+    # df['true_u_paxes'] = df['u_paxes']
     df = df[RIDE_COLS]
 
     _inData.sblts.SINGLES = df.copy()  # single trips
@@ -259,47 +260,46 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     def utility_sh_i():
         # utility of shared trip i
         return (params.price * (1 - params.shared_discount) * r.dist_i / 1000 +
-                r.VoT_i * params.WtS * (r.t_oo + params.pax_delay + r.t_od + params.delay_value * abs(r.delay_i)))
+                r.VoT_i * r.WtS_i * (r.t_oo + params.pax_delay + r.t_od + r.delay_value_i * abs(r.delay_i)))
 
     def utility_sh_j():
         # utility of shared trip j
         return (params.price * (1 - params.shared_discount) * r.dist_j / 1000 +
-                r.VoT_j * params.WtS * (r.t_od + r.t_dd + params.pax_delay +
-                                        params.delay_value * abs(r.delay_j)))
+                r.VoT_j * r.WtS_j * (r.t_od + r.t_dd + params.pax_delay +
+                                        r.delay_value_j * abs(r.delay_j)))
 
     def utility_i():
         # difference u_sh_i - u_ns_i (has to be positive)
         return (params.price * r.dist_i / 1000 * params.shared_discount
-                + r.VoT_i * (r.ttrav_i - params.WtS * (
-                        r.t_oo + r.t_od + params.pax_delay + params.delay_value * abs(r.delay_i))))
+                + r.VoT_i * (r.ttrav_i - r.WtS_i * (
+                        r.t_oo + r.t_od + params.pax_delay + r.delay_value_i * abs(r.delay_i))))
 
     def utility_j():
         # difference u_sh_i - u_ns_i
         return (params.price * r.dist_j / 1000 * params.shared_discount
-                + r.VoT_j * (r.ttrav_j - params.WtS * (
-                        r.t_od + r.t_dd + params.pax_delay + params.delay_value * abs(r.delay_j))))
+                + r.VoT_j * (r.ttrav_j - r.WtS_j * (
+                        r.t_od + r.t_dd + params.pax_delay + r.delay_value_j * abs(r.delay_j))))
 
     def utility_i_LIFO():
         # utility of LIFO trip for i
-        return (params.price * r.dist_i / 1000 * params.shared_discount
-                + r.VoT_i * (r.ttrav_i - params.WtS * (
-                        r.t_oo + r.t_od + 2 * params.pax_delay + r.t_dd + params.delay_value * abs(r.delay_i))))
+        return params.price * r.dist_i / 1000 * params.shared_discount + r.VoT_i * (r.ttrav_i - r.WtS_i * (
+                        r.t_oo + r.t_od + 2 * params.pax_delay + r.t_dd + params.delay_value * abs(r.delay_i)))
 
     def utility_j_LIFO():
-        # utility of LIFO trip for i
-        return (params.price * r.dist_i / 1000 * params.shared_discount
-                + r.VoT_j * (r.ttrav_j - params.WtS * (r.t_od + params.delay_value * abs(r.delay_j))))
+        # utility of LIFO trip for j
+        return params.price * r.dist_j / 1000 * params.shared_discount + \
+               r.VoT_j * (r.ttrav_j - r.WtS_j * (r.t_od + params.delay_value * abs(r.delay_j)))
 
     def utility_sh_i_LIFO():
         # difference u_sh_i_LIFO - u_ns_i
         return (params.price * (1 - params.shared_discount) * r.dist_i / 1000 +
-                r.VoT_i * params.WtS * (
-                        r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay + params.delay_value * abs(r.delay_i)))
+                r.VoT_i * r.WtS_i * (
+                        r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay + r.delay_value_i * abs(r.delay_i)))
 
     def utility_sh_j_LIFO():
         # difference u_sh_j_LIFO - u_ns_j
         return (params.price * (1 - params.shared_discount) * r.dist_j / 1000 +
-                r.VoT_j * params.WtS * (r.t_od + params.delay_value * abs(r.delay_j)))
+                r.VoT_j * r.WtS_j * (r.t_od + r.delay_value_j * abs(r.delay_j)))
 
     def query_skim(r, _from, _to, _col, _filter=True):
         """
@@ -405,22 +405,61 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
     """ THE NEW PART """
     if "VoT" in _inData.prob.sampled_random_parameters.columns:
-        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="i", right_index=True)
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
         r.VoT_i = new_temp_df['VoT']
 
-        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="j", right_index=True)
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
         r.VoT_j = new_temp_df['VoT']
 
-    """ THE END OF NEW PART"""
+    if "WtS" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['WtS'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["WtS_i"] = new_temp_df['WtS']
 
-    # r = r[utility_i() > 0]  # and filter only for positive utility
-    r['delta_utility_i'] = list(utility_i())
-
-    if params.st_dev_prob == 0:
-        r = r[r['delta_utility_i'] > 0]
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['WtS'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["WtS_j"] = new_temp_df['WtS']
     else:
-        r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_i']), left_on='i', right_index=True)
-        r = r[r['delta_utility_i'] + r['noise_i'] > 0]
+        r["WtS_i"] = params.WtS
+        r["WtS_j"] = params.WtS
+
+    if "delay_value" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['delay_value'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["delay_value_i"] = new_temp_df['delay_value']
+
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['delay_value'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["delay_value_j"] = new_temp_df['delay_value']
+    else:
+        r["delay_value_i"] = params.delay_value
+        r["delay_value_j"] = params.delay_value
+
+    if "shared_discount" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['shared_discount'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["shared_discount_i"] = new_temp_df['shared_discount']
+
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['shared_discount'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["shared_discount_j"] = new_temp_df['shared_discount']
+    else:
+        r["shared_discount_i"] = params.shared_discount
+        r["shared_discount_j"] = params.shared_discount
+
+    """ THE END OF NEW PART """
+
+    r = r[utility_i() > 0]  # and filter only for positive utility
 
     if plot:
         sp_plot(_r, r, 2, 'utility for i')
@@ -432,15 +471,9 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r = query_skim(r, 'destination_i', 'destination_j', 't_dd')  # and now see if it is attractive also for j
     # now we have times for all segments: # t_oo_i_j # t_od_j_i # dd_i_j
     # let's compute utility for j
-    # r = r[utility_j() > 0]
+    r = r[utility_j() > 0]
 
     r['delta_utility_j'] = list(utility_j())
-
-    if params.st_dev_prob == 0:
-        r = r[r['delta_utility_j'] > 0]
-    else:
-        r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_j']), left_on='j', right_index=True)
-        r = r[r['delta_utility_j'] + r['noise_j'] > 0]
 
     if plot:
         sp_plot(_r, r, 3, 'utility for j')
@@ -460,8 +493,10 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['indexes_orig'] = r.indexes
         r['indexes_dest'] = r.apply(lambda x: [int(x.i), int(x.j)], axis=1)
 
-        r['u_i'] = utility_sh_i() + r['noise_i']
-        r['u_j'] = utility_sh_j() + r['noise_j']
+        # r['u_i'] = utility_sh_i() + r['noise_i']
+        # r['u_j'] = utility_sh_j() + r['noise_j']
+        r['u_i'] = utility_sh_i()
+        r['u_j'] = utility_sh_j()
 
         r['t_i'] = r.t_oo + r.t_od + params.pax_delay
         r['t_j'] = r.t_od + r.t_dd + params.pax_delay
@@ -469,9 +504,9 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['delta_ji'] = r.apply(lambda x: x.delta_j - params.delay_value * abs(x.delay_j) - (x.t_j - x.ttrav_j), axis=1)
         r['delta'] = r[['delta_ji', 'delta_ij']].min(axis=1)
         r['u_pax'] = r['u_i'] + r['u_j']
-        r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
-        r['true_u_i'] = r['u_i'] - r['noise_i']
-        r['true_u_j'] = r['u_j'] - r['noise_j']
+        # r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
+        # r['true_u_i'] = r['u_i'] - r['noise_i']
+        # r['true_u_j'] = r['u_j'] - r['noise_j']
         # check_me_FIFO() if check else None
 
     _inData.sblts.FIFO2 = r.copy()
@@ -481,25 +516,9 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r = rLIFO
     r = query_skim(r, 'destination_j', 'destination_i', 't_dd')  # set different sequence of times
     r.t_od = r.ttrav_j
-    # r = r[utility_i_LIFO() > 0]
+    r = r[utility_i_LIFO() > 0]
 
-    r['delta_utility_i'] = list(utility_i_LIFO())
-
-    if params.st_dev_prob == 0:
-        r = r[r['delta_utility_i'] > 0]
-    else:
-        # r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_i']), left_on='i', right_index=True)
-        r = r[r['delta_utility_i'] + r['noise_i'] > 0]
-
-    # r = r[utility_j_LIFO() > 0]
-
-    r['delta_utility_j'] = list(utility_j_LIFO())
-
-    if params.st_dev_prob == 0:
-        r = r[r['delta_utility_j'] > 0]
-    else:
-        r = r.merge(pd.DataFrame(_inData.prob.noise, columns=['noise_j']), left_on='j', right_index=True)
-        r = r[r['delta_utility_j'] + r['noise_j'] > 0]
+    r = r[utility_j_LIFO() > 0]
 
     r = r.set_index(['i', 'j'], drop=False)
     r['ttrav'] = r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay
@@ -518,8 +537,10 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['indexes_orig'] = r.indexes
         r['indexes_dest'] = r.apply(lambda x: [int(x.j), int(x.i)], axis=1)
 
-        r['u_i'] = utility_sh_i_LIFO() + r['noise_i']
-        r['u_j'] = utility_sh_j_LIFO() + r['noise_j']
+        # r['u_i'] = utility_sh_i_LIFO() + r['noise_i']
+        # r['u_j'] = utility_sh_j_LIFO() + r['noise_j']
+        r['u_i'] = utility_sh_i_LIFO()
+        r['u_j'] = utility_sh_j_LIFO()
 
         r['t_i'] = r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay
         r['t_j'] = r.t_od
@@ -528,9 +549,9 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['delta_ji'] = r.apply(lambda x: x.delta_j - params.delay_value * abs(x.delay_j), axis=1)
         r['delta'] = r[['delta_ji', 'delta_ij']].min(axis=1)
         r['u_pax'] = r['u_i'] + r['u_j']
-        r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
-        r['true_u_i'] = r['u_i'] - r['noise_i']
-        r['true_u_j'] = r['u_j'] - r['noise_j']
+        # r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
+        # r['true_u_i'] = r['u_i'] - r['noise_i']
+        # r['true_u_j'] = r['u_j'] - r['noise_j']
         # check_me_LIFO() if check else None
 
     _inData.sblts.LIFO2 = r.copy()
@@ -544,7 +565,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     for df in [_inData.sblts.FIFO2.copy(), _inData.sblts.LIFO2.copy()]:
         if df.shape[0] > 0:
             df['u_paxes'] = df.apply(lambda x: [x.u_i, x.u_j], axis=1)
-            df['true_u_paxes'] = df.apply(lambda x: [x.true_u_i, x.true_u_j], axis=1)
+            # df['true_u_paxes'] = df.apply(lambda x: [x.true_u_i, x.true_u_j], axis=1)
             df['u_veh'] = df.ttrav
             df['times'] = df.apply(
                 lambda x: [x.treq_i + x.delay_i, x.t_oo + params.pax_delay, x.t_od, x.t_dd], axis=1)
@@ -637,8 +658,10 @@ def extend_degree(_inData, params, degree):
         retR.extend(newtrips)
         nPotential += nSearched
 
+    # df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
+    #                                  'u_paxes', 'times', 'indexes_dest', 'true_u_pax', 'true_u_paxes'])  # data synthax for rides
     df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
-                                     'u_paxes', 'times', 'indexes_dest', 'true_u_pax', 'true_u_paxes'])  # data synthax for rides
+                                     'u_paxes', 'times', 'indexes_dest'])
 
     df = df[RIDE_COLS]
     df = df.reset_index()
@@ -783,24 +806,24 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                 # if _print:
                 #    pd.Series(d, index=x).plot()  # option plot d=f(dep)
                 u_paxes = list()
-                true_u_paxes = list()
+                # true_u_paxes = list()
 
                 for i in range(degree + 1):
                     u_paxes.append(
                         trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i]) + noise[i])
-                    true_u_paxes.append(u_paxes[-1]-noise[i])
+                    # true_u_paxes.append(u_paxes[-1]-noise[i])
                     if u_paxes[-1] < 0:
                         feasible_flag = False
                         break
                 if feasible_flag:
                     re.u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i]) + noise[i] for i in
                                   range(degree + 1)]
-                    re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i])
-                                       for i in range(degree + 1)]
+                    # re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i])
+                    #                    for i in range(degree + 1)]
                     re.pos = pos
                     re.times = new_times
                     re.u_pax = sum(re.u_paxes)
-                    re.true_u_pax = sum(re.true_u_paxes)
+                    # re.true_u_pax = sum(re.true_u_paxes)
                     re.u_veh = sum(re.times[1:])
                     if degree > 4:
                         re.kind = 100
