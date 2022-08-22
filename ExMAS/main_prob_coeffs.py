@@ -111,13 +111,14 @@ def main(_inData, params, plot=False):
     """
     _inData.logger = init_log(params)  # initialize console logger
 
-    _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
-
-    degree = 1
     _inData = sample_random_parameters(_inData, params)
+
+    _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
+    degree = 1
 
     _inData = pairs(_inData, params, plot=plot)
     degree = 2
+
     _inData.logger.info('Degree {} \tCompleted'.format(degree))
 
     if degree < params.max_degree:
@@ -186,13 +187,19 @@ def single_rides(_inData, params):
         t0 = req.treq.min()  # set 0 as the earliest departure time
         req.treq = (req.treq - t0).dt.total_seconds().astype(int)  # recalc times for seconds starting from zero
         req.ttrav = req.ttrav.dt.total_seconds().divide(params.avg_speed).astype(int)  # recalc travel times using speed
-    if 'VoT' not in req.columns:
-        if params.get('VoT_std', False):
-            req['VoT'] = normal(params.VoT, params.VoT_std, params.nP)  # normally distributed Value of Time
-        else:
-            req['VoT'] = params.VoT  # heterogeneity not applied
+    # if 'VoT' not in req.columns:
+    #     if params.get('VoT_std', False):
+    #         req['VoT'] = normal(params.VoT, params.VoT_std, params.nP)  # normally distributed Value of Time
+    #     else:
+    #         req['VoT'] = params.VoT  # heterogeneity not applied
+    # else:
+    #     _inData.logger.warn('VoT predefined')
+
+    if "VoT" in _inData.prob.sampled_random_parameters.columns:
+        req.VoT = _inData.prob.sampled_random_parameters['VoT']
     else:
-        _inData.logger.warn('VoT predefined')
+        req.VoT = params.VoT
+
 
     req['delta'] = f_delta()  # assign maximal delay in seconds
     req['u'] = params.price * req.dist / 1000 + req.VoT * req.ttrav
@@ -200,7 +207,7 @@ def single_rides(_inData, params):
     req = req.reset_index()
 
     # req['timePT'] = 99999
-    req['u_PT'] = utility_PT()
+    # req['u_PT'] = utility_PT()
 
     # output
     _inData.sblts.requests = req.copy()
@@ -404,59 +411,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r = query_skim(r, 'origin_j', 'destination_i', 't_od')
 
     """ THE NEW PART """
-    if "VoT" in _inData.prob.sampled_random_parameters.columns:
-        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="i",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r.VoT_i = new_temp_df['VoT']
-
-        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="j",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r.VoT_j = new_temp_df['VoT']
-
-    if "WtS" in _inData.prob.sampled_random_parameters.columns:
-        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['WtS'], left_on="i",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r["WtS_i"] = new_temp_df['WtS']
-
-        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['WtS'], left_on="j",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r["WtS_j"] = new_temp_df['WtS']
-    else:
-        r["WtS_i"] = params.WtS
-        r["WtS_j"] = params.WtS
-
-    if "delay_value" in _inData.prob.sampled_random_parameters.columns:
-        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['delay_value'], left_on="i",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r["delay_value_i"] = new_temp_df['delay_value']
-
-        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['delay_value'], left_on="j",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r["delay_value_j"] = new_temp_df['delay_value']
-    else:
-        r["delay_value_i"] = params.delay_value
-        r["delay_value_j"] = params.delay_value
-
-    if "shared_discount" in _inData.prob.sampled_random_parameters.columns:
-        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['shared_discount'], left_on="i",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r["shared_discount_i"] = new_temp_df['shared_discount']
-
-        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['shared_discount'], left_on="j",
-                               right_index=True)
-        new_temp_df.index = r.index
-        r["shared_discount_j"] = new_temp_df['shared_discount']
-    else:
-        r["shared_discount_i"] = params.shared_discount
-        r["shared_discount_j"] = params.shared_discount
-
+    r = extend_r_sampled_parameters(r, _inData)
     """ THE END OF NEW PART """
 
     r = r[utility_i() > 0]  # and filter only for positive utility
@@ -1315,6 +1270,66 @@ def solver_for_pulp():
         return "GLPK_CMD"
     else:
         return "PULP_CBC_CMD"
+
+
+def extend_r_sampled_parameters(r, _inData):
+    if "VoT" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r.VoT_i = new_temp_df['VoT']
+
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r.VoT_j = new_temp_df['VoT']
+    else:
+        r.VoT_i = params.VoT
+        r.VoT_j = params.VoT
+
+    if "WtS" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['WtS'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["WtS_i"] = new_temp_df['WtS']
+
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['WtS'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["WtS_j"] = new_temp_df['WtS']
+    else:
+        r["WtS_i"] = params.WtS
+        r["WtS_j"] = params.WtS
+
+    if "delay_value" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['delay_value'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["delay_value_i"] = new_temp_df['delay_value']
+
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['delay_value'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["delay_value_j"] = new_temp_df['delay_value']
+    else:
+        r["delay_value_i"] = params.delay_value
+        r["delay_value_j"] = params.delay_value
+
+    if "shared_discount" in _inData.prob.sampled_random_parameters.columns:
+        new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['shared_discount'], left_on="i",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["shared_discount_i"] = new_temp_df['shared_discount']
+
+        new_temp_df = pd.merge(r['j'].copy(), _inData.prob.sampled_random_parameters['shared_discount'], left_on="j",
+                               right_index=True)
+        new_temp_df.index = r.index
+        r["shared_discount_j"] = new_temp_df['shared_discount']
+    else:
+        r["shared_discount_i"] = params.shared_discount
+        r["shared_discount_j"] = params.shared_discount
+
+    return r
 
 
 if __name__ == "__main__":
