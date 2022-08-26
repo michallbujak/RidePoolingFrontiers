@@ -945,6 +945,12 @@ def centrality_degree(graph, tuned=True, alpha=1):
         raise Exception("Invalid arguments")
 
 
+def inverse_normal(means, stds):
+    def internal_function(x):
+        return [norm.ppf(x, mean, std) for mean, std in zip(means, stds)]
+    return internal_function
+
+
 class StructuralProperties:
     """
     Aggregated functions designed to calculate structural properties of the networks

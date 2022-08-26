@@ -30,6 +30,9 @@ if __name__ == "__main__":
                                                      config=config.initial_parameters)
 
     """ Run ExMAS """
+    def foo(a, b):
+        x = 0
+    params.sampling_function = 0
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
                                                                           topo_params=config,
                                                                           replications=config.replications,

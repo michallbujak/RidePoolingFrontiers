@@ -48,6 +48,7 @@ import time
 import sys
 from itertools import product
 import logging
+from types import FunctionType
 
 import scipy.stats
 from dotmap import DotMap
@@ -169,13 +170,6 @@ def single_rides(_inData, params):
         return (1 / params.WtS - 1) * req.ttrav + \
                (params.price * params.shared_discount * req.dist / 1000) / (req.VoT * params.WtS)
 
-    def utility_PT():
-        # utility of trip with PT - not used
-        if (params.get("PT_discount") is None) | (params.get("PT_beta") is None):
-            return 999999
-        else:
-            return params.price * (1 - params.PT_discount) * req.dist / 1000 + req.VoT * params.PT_beta * req.timePT
-
     # prepare data structures
     _inData.sblts = DotMap(_dynamic=False)
     _inData.sblts.log = DotMap(_dynamic=False)
@@ -187,27 +181,28 @@ def single_rides(_inData, params):
         t0 = req.treq.min()  # set 0 as the earliest departure time
         req.treq = (req.treq - t0).dt.total_seconds().astype(int)  # recalc times for seconds starting from zero
         req.ttrav = req.ttrav.dt.total_seconds().divide(params.avg_speed).astype(int)  # recalc travel times using speed
-    # if 'VoT' not in req.columns:
-    #     if params.get('VoT_std', False):
-    #         req['VoT'] = normal(params.VoT, params.VoT_std, params.nP)  # normally distributed Value of Time
-    #     else:
-    #         req['VoT'] = params.VoT  # heterogeneity not applied
-    # else:
-    #     _inData.logger.warn('VoT predefined')
 
+    """ NEW """
     if "VoT" in _inData.prob.sampled_random_parameters.columns:
-        req.VoT = _inData.prob.sampled_random_parameters['VoT']
+        req = req.assign(VoT=_inData.prob.sampled_random_parameters['VoT'].values)
     else:
-        req.VoT = params.VoT
+        req["VoT"] = params.VoT
 
+    if "WtS" in _inData.prob.sampled_random_parameters.columns:
+        req = req.assign(WtS=_inData.prob.sampled_random_parameters['WtS'].values)
+    else:
+        req["WtS"] = params.WtS
+
+    if "delay_value" in _inData.prob.sampled_random_parameters.columns:
+        req = req.assign(delay_value=_inData.prob.sampled_random_parameters['delay_value'].values)
+    else:
+        req["delay_value"] = params.delay_value
+    """ END OF NEW"""
 
     req['delta'] = f_delta()  # assign maximal delay in seconds
     req['u'] = params.price * req.dist / 1000 + req.VoT * req.ttrav
     req = req.sort_values(['treq', 'pax_id'])  # sort
     req = req.reset_index()
-
-    # req['timePT'] = 99999
-    # req['u_PT'] = utility_PT()
 
     # output
     _inData.sblts.requests = req.copy()
@@ -223,8 +218,6 @@ def single_rides(_inData, params):
     df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times']]
     df['indexes_orig'] = df.indexes  # copy order of origins for single rides
     df['indexes_dest'] = df.indexes  # and dest
-    # df['true_u_pax'] = df['u_pax']
-    # df['true_u_paxes'] = df['u_paxes']
     df = df[RIDE_COLS]
 
     _inData.sblts.SINGLES = df.copy()  # single trips
@@ -361,7 +354,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     _inData.logger.info('Initializing pairwise trip shareability between {0} and {0} trips.'.format(params.nP))
     r = pd.DataFrame(index=pd.MultiIndex.from_product([req.index, req.index]))  # new df with a pairwise index
     _inData.logger.info('creating combinations')
-    cols = ['origin', 'destination', 'ttrav', 'treq', 'delta', 'dist', 'VoT']
+    cols = ['origin', 'destination', 'ttrav', 'treq', 'delta', 'dist', 'VoT', 'WtS', "delay_value"]
     r[[col + "_i" for col in cols]] = req.loc[r.index.get_level_values(0)][cols].set_index(r.index)  # assign columns
     r[[col + "_j" for col in cols]] = req.loc[r.index.get_level_values(1)][cols].set_index(r.index)  # time consuming
 
@@ -411,7 +404,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r = query_skim(r, 'origin_j', 'destination_i', 't_od')
 
     """ THE NEW PART """
-    r = extend_r_sampled_parameters(r, _inData)
+    # r = extend_r_sampled_parameters(r, _inData, params)
     """ THE END OF NEW PART """
 
     r = r[utility_i() > 0]  # and filter only for positive utility
@@ -459,10 +452,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['delta_ji'] = r.apply(lambda x: x.delta_j - params.delay_value * abs(x.delay_j) - (x.t_j - x.ttrav_j), axis=1)
         r['delta'] = r[['delta_ji', 'delta_ij']].min(axis=1)
         r['u_pax'] = r['u_i'] + r['u_j']
-        # r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
-        # r['true_u_i'] = r['u_i'] - r['noise_i']
-        # r['true_u_j'] = r['u_j'] - r['noise_j']
-        # check_me_FIFO() if check else None
 
     _inData.sblts.FIFO2 = r.copy()
     del r
@@ -492,8 +481,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['indexes_orig'] = r.indexes
         r['indexes_dest'] = r.apply(lambda x: [int(x.j), int(x.i)], axis=1)
 
-        # r['u_i'] = utility_sh_i_LIFO() + r['noise_i']
-        # r['u_j'] = utility_sh_j_LIFO() + r['noise_j']
         r['u_i'] = utility_sh_i_LIFO()
         r['u_j'] = utility_sh_j_LIFO()
 
@@ -504,10 +491,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['delta_ji'] = r.apply(lambda x: x.delta_j - params.delay_value * abs(x.delay_j), axis=1)
         r['delta'] = r[['delta_ji', 'delta_ij']].min(axis=1)
         r['u_pax'] = r['u_i'] + r['u_j']
-        # r['true_u_pax'] = r['u_i'] + r['u_j'] - r['noise_i'] - r['noise_j']
-        # r['true_u_i'] = r['u_i'] - r['noise_i']
-        # r['true_u_j'] = r['u_j'] - r['noise_j']
-        # check_me_LIFO() if check else None
 
     _inData.sblts.LIFO2 = r.copy()
     _inData.sblts.pairs = pd.concat([_inData.sblts.FIFO2, _inData.sblts.LIFO2],
@@ -601,7 +584,8 @@ def extend_degree(_inData, params, degree):
     dist_dict = _inData.sblts.requests.dist.to_dict()  # distances
     ttrav_dict = _inData.sblts.requests.ttrav.to_dict()  # travel times
     treq_dict = _inData.sblts.requests.treq.to_dict()  # requests times
-    VoT_dict = _inData.sblts.requests.VoT.to_dict()  # valuoes of time
+    VoT_dict = _inData.sblts.requests.VoT.to_dict()   # values of time
+    WtS_dict = _inData.sblts.requests.WtS.to_dict()
     noise_dict = {i: _inData.prob.noise[i] for i in range(len(_inData.prob.noise))}  # noise for utility
 
     nPotential = 0
@@ -609,14 +593,12 @@ def extend_degree(_inData, params, degree):
 
     for _, r in R[degree].iterrows():  # iterate through all rides to extend
         newtrips, nSearched = extend(r, _inData.sblts.S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict
-                                     , noise_dict)
+                                     , WtS_dict)
         retR.extend(newtrips)
         nPotential += nSearched
 
-    # df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
-    #                                  'u_paxes', 'times', 'indexes_dest', 'true_u_pax', 'true_u_paxes'])  # data synthax for rides
     df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
-                                     'u_paxes', 'times', 'indexes_dest'])
+                                     'u_paxes', 'times', 'indexes_dest']) # data synthax for rides
 
     df = df[RIDE_COLS]
     df = df.reset_index()
@@ -633,7 +615,7 @@ def extend_degree(_inData, params, degree):
 
 
 # ALGORITHM 2 a
-def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, noise_dict):
+def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, WtS_dict):
     """
     extends a single ride of a given degree with all feasible rides of degree+1
     calls trip_sharing_utility to test if ride is attractive
@@ -730,17 +712,18 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             dists = [dist_dict[_] for _ in re.indexes]  # distances
             ttrav_ns = [ttrav_dict[_] for _ in re.indexes]  # non shared travel times
             VoT = [VoT_dict[_] for _ in re.indexes]  # VoT of sharing travellers
+            WtS = [WtS_dict[_] for _ in re.indexes]
             # shared travel times
             ttrav = [sum(new_times[i + 1:degree + 2 + re.indexes_dest.index(re.indexes[i])]) for i in
                      range(degree + 1)]
 
-            # probabilistic addon
-            noise = [noise_dict[_] for _ in re.indexes]
+            # # probabilistic addon
+            # noise = [noise_dict[_] for _ in re.indexes]
 
             # first assume null delays
             feasible_flag = True
             for i in range(degree + 1):
-                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i]) + noise[i] < 0:
+                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i], WtS[i]) < 0:
                     feasible_flag = False
                     break
             if feasible_flag:
@@ -765,16 +748,15 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
 
                 for i in range(degree + 1):
                     u_paxes.append(
-                        trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i]) + noise[i])
-                    # true_u_paxes.append(u_paxes[-1]-noise[i])
+                        trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i], WtS[i]))
+
                     if u_paxes[-1] < 0:
                         feasible_flag = False
                         break
                 if feasible_flag:
-                    re.u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i]) + noise[i] for i in
+                    re.u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i in
                                   range(degree + 1)]
-                    # re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i])
-                    #                    for i in range(degree + 1)]
+
                     re.pos = pos
                     re.times = new_times
                     re.u_pax = sum(re.u_paxes)
@@ -1069,17 +1051,17 @@ def evaluate_shareability(_inData, params, plot=False):
 # UTILS #
 #########
 
-def trip_sharing_utility(params, dist, dep_delay, ttrav, ttrav_ns, VoT):
+def trip_sharing_utility(params, dist, dep_delay, ttrav, ttrav_ns, VoT, WtS):
     # trip sharing utility for a trip, trips are shared only if this is positive.
     # difference
     return (params.price * dist / 1000 * params.shared_discount
-            + VoT * (ttrav_ns - params.WtS * (ttrav + params.delay_value * abs(dep_delay))))
+            + VoT * (ttrav_ns - WtS * (ttrav + params.delay_value * abs(dep_delay))))
 
 
-def shared_trip_utility(params, dist, dep_delay, ttrav, VoT):
+def shared_trip_utility(params, dist, dep_delay, ttrav, VoT, WtS):
     #  utility of a shared trip
     return (params.price * (1 - params.shared_discount) * dist / 1000 +
-            VoT * params.WtS * (ttrav + params.delay_value * abs(dep_delay)))
+            VoT * WtS * (ttrav + params.delay_value * abs(dep_delay)))
 
 
 def make_schedule(t, r):
@@ -1195,25 +1177,38 @@ def add_noise(inData, params, noise_prior):
     return inData
 
 
-def sample_random_parameters(inData: DotMap, params: DotMap):
+def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: FunctionType = lambda *args: None):
     """
     Function designed to
+    @param sampling_func:
     @param inData:
     @param params:
     @return:
     """
+    if params.get("distribution_variables", None) is None:
+        inData.prob.sampled_random_parameters = pd.DataFrame()
+        return inData
+
     type_of_distribution = params.get("type_of_distribution", None)
     number_of_requests = len(inData.requests)
+    zeros = [0]*len(params.distribution_variables)
 
     if type_of_distribution == "discrete":
-        assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details"
+        assert isinstance(params.discrete_distribution_details, dict), "Incorrect format of distribution details - " \
+                                                                       "should be dict"
         randomised_variables = dict()
 
         for key in params.distribution_details.keys():
             randomised_variables[key] = np.random.choice(params.distribution_details[key][0], number_of_requests,
                                                          params.distribution_details[key][1])
+
+    elif type_of_distribution is None and sampling_func(*zeros) is not None:
+        sample_from_interval = np.random.random([number_of_requests, len(zeros)])
+        randomised_variables = pd.DataFrame([sampling_func(t) for t in sample_from_interval],
+                                            columns=params.distribution_variables)
+
     else:
-        raise Exception("Currently not implemented (type_of_distribution error)")
+        raise Exception("currently not implemented/wrong arguments, check the code")
 
     inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
 
@@ -1272,7 +1267,7 @@ def solver_for_pulp():
         return "PULP_CBC_CMD"
 
 
-def extend_r_sampled_parameters(r, _inData):
+def extend_r_sampled_parameters(r, _inData, params):
     if "VoT" in _inData.prob.sampled_random_parameters.columns:
         new_temp_df = pd.merge(r['i'].copy(), _inData.prob.sampled_random_parameters['VoT'], left_on="i",
                                right_index=True)
