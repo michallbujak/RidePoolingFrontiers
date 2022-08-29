@@ -1,4 +1,5 @@
 {
 	"initial_parameters": "Miscellaneous_scripts/configs/initial_config.json",
-	"path_results": "data/"
+	"path_results": "data/",
+	"distribution_variables": ["VoT", "WtS"]
 }

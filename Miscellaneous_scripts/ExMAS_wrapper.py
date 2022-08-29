@@ -8,6 +8,8 @@ import Topology.utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.main_prob_coeffs import main as exmas_algo
 
+import scipy.stats as ss
+
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
@@ -30,9 +32,9 @@ if __name__ == "__main__":
                                                      config=config.initial_parameters)
 
     """ Run ExMAS """
-    def foo(a, b):
-        x = 0
-    params.sampling_function = 0
+    params = utils.update_probabilistic(config, params)
+    params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
+
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
                                                                           topo_params=config,
                                                                           replications=config.replications,

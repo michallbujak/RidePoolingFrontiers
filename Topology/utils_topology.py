@@ -11,7 +11,7 @@ import seaborn as sns
 import datetime
 import os
 import math
-from scipy.stats import norm
+import scipy.stats as ss
 from tqdm import tqdm
 from collections import Counter
 import pickle
@@ -946,9 +946,15 @@ def centrality_degree(graph, tuned=True, alpha=1):
 
 
 def inverse_normal(means, stds):
-    def internal_function(x):
-        return [norm.ppf(x, mean, std) for mean, std in zip(means, stds)]
+    def internal_function(*X):
+        return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, means, stds)]
     return internal_function
+
+
+def update_probabilistic(config, params):
+    for k in ["distribution_variables", "type_of_distribution", "distribution_details"]:
+        params[k] = config.get(k, None)
+    return params
 
 
 class StructuralProperties:

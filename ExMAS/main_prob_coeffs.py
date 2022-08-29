@@ -266,7 +266,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         # utility of shared trip j
         return (params.price * (1 - params.shared_discount) * r.dist_j / 1000 +
                 r.VoT_j * r.WtS_j * (r.t_od + r.t_dd + params.pax_delay +
-                                        r.delay_value_j * abs(r.delay_j)))
+                                     r.delay_value_j * abs(r.delay_j)))
 
     def utility_i():
         # difference u_sh_i - u_ns_i (has to be positive)
@@ -283,7 +283,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     def utility_i_LIFO():
         # utility of LIFO trip for i
         return params.price * r.dist_i / 1000 * params.shared_discount + r.VoT_i * (r.ttrav_i - r.WtS_i * (
-                        r.t_oo + r.t_od + 2 * params.pax_delay + r.t_dd + params.delay_value * abs(r.delay_i)))
+                r.t_oo + r.t_od + 2 * params.pax_delay + r.t_dd + params.delay_value * abs(r.delay_i)))
 
     def utility_j_LIFO():
         # utility of LIFO trip for j
@@ -584,7 +584,7 @@ def extend_degree(_inData, params, degree):
     dist_dict = _inData.sblts.requests.dist.to_dict()  # distances
     ttrav_dict = _inData.sblts.requests.ttrav.to_dict()  # travel times
     treq_dict = _inData.sblts.requests.treq.to_dict()  # requests times
-    VoT_dict = _inData.sblts.requests.VoT.to_dict()   # values of time
+    VoT_dict = _inData.sblts.requests.VoT.to_dict()  # values of time
     WtS_dict = _inData.sblts.requests.WtS.to_dict()
     noise_dict = {i: _inData.prob.noise[i] for i in range(len(_inData.prob.noise))}  # noise for utility
 
@@ -598,7 +598,7 @@ def extend_degree(_inData, params, degree):
         nPotential += nSearched
 
     df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
-                                     'u_paxes', 'times', 'indexes_dest']) # data synthax for rides
+                                     'u_paxes', 'times', 'indexes_dest'])  # data synthax for rides
 
     df = df[RIDE_COLS]
     df = df.reset_index()
@@ -931,7 +931,7 @@ def match(im, r, params, plot=False, make_assertion=True, logger=None):
         prob += pulp.lpSum([imr[i] * variables[i] for i in variables if imr[i] > 0]) == 1, 'c' + str(j)
 
     solver = pulp.get_solver(solver_for_pulp())
-    solver.msg = False
+    solver.msg = True
     prob.solve(solver)  # main optimization call
     # prob.solve()  # main optimization call
 
@@ -1189,74 +1189,41 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
         inData.prob.sampled_random_parameters = pd.DataFrame()
         return inData
 
+    if params.get("sampling_function", None) is not None:
+        sampling_func = params.sampling_function
+
     type_of_distribution = params.get("type_of_distribution", None)
     number_of_requests = len(inData.requests)
-    zeros = [0]*len(params.distribution_variables)
+    zeros = [0] * len(params.distribution_variables)
 
     if type_of_distribution == "discrete":
-        assert isinstance(params.discrete_distribution_details, dict), "Incorrect format of distribution details - " \
+        assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details - " \
                                                                        "should be dict"
         randomised_variables = dict()
 
         for key in params.distribution_details.keys():
             randomised_variables[key] = np.random.choice(params.distribution_details[key][0], number_of_requests,
                                                          params.distribution_details[key][1])
+        inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
 
     elif type_of_distribution is None and sampling_func(*zeros) is not None:
         sample_from_interval = np.random.random([number_of_requests, len(zeros)])
-        randomised_variables = pd.DataFrame([sampling_func(t) for t in sample_from_interval],
-                                            columns=params.distribution_variables)
+        inData.prob.sampled_random_parameters = pd.DataFrame([sampling_func(*sample_from_interval[j, :])
+                                                              for j in range(len(sample_from_interval))],
+                                                             columns=params.distribution_variables)
+    elif type_of_distribution == "normal":
+        assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details - " \
+                                                                       "should be dict"
+        randomised_variables = dict()
 
+        for key in params.distribution_details.keys():
+            randomised_variables[key] = np.random.normal(size=number_of_requests, loc=params.distribution_details[key][0],
+                                                         scale=params.distribution_details[key][1])
+        inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
     else:
         raise Exception("currently not implemented/wrong arguments, check the code")
 
-    inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
-
     return inData
-
-
-def noise_generator(step=0, noise=None, params=None, batch_length=0, type=None, constrains=None):
-    """
-    Function designed to create noise and update it stepwise if required.
-    @param step: 0 is a start, any number >0 means updating existing noise (stochastic process)
-    @param noise: existing noise to be updated (if step != 0)
-    @param type: currently only wiener process supported. None returns None objecty -
-    @param params:
-    @param batch_length:
-    @param constrains:
-    @return: noise
-    """
-    if type is not None:
-        type = type.lower()
-
-    normal_list = ['wiener', 'normal', 'brownian']
-    if type is None:
-        return [0]*batch_length
-    else:
-        assert type in normal_list, 'Incorrect type'
-        if step == 0:
-            if type in normal_list:
-                return np.random.normal(params.starting_probs.get('mu_prob', 0),
-                                        params.starting_probs.get('st_dev_prob', 0), batch_length)
-        else:
-            assert noise is not None, 'Not-zero step and no noise passed'
-            if type in normal_list:
-                if constrains is None:
-                    return noise + np.random.normal(params.stepwise_probs.get('mu_prob', 0),
-                                                    params.stepwise_probs.get('st_dev_prob', 0), batch_length)
-                else:
-                    temp = noise + np.random.normal(params.stepwise_probs.get('mu_prob', 0),
-                                                    params.stepwise_probs.get('st_dev_prob', 0), batch_length)
-
-                    def foo(x, constrains):
-                        if x < constrains[0]:
-                            return constrains[0]
-                        elif x > constrains[1]:
-                            return constrains[1]
-                        else:
-                            return x
-
-                    return temp.apply(foo, args=(constrains,))
 
 
 def solver_for_pulp():
