@@ -8,9 +8,6 @@ import Topology.utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.main_prob_coeffs import main as exmas_algo
 
-import scipy.stats as ss
-
-
 if __name__ == "__main__":
     """ Load all the topological parameters """
     config = utils.get_parameters('configs/test_config.json')
@@ -36,9 +33,9 @@ if __name__ == "__main__":
     params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
-                                                                          topo_params=config,
-                                                                          replications=config.replications,
-                                                                          logger_level='INFO')
+                                                                        topo_params=config,
+                                                                        replications=config.replications,
+                                                                        logger_level='INFO')
 
     final_results = zip([x.sblts.res for x in dotmaps_list_results], settings_list)
     utils.save_with_pickle(final_results, 'final_res', config)

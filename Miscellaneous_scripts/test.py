@@ -5,7 +5,7 @@ import scipy.stats as ss
 import Topology.utils_topology as utils
 from test2 import func
 
-pp = utils.inverse_normal([1, 0], [1, 1])
-print(pp(0.9, 0.9))
+with open("data/31-08-22/final_res_31-08-22.obj", "rb") as file:
+    x = list(pickle.load(file))
 
-
+z = 0
