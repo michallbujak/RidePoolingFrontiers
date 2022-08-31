@@ -931,7 +931,7 @@ def match(im, r, params, plot=False, make_assertion=True, logger=None):
         prob += pulp.lpSum([imr[i] * variables[i] for i in variables if imr[i] > 0]) == 1, 'c' + str(j)
 
     solver = pulp.get_solver(solver_for_pulp())
-    solver.msg = True
+    solver.msg = False
     prob.solve(solver)  # main optimization call
     # prob.solve()  # main optimization call
 

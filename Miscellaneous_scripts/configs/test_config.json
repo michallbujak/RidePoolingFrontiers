@@ -1,5 +1,5 @@
 {
-	"initial_parameters": "Miscellaneous_scripts/configs/initial_config.json",
+	"initial_parameters": "Topology/data/configs/initial_config.json",
 	"path_results": "data/",
-	"distribution_variables": ["VoT", "WtS"]
+	"distribution_variables": ["VoT","WtS"]
 }

@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
 import utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main_prob import main as exmas_algo
+from ExMAS.main_prob_coeffs import main as exmas_algo
 from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
@@ -39,24 +39,24 @@ if __name__ == "__main__":
     # ExMAS.utils.plot_demand(dotmaps_list[0], params)
 
     """ Run ExMAS """
-    dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
-                                                                          noise_generator='wiener',
-                                                                          stepwise=False,
-                                                                          topo_params=topological_config,
-                                                                          replications=topological_config.replications,
-                                                                          logger_level='INFO')
-    utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
+    params = utils.update_probabilistic(topological_config, params)
+    params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
+    # utils.display_text(params, is_dotmap=True)
 
-    """ Noise analysis """
-    utils.analyse_noise(dotmaps_list_results, topological_config)
+    dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
+                                                                        topo_params=topological_config,
+                                                                        replications=topological_config.replications,
+                                                                        logger_level='INFO')
+    # utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
+
     """ Edges storing & counting """
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
-    utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
+    # utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
 
     pool = mp.Pool(mp.cpu_count())
-    all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all', "noise")) for indata in dotmaps_list_results]
+    all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all')) for indata in dotmaps_list_results]
     pool.close()
-    utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
+    # utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
 
     utils.analysis_all_graphs(all_graphs_list, topological_config)
 

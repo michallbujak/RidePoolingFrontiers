@@ -657,7 +657,7 @@ def create_results_directory(config):
     return config
 
 
-def create_graph(indata, list_types_of_graph):
+def create_graph(indata, list_types_of_graph, noise_coefficients="coefficients"):
     if list_types_of_graph == 'all':
         list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
                                'pairs_matching', 'probability_pairs']
@@ -683,7 +683,12 @@ def create_graph(indata, list_types_of_graph):
             edges = list()
             for i, row in _rides.iterrows():
                 for j, pax in enumerate(row.indexes):
-                    edges.append((i, pax, {'u': row.u_paxes[j], 'true_u': row.true_u_paxes[j]}))
+                    if noise_coefficients == "noise":
+                        edges.append((i, pax, {'u': row.u_paxes[j], 'true_u': row.true_u_paxes[j]}))
+                    elif noise_coefficients == "coefficients":
+                        edges.append((i, pax, {'u': row.u_paxes[j]}))
+                    else:
+                        raise Exception("Incorrect type of noise_coefficient parameter")
 
             bipartite_graph.add_edges_from(edges)
             graph_list[type_of_graph] = bipartite_graph.copy()
@@ -701,14 +706,26 @@ def create_graph(indata, list_types_of_graph):
                     for j, pax1 in enumerate(row.indexes):
                         for k, pax2 in enumerate(row.indexes):
                             if pax1 != pax2:
-                                edges.append((pax1, pax2, {'u': row.u_pax, 'true_u': row.true_u_pax,
-                                                           'u_paxes': row.true_u_paxes,
-                                                           'true_u_paxes': row.true_u_paxes}))
+                                if noise_coefficients == "noise":
+                                    edges.append((pax1, pax2, {'u': row.u_pax, 'true_u': row.true_u_pax,
+                                                               'u_paxes': row.u_paxes,
+                                                               'true_u_paxes': row.true_u_paxes}))
+                                elif noise_coefficients == "coefficients":
+                                    edges.append((pax1, pax2, {'u': row.u_pax, 'u_paxes': row.u_paxes}))
+                                else:
+                                    raise Exception("Incorrect type of noise_coefficient parameter")
 
             pairs_graph.add_edges_from(edges)
             graph_list[type_of_graph] = pairs_graph.copy()
 
         if type_of_graph == 'probability_pairs':
+            if noise_coefficients == "noise":
+                utility_name = "true_u_paxes"
+            elif noise_coefficients == "coefficients":
+                utility_name = "u_paxes"
+            else:
+                raise Exception("Incorrect type of noise_coefficient parameter")
+
             prob_graph = nx.Graph()
             prob_graph.add_nodes_from(requests.index)
             edges = list()
@@ -718,7 +735,7 @@ def create_graph(indata, list_types_of_graph):
                     for j, pax1 in enumerate(row.indexes):
                         for k, pax2 in enumerate(row.indexes):
                             if pax1 != pax2:
-                                prob = norm.cdf(row.true_u_paxes[0]) * norm.cdf(row.true_u_paxes[1])
+                                prob = ss.norm.cdf(row[utility_name][0]) * ss.norm.cdf(row[utility_name][1])
                                 edges.append((pax1, pax2, {'weight': prob}))
             prob_graph.add_edges_from(edges)
             graph_list[type_of_graph] = prob_graph
@@ -974,7 +991,7 @@ def display_text(text, is_dotmap=False, is_dict=False, height=30, width=100):
     txt = tk.Text(window, width=width, height=height)
     txt.pack()
     txt.insert("1.0", text)
-    button = tk.Button(window, text="Exit viewer", command=window.quit)
+    button = tk.Button(window, text="Exit viewer", command=window.destroy)
     button.pack()
     button2 = tk.Button(window, text="Stop the code", command=quit)
     button2.pack()
