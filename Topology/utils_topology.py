@@ -15,6 +15,7 @@ import scipy.stats as ss
 from tqdm import tqdm
 from collections import Counter
 import pickle
+import tkinter as tk
 
 
 def get_parameters(path, time_correction=False):
@@ -955,6 +956,29 @@ def update_probabilistic(config, params):
     for k in ["distribution_variables", "type_of_distribution", "distribution_details"]:
         params[k] = config.get(k, None)
     return params
+
+
+def display_text(text, is_dotmap=False, is_dict=False, height=30, width=100):
+    if is_dotmap:
+        text = text.toDict()
+        is_dict = True
+
+    if is_dict:
+        for key, val in text.items():
+            text[key] = str(val)
+        text = json.dumps(text, indent=2)
+
+    window = tk.Tk()
+    lbl = tk.Label(window, text="Input")
+    lbl.pack()
+    txt = tk.Text(window, width=width, height=height)
+    txt.pack()
+    txt.insert("1.0", text)
+    button = tk.Button(window, text="Exit viewer", command=window.quit)
+    button.pack()
+    button2 = tk.Button(window, text="Stop the code", command=quit)
+    button2.pack()
+    window.mainloop()
 
 
 class StructuralProperties:

@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -30,7 +31,8 @@ if __name__ == "__main__":
 
     """ Run ExMAS """
     params = utils.update_probabilistic(config, params)
-    params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
+    # params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
+    utils.display_text(params, is_dotmap=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
                                                                         topo_params=config,
