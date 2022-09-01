@@ -18,14 +18,14 @@ from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('data/configs/topology_settings.json')
+    topological_config = utils.get_parameters('data/configs/topology_settings2.json')
 
     """ Set up varying parameters (optional) """
     # topological_config.variable = 'shared_discount'
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 2
+    topological_config.replications = 3
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
-    params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
+    # params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.001, 0.2])
     # utils.display_text(params, is_dotmap=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
