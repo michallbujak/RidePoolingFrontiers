@@ -38,5 +38,11 @@
 	},
 	"initial_parameters": "Topology/data/configs/nyc_prob_coeffs.json",
 	"path_results": "data/results/",
-	"netwulf_config": "data/configs/netwulf_config.json"
+	"netwulf_config": "data/configs/netwulf_config.json",
+	"distribution_variables": ["VoT", "WtS"],
+	"type_of_distribution": "discrete",
+	"distribution_details": {
+		"VoT": [[0.0035, 0.003, 0.004], [0.6, 0.2, 0.2]],
+		"WtS": [[1.3, 1.2, 1.4], [0.6, 0.2, 0.2]]		
+	}
 }
