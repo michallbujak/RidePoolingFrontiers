@@ -928,41 +928,6 @@ def read_pickle(file_path: str):
         raise Exception("Cannot read the file. Make sure the path is correct.")
 
 
-def centrality_degree(graph, tuned=True, alpha=1):
-    """
-    Refined function given in a networkx package allowing to calculate centrality degree on weighted networks
-    @param graph: networkx graph
-    @param tuned: choose whether to use refined version proposed in
-    "Node centrality in weighted networks: Generalizing degree and shortest paths" by Tore Opsahla, Filip Agneessensb,
-    John Skvoretzc or more straightforward approach (tuned=True => article version)
-    @param alpha: parameter used in refined version of the tuned model
-    @return: dictionary with centrality degree per node
-    """
-    if len(graph) <= 1:
-        return {n: 1 for n in graph}
-    if not nx.is_weighted(graph):
-        return nx.degree_centrality(graph)
-
-    elif nx.is_weighted(graph) and not tuned:
-        max_degree_corr = 1 / (max([i[1] for i in graph.degree(weight='weight')]) * (len(graph) - 1))
-        return {n: max_degree_corr * d for n, d in graph.degree(weight='weight')}
-
-    elif nx.is_weighted(graph) and tuned:
-        degrees_strength = zip(graph.degree(), graph.degree(weight='weight'))
-        degrees_strength = [(x[0][0], x[0][1], x[1][1]) for x in degrees_strength]
-
-        def foo(s, k, alpha):
-            if k == 0:
-                return 0
-            else:
-                return k * np.power(s / k, alpha)
-
-        return {n: foo(s, k, alpha) for (n, k, s) in degrees_strength}
-
-    else:
-        raise Exception("Invalid arguments")
-
-
 def inverse_normal(means, stds):
     def internal_function(*X):
         return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, means, stds)]
@@ -997,25 +962,3 @@ def display_text(text, is_dotmap=False, is_dict=False, height=30, width=100):
     button2.pack()
     window.mainloop()
 
-
-class StructuralProperties:
-    """
-    Aggregated functions designed to calculate structural properties of the networks
-    """
-    def __init__(self, graph, tuned_degree_centrality=True, alpha_degree_centrality=1):
-        self.G = graph
-        self.tuned_degree_centrality = tuned_degree_centrality
-        self.alpha_degree_centrality = alpha_degree_centrality
-        self.centrality_degree = None
-        self.eigenvector_centrality = None
-
-    def __repr__(self):
-        return "StructuralProperties of the graph (tuned centrality = %r, alpha = %r)" % (self.tuned_degree_centrality,
-                                                                                          self.alpha_degree_centrality)
-
-    def centrality_measures(self, tuned_degree_centrality=True, alpha_degree_centrality=1):
-        self.centrality_degree = centrality_degree(self.G, self.tuned_degree_centrality, self.alpha_degree_centrality)
-        if nx.is_weighted(self.G):
-            self.eigenvector_centrality = nx.eigenvector_centrality_numpy(self.G, weight='weight')
-        else:
-            self.eigenvector_centrality = nx.eigenvector_centrality_numpy(self.G)
