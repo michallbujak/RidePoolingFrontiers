@@ -16,7 +16,13 @@ from tqdm import tqdm
 from collections import Counter
 import pickle
 import tkinter as tk
-
+import matplotlib
+matplotlib.use('TkAgg')
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg,
+    NavigationToolbar2Tk
+)
 
 def get_parameters(path, time_correction=False):
     with open(path) as json_file:
@@ -938,6 +944,7 @@ def update_probabilistic(config, params):
     for k in ["distribution_variables", "type_of_distribution", "distribution_details"]:
         params[k] = config.get(k, None)
     return params
+
 
 
 def display_text(text, is_dotmap=False, is_dict=False, height=30, width=100):

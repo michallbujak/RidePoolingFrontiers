@@ -26,14 +26,15 @@ if __name__ == "__main__":
 
     """ Run parameters """
     topological_config.replications = 3
-    topological_config.no_batches = 1
+    topological_config.no_batches = 2
 
     """ Prepare folder """
     utils.create_results_directory(topological_config)
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) < 150,
+                                                     filter_function=lambda x: (len(x.requests) < 150) &
+                                                                               (len(x.requests) > 100),
                                                      config=topological_config.initial_parameters)
 
     # ExMAS.utils.plot_demand(dotmaps_list[0], params)

@@ -15,7 +15,6 @@ with open(os.path.dirname(os.path.abspath(os.getcwd())) +
     G = pickle.load(file)["pairs_shareability"]
 
 
-d = {n: statistics.fmean([nx.efficiency(G, n, t) for t in G.nodes if t != n]) for n in G.nodes}
-print(d)
+print(nx.katz_centrality_numpy(G))
 
 

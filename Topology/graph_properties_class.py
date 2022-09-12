@@ -95,6 +95,9 @@ class NetworkStructuralProperties:
         # Path based centrality measures
         self.closeness_centrality = None
         self.node_efficiency = None
+        self.katz_centrality = None
+        self.betweenness_centrality = None
+        self.current_flow_betweenness_centrality = None
 
     def __repr__(self):
         return "NetworkStructuralProperties (%r) of the graph with nodes = %r & edges = %r" % \
@@ -114,4 +117,14 @@ class NetworkStructuralProperties:
         self.closeness_centrality = nx.closeness_centrality(self.G)
         self.node_efficiency = {n: statistics.fmean([nx.efficiency(self.G, n, t)
                                                      for t in self.G.nodes if t != n]) for n in self.G.nodes}
+        self.katz_centrality = nx.katz_centrality_numpy(self.G)
+        if nx.is_weighted(self.G):
+            self.betweenness_centrality = nx.betweenness_centrality(self.G, weight='weight')
+        else:
+            self.betweenness_centrality = nx.betweenness_centrality(self.G)
+        if nx.is_weighted(self.G):
+            self.current_flow_betweenness_centrality = nx.current_flow_betweenness_centrality(self.G, weight='weight')
+        else:
+            self.current_flow_betweenness_centrality = nx.current_flow_betweenness_centrality(self.G)
+
 
