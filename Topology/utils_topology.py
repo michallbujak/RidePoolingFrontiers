@@ -1,4 +1,7 @@
+import bisect
 import json
+import random
+
 from dotmap import DotMap
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,13 +19,8 @@ from tqdm import tqdm
 from collections import Counter
 import pickle
 import tkinter as tk
-import matplotlib
-matplotlib.use('TkAgg')
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg,
-    NavigationToolbar2Tk
-)
+import bisect
+
 
 def get_parameters(path, time_correction=False):
     with open(path) as json_file:
@@ -945,6 +943,15 @@ def update_probabilistic(config, params):
         params[k] = config.get(k, None)
     return params
 
+
+def mixed_discrete_norm_distribution(probs, *args):
+    z = random.random()
+    index = bisect.bisect(probs, z)
+
+    def internal_function(*X):
+        return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, args[index][0], args[index][1])]
+
+    return internal_function
 
 
 def display_text(text, is_dotmap=False, is_dict=False, height=30, width=100):
