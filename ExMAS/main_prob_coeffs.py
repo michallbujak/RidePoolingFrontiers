@@ -167,8 +167,8 @@ def single_rides(_inData, params):
 
     def f_delta():
         # maximal possible delay of a trip (computed before join)
-        return (1 / params.WtS - 1) * req.ttrav + \
-               (params.price * params.shared_discount * req.dist / 1000) / (req.VoT * params.WtS)
+        return (1 / req.WtS - 1) * req.ttrav + \
+               (params.price * params.shared_discount * req.dist / 1000) / (req.VoT * req.WtS)
 
     # prepare data structures
     _inData.sblts = DotMap(_dynamic=False)
@@ -1206,7 +1206,7 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
                                                          params.distribution_details[key][1])
         inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
 
-    elif type_of_distribution is None and sampling_func(*zeros) is not None:
+    elif type_of_distribution == "manual" and sampling_func(*zeros) is not None:
         sample_from_interval = np.random.random([number_of_requests, len(zeros)])
         inData.prob.sampled_random_parameters = pd.DataFrame([sampling_func(*sample_from_interval[j, :])
                                                               for j in range(len(sample_from_interval))],

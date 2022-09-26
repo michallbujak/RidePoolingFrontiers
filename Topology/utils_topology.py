@@ -945,10 +945,9 @@ def update_probabilistic(config, params):
 
 
 def mixed_discrete_norm_distribution(probs, *args):
-    z = random.random()
-    index = bisect.bisect(probs, z)
-
     def internal_function(*X):
+        z = random.random()
+        index = bisect.bisect(probs, z)
         return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, args[index][0], args[index][1])]
 
     return internal_function

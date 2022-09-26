@@ -11,18 +11,18 @@ import datetime
 import matplotlib.image as mpimg
 import netwulf
 
-# with open('data/results/06-06-22/rep_graphs_06-06-22.obj', 'rb') as file:
-#     e = pickle.load(file)
+with open('data/results/26-09-22/rep_graphs_26-09-22.obj', 'rb') as file:
+    e = pickle.load(file)
 
 # with open('data/results/06-06-22/dotmap_list_06-06-22.obj', 'rb') as file:
 #     e = pickle.load(file)
 
-with open('data/results/06-06-22/all_graphs_list_06-06-22.obj', 'rb') as file:
-    e = pickle.load(file)[0]
+# with open('data/results/06-06-22/all_graphs_list_06-06-22.obj', 'rb') as file:
+#     e = pickle.load(file)[0]
 
-topological_config = utils.get_parameters('data/configs/topology_settings.json')
+topological_config = utils.get_parameters('data/configs/topology_settings2.json')
 # utils.create_results_directory(topological_config)
-topological_config.path_results = 'data/results/06-06-22/'
+# topological_config.path_results = 'data/results/06-06-22/'
 
 # """ Instead of netwulf """
 # G = e['pairs_matching']
@@ -50,9 +50,9 @@ topological_config.path_results = 'data/results/06-06-22/'
 # """ """
 
 
-# visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
-draw_bipartite_graph(e['bipartite_matching'], 1, topological_config, date='06-06-22', save=True,
-                     name="bipartite_matching_single", dpi=200, colour_specific_node=0)
+visualize(e['pairs_shareability'], config=json.load(open('data/configs/netwulf_config.json')))
+# draw_bipartite_graph(e['bipartite_matching'], 1, topological_config, date='06-06-22', save=True,
+#                      name="bipartite_matching_single", dpi=200, colour_specific_node=0)
 
 # num_list = [1, 5, 10, 100, 900]
 # for num in num_list:

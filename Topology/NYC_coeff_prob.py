@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 100
+    topological_config.replications = 3
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -41,11 +41,12 @@ if __name__ == "__main__":
 
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
+    s = 1/3600
     params.sampling_function = utils.mixed_discrete_norm_distribution((0.29, 0.57, 0.81, 1),
-                                                                      ((16.98, 1.22), (1.68, 0.122)),
-                                                                      ((14.02, 1.135), (1.402, 0.1135)),
-                                                                      ((26.25, 1.049), (2.625, 0.105)),
-                                                                      ((7.78, 1.18), (0.778, 0.118)))
+                                                                      ((16.98/3600, 1.22), (s*1.68, s*0.122)),
+                                                                      ((14.02/3600, 1.135), (s*1.402, s*0.1135)),
+                                                                      ((26.25/3600, 1.049), (s*2.625, s*0.105)),
+                                                                      ((7.78/3600, 1.18), (s*0.778, s*0.118)))
     # utils.display_text(params, is_dotmap=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
