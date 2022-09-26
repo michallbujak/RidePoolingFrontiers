@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 5
+    topological_config.replications = 100
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -56,12 +56,12 @@ if __name__ == "__main__":
 
     """ Edges storing & counting """
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
-    # utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
+    utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
 
     pool = mp.Pool(mp.cpu_count())
     all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all')) for indata in dotmaps_list_results]
     pool.close()
-    # utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
+    utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
 
     utils.analysis_all_graphs(all_graphs_list, topological_config)
 
