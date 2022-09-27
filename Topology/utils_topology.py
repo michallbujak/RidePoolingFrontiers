@@ -939,7 +939,7 @@ def inverse_normal(means, stds):
 
 
 def update_probabilistic(config, params):
-    for k in ["distribution_variables", "type_of_distribution", "distribution_details"]:
+    for k in ["distribution_variables", "type_of_distribution", "distribution_details", "panel_noise", "noise"]:
         params[k] = config.get(k, None)
     return params
 

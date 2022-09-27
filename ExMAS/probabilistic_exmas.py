@@ -407,6 +407,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
     if params.get("panel_noise", None) is not None:
         r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_i']), left_on='i', right_index=True)
+        r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_j']), left_on='j', right_index=True)
         r = r[r['true_utility_i'] + r['panel_noise_i'] > 0]
     else:
         r = r[r['true_utility_i'] > 0]
@@ -426,7 +427,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r['true_utility_j'] = list(utility_j())
 
     if params.get("panel_noise", None) is not None:
-        r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_j']), left_on='j', right_index=True)
         r = r[r['true_utility_j'] + r['panel_noise_j'] > 0]
     else:
         r = r[r['true_utility_j'] > 0]
@@ -452,8 +452,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['true_u_i'] = utility_sh_i()
         r['true_u_j'] = utility_sh_j()
 
-        r['u_i'] = r['true_u_i'] + r['noise_i']
-        r['u_j'] = r['true_u_j'] + r['noise_j']
+        r['u_i'] = r['true_u_i'] + r['panel_noise_i']
+        r['u_j'] = r['true_u_j'] + r['panel_noise_j']
 
         r['t_i'] = r.t_oo + r.t_od + params.pax_delay
         r['t_j'] = r.t_od + r.t_dd + params.pax_delay
@@ -474,7 +474,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r["true_utility_i"] = list(utility_i_LIFO())
 
     if params.get("panel_noise", None) is not None:
-        r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_i']), left_on='i', right_index=True)
         r = r[r['true_utility_i'] + r['panel_noise_i'] > 0]
     else:
         r = r[r['true_utility_i'] > 0]
@@ -482,7 +481,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r["true_utility_j"] = list(utility_j_LIFO())
 
     if params.get("panel_noise", None) is not None:
-        r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_j']), left_on='j', right_index=True)
         r = r[r['true_utility_j'] + r['panel_noise_j'] > 0]
     else:
         r = r[r['true_utility_j'] > 0]
@@ -742,7 +740,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             ttrav = [sum(new_times[i + 1:degree + 2 + re.indexes_dest.index(re.indexes[i])]) for i in
                      range(degree + 1)]
 
-            # # probabilistic addon
+            # panell noise addon
             panel_noise = [panel_noise_dict[_] for _ in re.indexes]
 
             # first assume null delays
@@ -775,7 +773,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                 for i in range(degree + 1):
                     true_u_paxes.append(
                         trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i], WtS[i]))
-                    u_paxes.append(u_paxes[-1] + panel_noise[i])
+                    u_paxes.append(true_u_paxes[-1] + panel_noise[i])
 
                     if u_paxes[-1] < 0:
                         feasible_flag = False
@@ -1191,6 +1189,7 @@ def assert_extension(_inData, params, degree=3, nchecks=4, t=None):
 
 def add_noise(inData, params):
     if params.get("panel_noise", None) is not None:
+        assert isinstance(params.panel_noise, dict), "Wrong type of panel_noise passed in json"
         seed = params.get('seed', None)
         if seed is not None:
             try:

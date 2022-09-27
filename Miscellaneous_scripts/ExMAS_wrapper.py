@@ -1,4 +1,4 @@
-import json
+import pickle
 import os
 import sys
 
@@ -10,30 +10,34 @@ import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.probabilistic_exmas import main as exmas_algo
 
 if __name__ == "__main__":
-    """ Load all the topological parameters """
+    # """ Load all the topological parameters """
     config = utils.get_parameters(
         r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
-
-    """ Set up varying parameters (optional) """
-    # config.variable = 'shared_discount'
-    # config.values = [0.22, 0.24]
-
-    """ Run parameters """
+    #
+    # """ Set up varying parameters (optional) """
+    # # config.variable = 'shared_discount'
+    # # config.values = [0.22, 0.24]
+    #
+    # """ Run parameters """
     config.replications = 1
     config.no_batches = 1
-
-    """ Prepare folder """
+    #
+    # """ Prepare folder """
     utils.create_results_directory(config)
-
-    """ Prepare data """
-    dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) > 0,
-                                                     config=config.initial_parameters)
+    #
+    # """ Prepare data """
+    # dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
+    #                                                  filter_function=lambda x: len(x.requests) > 0,
+    #                                                  config=config.initial_parameters)
+    with open("data/exemplary_demand.obj", "rb") as file:
+        dotmaps_list = pickle.load(file)
+    with open("data/params_in_process.obj", "rb") as file:
+        params = pickle.load(file)
 
     """ Run ExMAS """
-    # params = utils.update_probabilistic(config, params)
+    params = utils.update_probabilistic(config, params)
     # params.sampling_function = utils.inverse_normal([0.0035, 1.3], [0.0005, 0.1])
-    utils.display_text(params, is_dotmap=True)
+    # utils.display_text(params, is_dotmap=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
                                                                         topo_params=config,
