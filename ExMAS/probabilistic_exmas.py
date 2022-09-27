@@ -110,10 +110,10 @@ def main(_inData, params, plot=False):
     _inData.logger = init_log(params)  # initialize console logger
 
     _inData = sample_random_parameters(_inData, params)
+    _inData = add_noise(_inData, params)
 
     _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
     degree = 1
-    _inData = add_noise(_inData, params)
 
     _inData = pairs(_inData, params, plot=plot)
     degree = 2

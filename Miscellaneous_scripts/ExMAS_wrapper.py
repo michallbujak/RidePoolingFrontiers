@@ -7,11 +7,12 @@ sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
 import Topology.utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main import main as exmas_algo
+from ExMAS.probabilistic_exmas import main as exmas_algo
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    config = utils.get_parameters('configs/test_config.json')
+    config = utils.get_parameters(
+        r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
 
     """ Set up varying parameters (optional) """
     # config.variable = 'shared_discount'
@@ -39,5 +40,6 @@ if __name__ == "__main__":
                                                                         replications=config.replications,
                                                                         logger_level='INFO')
 
-    final_results = zip([x.sblts.res for x in dotmaps_list_results], settings_list)
-    utils.save_with_pickle(final_results, 'final_res', config)
+    # final_results = zip([x.sblts.res for x in dotmaps_list_results], settings_list)
+    # utils.save_with_pickle(final_results, 'final_res', config)
+    x = 0
