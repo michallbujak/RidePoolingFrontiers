@@ -405,12 +405,27 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
     r['true_utility_i'] = list(utility_i())
 
+    sampled_noise = dict()
+
     if params.get("panel_noise", None) is not None:
+        assert isinstance(params.panel_noise, dict), "Incorrect type of panel_noise in json (should be dict)"
         r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_i']), left_on='i', right_index=True)
         r = r.merge(pd.DataFrame(_inData.prob.panel_noise, columns=['panel_noise_j']), left_on='j', right_index=True)
-        r = r[r['true_utility_i'] + r['panel_noise_i'] > 0]
+        if params.get("noise", None) is not None:
+            assert isinstance(params.noise, dict), "Incorrect type of noise in json (should be dict)"
+            sampled_noise["i_utility_1"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_i'] + r['panel_noise_i'] + sampled_noise["i_utility_1"] > 0]
+        else:
+            r = r[r['true_utility_i'] + r['panel_noise_i'] > 0]
     else:
-        r = r[r['true_utility_i'] > 0]
+        if params.get("noise", None) is not None:
+            assert isinstance(params.noise, dict), "Incorrect type of noise in json (should be dict)"
+            sampled_noise["i_utility_1"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_i'] + sampled_noise["i_utility_1"] > 0]
+        else:
+            r = r[r['true_utility_i'] > 0]
 
     if plot:
         sp_plot(_r, r, 2, 'utility for i')
@@ -427,9 +442,19 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r['true_utility_j'] = list(utility_j())
 
     if params.get("panel_noise", None) is not None:
-        r = r[r['true_utility_j'] + r['panel_noise_j'] > 0]
+        if params.get("noise", None) is not None:
+            sampled_noise["j_utility_1"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_j'] + r['panel_noise_j'] + sampled_noise["j_utility_1"] > 0]
+        else:
+            r = r[r['true_utility_j'] + r['panel_noise_j'] > 0]
     else:
-        r = r[r['true_utility_j'] > 0]
+        if params.get("noise", None) is not None:
+            sampled_noise["j_utility_1"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_j'] + sampled_noise["j_utility_1"] > 0]
+        else:
+            r = r[r['true_utility_j'] > 0]
 
     if plot:
         sp_plot(_r, r, 3, 'utility for j')
@@ -452,8 +477,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['true_u_i'] = utility_sh_i()
         r['true_u_j'] = utility_sh_j()
 
-        r['u_i'] = r['true_u_i'] + r['panel_noise_i']
-        r['u_j'] = r['true_u_j'] + r['panel_noise_j']
+        r['u_i'] = r['true_u_i'] + r['panel_noise_i'] + sampled_noise["i_utility_1"]
+        r['u_j'] = r['true_u_j'] + r['panel_noise_j'] + sampled_noise["j_utility_1"]
 
         r['t_i'] = r.t_oo + r.t_od + params.pax_delay
         r['t_j'] = r.t_od + r.t_dd + params.pax_delay
@@ -474,16 +499,36 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r["true_utility_i"] = list(utility_i_LIFO())
 
     if params.get("panel_noise", None) is not None:
-        r = r[r['true_utility_i'] + r['panel_noise_i'] > 0]
+        if params.get("noise", None) is not None:
+            sampled_noise["i_utility_2"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_i'] + r['panel_noise_i'] + sampled_noise["i_utility_2"] > 0]
+        else:
+            r = r[r['true_utility_i'] + r['panel_noise_i'] > 0]
     else:
-        r = r[r['true_utility_i'] > 0]
+        if params.get("noise", None) is not None:
+            sampled_noise["i_utility_2"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_i'] + sampled_noise["i_utility_2"] > 0]
+        else:
+            r = r[r['true_utility_i'] > 0]
 
     r["true_utility_j"] = list(utility_j_LIFO())
 
     if params.get("panel_noise", None) is not None:
-        r = r[r['true_utility_j'] + r['panel_noise_j'] > 0]
+        if params.get("noise", None) is not None:
+            sampled_noise["j_utility_2"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_j'] + r['panel_noise_j'] + sampled_noise["j_utility_2"] > 0]
+        else:
+            r = r[r['true_utility_j'] + r['panel_noise_j'] > 0]
     else:
-        r = r[r['true_utility_j'] > 0]
+        if params.get("noise", None) is not None:
+            sampled_noise["j_utility_2"] = \
+                np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
+            r = r[r['true_utility_j'] + sampled_noise["j_utility_2"] > 0]
+        else:
+            r = r[r['true_utility_j'] > 0]
 
     r = r.set_index(['i', 'j'], drop=False)
     r['ttrav'] = r.t_oo + r.t_od + r.t_dd + 2 * params.pax_delay
