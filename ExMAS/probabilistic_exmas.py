@@ -112,6 +112,8 @@ def main(_inData, params, plot=False):
     _inData = sample_random_parameters(_inData, params)
     _inData = add_noise(_inData, params)
 
+    check_if_correct_attributes(params)
+
     _inData = single_rides(_inData, params)  # prepare requests as a potential single rides
     degree = 1
 
@@ -198,7 +200,11 @@ def single_rides(_inData, params):
     """ END OF NEW"""
 
     req['delta'] = f_delta()  # assign maximal delay in seconds
-    req['u'] = params.price * req.dist / 1000 + req.VoT * req.ttrav
+    req['true_u'] = params.price * req.dist / 1000 + req.VoT * req.ttrav
+    if params.get("noise", None) is not None:
+        assert isinstance(params.noise, dict), "Incorrect type of params.noise in json (expected dict)"
+        req['u'] = req["true_u"] + np.random.normal(size=len(req), loc=params.noise.get("mean", 0),
+                                                    scale=params.noise.get("st_dev", 0))
     req = req.sort_values(['treq', 'pax_id'])  # sort
     req = req.reset_index()
 
@@ -1373,18 +1379,30 @@ def calculate_r_utility(r, ij, params, sampled_noise, one_or_two):
     return r
 
 
-if __name__ == "__main__":
-    import ExMAS.utils
+def check_if_correct_attributes(params):
+    if "distribution_variables" in params.keys():
+        assert isinstance(params.distribution_variables, list), "distribution_variables should be a list"
+        for j in params.distribution_variables:
+            assert isinstance(j, str), "Elements of list params.distribution_variables should be str"
+    if "type_of_distribution" in params.keys():
+        params.type_of_distribution = params.type_of_distribution.lower()
+        assert params.type_of_distribution in ["discrete", "manual", "normal"], \
+            "Incorrect type_of_distribution. Admissible: 'discrete', 'manual', 'normal'"
+        if params.type_of_distribution == "discrete":
+            assert "distribution_details" in params.keys(), \
+                "distribution_details must be provided for discrete distribution. Example:" \
+                '"distribution_details": {"VoT": [[0.0035, 0.003, 0.004], [0.6, 0.2, 0.2]]}'
+            assert isinstance(params.distribution_details, dict), \
+                'Incorrect type of distribution_details. Correct form: ' \
+                'distribution_details": {"VoT": [[0.0035, 0.003, 0.004], [0.6, 0.2, 0.2]]}'
+        if params.type_of_distribution == "normal":
+            assert "distribution_details" in params.keys(), \
+                "distribution_details must be provided for normal distribution (mean, st_dev)"
+            assert {"mean", "st_dev"}.issubset(set(params.distribution_details.keys())), \
+                "distribution_details: {mean: x, st_dev: y} is the ony admissible form."
+    if "noise" in params.keys():
+        assert {"mean", "st_dev"}.issubset(set(params.noise.keys())), "Incorrect noise (should be dict: mean, st_dev)"
+    if "panel_noise" in params.keys():
+        assert {"mean", "st_dev"}.issubset(set(params.panel_noise.keys()))
 
-    params = ExMAS.utils.get_config('ExMAS/data/configs/default.json')
-    params = ExMAS.utils.make_paths(params)
 
-    params.t0 = pd.Timestamp.now()
-
-    from ExMAS.utils import inData as inData
-
-    inData = ExMAS.utils.load_G(inData, params, stats=True)  # download the CITY graph
-
-    inData = ExMAS.utils.generate_demand(inData, params)
-
-    main(inData, params)
