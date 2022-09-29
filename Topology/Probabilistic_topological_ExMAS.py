@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 3
+    topological_config.replications = 10
     topological_config.no_batches = 1
 
     """ Prepare folder """
