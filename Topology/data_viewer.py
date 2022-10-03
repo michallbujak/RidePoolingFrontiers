@@ -11,16 +11,16 @@ import datetime
 import matplotlib.image as mpimg
 import netwulf
 
-with open('data/results/26-09-22/rep_graphs_26-09-22.obj', 'rb') as file:
-    e = pickle.load(file)
-
-# with open('data/results/06-06-22/dotmap_list_06-06-22.obj', 'rb') as file:
+# with open('data/results/30-09-22/rep_graphs_30-09-22.obj', 'rb') as file:
 #     e = pickle.load(file)
 
-# with open('data/results/06-06-22/all_graphs_list_06-06-22.obj', 'rb') as file:
+with open('data/results/30-09-22/dotmap_list_30-09-22.obj', 'rb') as file:
+    e = pickle.load(file)
+
+# with open('data/results/30-09-22/all_graphs_list_30-09-22.obj', 'rb') as file:
 #     e = pickle.load(file)[0]
 
-topological_config = utils.get_parameters('data/configs/topology_settings2.json')
+topological_config = utils.get_parameters('data/configs/topology_settings3.json')
 # utils.create_results_directory(topological_config)
 # topological_config.path_results = 'data/results/06-06-22/'
 
@@ -50,7 +50,7 @@ topological_config = utils.get_parameters('data/configs/topology_settings2.json'
 # """ """
 
 
-visualize(e['pairs_shareability'], config=json.load(open('data/configs/netwulf_config.json')))
+# visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
 # draw_bipartite_graph(e['bipartite_matching'], 1, topological_config, date='06-06-22', save=True,
 #                      name="bipartite_matching_single", dpi=200, colour_specific_node=0)
 
@@ -111,3 +111,6 @@ visualize(e['pairs_shareability'], config=json.load(open('data/configs/netwulf_c
 # df.reset_index(inplace=True)
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
+
+plt.hist([(x.sblts.res.VehHourTrav_ns - x.sblts.res.VehHourTrav) / x.sblts.res.VehHourTrav_ns for x in e])
+plt.show()

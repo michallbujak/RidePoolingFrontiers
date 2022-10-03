@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 10
+    topological_config.replications = 1000
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -53,7 +53,7 @@ if __name__ == "__main__":
                                                                         topo_params=topological_config,
                                                                         replications=topological_config.replications,
                                                                         logger_level='INFO')
-    # utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
+    utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
 
     """ Edges storing & counting """
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
