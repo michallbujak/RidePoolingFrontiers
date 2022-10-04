@@ -644,9 +644,12 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
         return graph_list
 
 
-def create_results_directory(config):
-    today = str(datetime.date.today().strftime("%d-%m-%y"))
-    config.path_results += today
+def create_results_directory(config, date=None):
+    if date is None:
+        the_day = str(datetime.date.today().strftime("%d-%m-%y"))
+    else:
+        the_day = date
+    config.path_results += the_day
     try:
         os.mkdir(config.path_results)
     except OSError as error:

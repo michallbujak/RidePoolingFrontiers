@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import datetime
 import matplotlib.image as mpimg
 import netwulf
+import seaborn as sns
 
 date = "30-09-22"
 
@@ -23,7 +24,7 @@ with open('data/results/' + date + '/dotmap_list_' + date + '.obj', 'rb') as fil
 #     e = pickle.load(file)[0]
 
 topological_config = utils.get_parameters('data/configs/topology_settings3.json')
-utils.create_results_directory(topological_config)
+# utils.create_results_directory(topological_config, date=date)
 topological_config.path_results = 'data/results/' + date + '/'
 
 # G = e['pairs_shareability']
@@ -52,9 +53,10 @@ topological_config.path_results = 'data/results/' + date + '/'
 # plt.show()
 
 
-# visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
-# draw_bipartite_graph(e['bipartite_shareability'], 1, topological_config, date=date, save=True,
-#                      name="single_bi_shareability", dpi=100, colour_specific_node=0)
+# visualize(e['pairs_shareability'], config=json.load(open('data/configs/netwulf_config.json')))
+# draw_bipartite_graph(e['bipartite_shareability'], 1000, topological_config, date=date, save=True,
+#                      name="full_bi_shareability", dpi=200, colour_specific_node=None,
+#                      default_edge_size=0.1)
 
 # num_list = [1, 5, 10, 100, 900]
 # for num in num_list:
@@ -66,7 +68,7 @@ topological_config.path_results = 'data/results/' + date + '/'
 #                                                   list_types_of_graph=['bipartite_matching'], logger_level='WARNING')[
 #                              'bipartite_matching'],
 #                          num, node_size=1, dpi=80, figsize=(10, 24), plot=False, width_power=1,
-#                          config=topological_config, save=True, saving_number=num, date='06-06-22')
+#                          config=topological_config, save=True, saving_number=num, date=date)
 
 # fig, axes = plt.subplots(nrows=2, ncols=5, sharex='col', sharey='row')
 #
@@ -114,5 +116,14 @@ topological_config.path_results = 'data/results/' + date + '/'
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
 
-# plt.hist([(x.sblts.res.VehHourTrav_ns - x.sblts.res.VehHourTrav) / x.sblts.res.VehHourTrav_ns for x in e])
-# plt.show()
+ax = sns.histplot([(x.sblts.res.PassUtility_ns - x.sblts.res.PassUtility) / x.sblts.res.PassUtility_ns for x in e])
+ax.set(xlabel="Utility gain", ylabel=None)
+plt.savefig(topological_config.path_results + "figs/relative_pass_utility.png")
+
+ax = sns.histplot([(x.sblts.res.PassHourTrav - x.sblts.res.PassHourTrav_ns) / x.sblts.res.PassHourTrav_ns for x in e])
+ax.set(xlabel="Travel time extension", ylabel=None)
+plt.savefig(topological_config.path_results + "figs/relative_pass_hours.png")
+
+ax = sns.histplot([(x.sblts.res.VehHourTrav_ns - x.sblts.res.VehHourTrav) / x.sblts.res.VehHourTrav_ns for x in e])
+ax.set(xlabel='Vehicle time shortening', ylabel=None)
+plt.savefig(topological_config.path_results + "figs/relative_veh_hours.png")
