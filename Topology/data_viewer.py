@@ -11,22 +11,23 @@ import datetime
 import matplotlib.image as mpimg
 import netwulf
 
-# with open('data/results/30-09-22/rep_graphs_30-09-22.obj', 'rb') as file:
+date = "30-09-22"
+
+# with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)
 
-with open('data/results/30-09-22/dotmap_list_30-09-22.obj', 'rb') as file:
+with open('data/results/' + date + '/dotmap_list_' + date + '.obj', 'rb') as file:
     e = pickle.load(file)
 
-# with open('data/results/30-09-22/all_graphs_list_30-09-22.obj', 'rb') as file:
+# with open('data/results/' + date + '/all_graphs_list_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)[0]
 
 topological_config = utils.get_parameters('data/configs/topology_settings3.json')
-# utils.create_results_directory(topological_config)
-# topological_config.path_results = 'data/results/06-06-22/'
+utils.create_results_directory(topological_config)
+topological_config.path_results = 'data/results/' + date + '/'
 
-# """ Instead of netwulf """
-# G = e['pairs_matching']
-#
+# G = e['pairs_shareability']
+
 # colours = []
 # for item in G.nodes:
 #     if item == 0:
@@ -34,7 +35,7 @@ topological_config = utils.get_parameters('data/configs/topology_settings3.json'
 #     else:
 #         colours.append("black")
 # nx.set_node_attributes(G, dict(zip(list(G.nodes), colours)), "group")
-# visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
+# # visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 #
 # edge_colours = []
 # for item in G.edges:
@@ -44,15 +45,16 @@ topological_config = utils.get_parameters('data/configs/topology_settings3.json'
 #         edge_colours.append("black")
 # nx.set_edge_attributes(G, dict(zip(list(G.edges), colours)), "colour")
 #
-# nx.draw_networkx_nodes(G, pos=nx.spring_layout(G), node_size=5, node_color="black")
-# nx.draw_networkx_edges(G, pos=nx.spring_layout(G), width=5, edge_color="black")
+# visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
+
+# nx.draw_networkx_nodes(G, pos=nx.spring_layout(G), node_size=10, node_color="black")
+# nx.draw_networkx_edges(G, pos=nx.spring_layout(G), width=2, edge_color="black")
 # plt.show()
-# """ """
 
 
 # visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
-# draw_bipartite_graph(e['bipartite_matching'], 1, topological_config, date='06-06-22', save=True,
-#                      name="bipartite_matching_single", dpi=200, colour_specific_node=0)
+# draw_bipartite_graph(e['bipartite_shareability'], 1, topological_config, date=date, save=True,
+#                      name="single_bi_shareability", dpi=100, colour_specific_node=0)
 
 # num_list = [1, 5, 10, 100, 900]
 # for num in num_list:
@@ -112,5 +114,5 @@ topological_config = utils.get_parameters('data/configs/topology_settings3.json'
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
 
-plt.hist([(x.sblts.res.VehHourTrav_ns - x.sblts.res.VehHourTrav) / x.sblts.res.VehHourTrav_ns for x in e])
-plt.show()
+# plt.hist([(x.sblts.res.VehHourTrav_ns - x.sblts.res.VehHourTrav) / x.sblts.res.VehHourTrav_ns for x in e])
+# plt.show()
