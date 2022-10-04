@@ -1405,4 +1405,3 @@ def check_if_correct_attributes(params):
     if "panel_noise" in params.keys():
         assert {"mean", "st_dev"}.issubset(set(params.panel_noise.keys()))
 
-
