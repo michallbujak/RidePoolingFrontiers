@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 1000
+    topological_config.replications = 100
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -33,15 +33,15 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: (len(x.requests) < 150) &
-                                                                               (len(x.requests) > 100),
+                                                     filter_function=lambda x: (len(x.requests) < 105) &
+                                                                               (len(x.requests) > 95),
                                                      config=topological_config.initial_parameters)
 
     # ExMAS.utils.plot_demand(dotmaps_list[0], params)
 
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
-    s = 1/3600
+    s = 1
     params.sampling_function = utils.mixed_discrete_norm_distribution((0.29, 0.57, 0.81, 1),
                                                                       ((16.98/3600, 1.22), (s*1.68, s*0.122)),
                                                                       ((14.02/3600, 1.135), (s*1.402, s*0.1135)),

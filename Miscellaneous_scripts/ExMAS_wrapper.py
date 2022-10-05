@@ -12,7 +12,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 if __name__ == "__main__":
     # """ Load all the topological parameters """
     config = utils.get_parameters(
-        r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
+        r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
     #
     # """ Set up varying parameters (optional) """
     # # config.variable = 'shared_discount'
@@ -25,14 +25,19 @@ if __name__ == "__main__":
     # """ Prepare folder """
     utils.create_results_directory(config)
     #
-    # """ Prepare data """
-    # dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
-    #                                                  filter_function=lambda x: len(x.requests) > 0,
-    #                                                  config=config.initial_parameters)
-    with open("data/exemplary_demand.obj", "rb") as file:
-        dotmaps_list = pickle.load(file)
-    with open("data/params_in_process.obj", "rb") as file:
-        params = pickle.load(file)
+    """ Prepare data """
+    dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
+                                                     filter_function=lambda x: len(x.requests) > 0,
+                                                     config=config.initial_parameters)
+    with open("data/exemplary_demand.obj", "wb") as file:
+        pickle.dump(dotmaps_list, file)
+    with open("data/params_in_process.obj", "wb") as file:
+        pickle.dump(params, file)
+
+    # with open("data/exemplary_demand.obj", "rb") as file:
+    #     dotmaps_list = pickle.load(file)
+    # with open("data/params_in_process.obj", "rb") as file:
+    #     params = pickle.load(file)
 
     """ Run ExMAS """
     params = utils.update_probabilistic(config, params)
