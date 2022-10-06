@@ -13,19 +13,19 @@ sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
 import utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main_prob_coeffs import main as exmas_algo
+from ExMAS.probabilistic_exmas import main as exmas_algo
 from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('data/configs/topology_settings2.json')
+    topological_config = utils.get_parameters('data/configs/topology_settings3.json')
 
     """ Set up varying parameters (optional) """
     # topological_config.variable = 'shared_discount'
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 100
+    topological_config.replications = 1000
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: (len(x.requests) < 105) &
-                                                                               (len(x.requests) > 95),
+                                                     filter_function=lambda x: (len(x.requests) < 150) &
+                                                                               (len(x.requests) > 140),
                                                      config=topological_config.initial_parameters)
 
     # ExMAS.utils.plot_demand(dotmaps_list[0], params)

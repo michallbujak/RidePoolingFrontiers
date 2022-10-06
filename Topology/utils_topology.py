@@ -130,10 +130,14 @@ class GraphStatistics:
 
         if self.bipartite:
             degrees = dict(self.G.degree())
-            group0 = {k: v for k, v in degrees.items() if k in self.group0_colour.keys()}
-            group1 = {k: v for k, v in degrees.items() if k in self.group1_colour.keys()}
-            self.average_degree_group0 = sum(group0.values()) / len(group0)
-            self.average_degree_group1 = sum(group1.values()) / len(group1)
+            if all(j[1] == 0 for j in self.G.degree()):
+                self.average_degree_group0 = 0
+                self.average_degree_group1 = 0
+            else:
+                group0 = {k: v for k, v in degrees.items() if k in self.group0_colour.keys()}
+                group1 = {k: v for k, v in degrees.items() if k in self.group1_colour.keys()}
+                self.average_degree_group0 = sum(group0.values()) / len(group0)
+                self.average_degree_group1 = sum(group1.values()) / len(group1)
 
         if degree_histogram:
             plt.bar(*np.unique(degree_sequence, return_counts=True))

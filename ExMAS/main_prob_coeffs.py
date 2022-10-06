@@ -403,10 +403,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
     r = query_skim(r, 'origin_j', 'destination_i', 't_od')
 
-    """ THE NEW PART """
-    # r = extend_r_sampled_parameters(r, _inData, params)
-    """ THE END OF NEW PART """
-
     r = r[utility_i() > 0]  # and filter only for positive utility
 
     if plot:

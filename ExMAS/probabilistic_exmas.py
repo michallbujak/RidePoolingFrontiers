@@ -407,7 +407,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         _inData.sblts.FIFO2 = r  # early exit with empty result
         return _inData
 
-    r = query_skim(r, 'origin_j', 'destination_i', 't_od')
+    r = query_skim(r, 'origin_j', 'destination_i', 't_od', _filter=False)
 
     r['true_utility_i'] = list(utility_i())
 
