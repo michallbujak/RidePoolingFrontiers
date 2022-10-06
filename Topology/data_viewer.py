@@ -13,22 +13,22 @@ import netwulf
 import seaborn as sns
 import matplotlib.ticker as mtick
 
-date = "05-10-22"
+date = "06-10-22"
 
-# with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
-#     e = pickle.load(file)
+with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
+    e = pickle.load(file)
 
 # with open('data/results/' + date + '/dotmap_list_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)
 
-with open('data/results/' + date + '/all_graphs_list_' + date + '.obj', 'rb') as file:
-    e = pickle.load(file)
+# with open('data/results/' + date + '/all_graphs_list_' + date + '.obj', 'rb') as file:
+#     e = pickle.load(file)
 
 topological_config = utils.get_parameters('data/configs/topology_settings3.json')
 # utils.create_results_directory(topological_config, date=date)
 topological_config.path_results = 'data/results/' + date + '/'
 
-# G = e['pairs_shareability']
+G = e['pairs_matching']
 
 # colours = []
 # for item in G.nodes:
@@ -37,7 +37,7 @@ topological_config.path_results = 'data/results/' + date + '/'
 #     else:
 #         colours.append("black")
 # nx.set_node_attributes(G, dict(zip(list(G.nodes), colours)), "group")
-# # visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
+visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 #
 # edge_colours = []
 # for item in G.edges:
