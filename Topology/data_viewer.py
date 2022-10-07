@@ -13,7 +13,7 @@ import netwulf
 import seaborn as sns
 import matplotlib.ticker as mtick
 
-date = "06-10-22"
+date = "07-10-22"
 
 with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
     e = pickle.load(file)
@@ -28,7 +28,7 @@ topological_config = utils.get_parameters('data/configs/topology_settings3.json'
 # utils.create_results_directory(topological_config, date=date)
 topological_config.path_results = 'data/results/' + date + '/'
 
-G = e['pairs_matching']
+# G = e['pairs_shareability']
 
 # colours = []
 # for item in G.nodes:
@@ -37,7 +37,7 @@ G = e['pairs_matching']
 #     else:
 #         colours.append("black")
 # nx.set_node_attributes(G, dict(zip(list(G.nodes), colours)), "group")
-visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
+# visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 #
 # edge_colours = []
 # for item in G.edges:
@@ -55,9 +55,9 @@ visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 
 
 # visualize(e['pairs_matching'], config=json.load(open('data/configs/netwulf_config.json')))
-# draw_bipartite_graph(e['bipartite_shareability'], 1000, topological_config, date=date, save=True,
-#                      name="full_bi_shareability", dpi=200, colour_specific_node=None,
-#                      default_edge_size=0.1)
+draw_bipartite_graph(e['bipartite_matching'], 1000, topological_config, date=date, save=True,
+                     name="full_bi_matching", dpi=200, colour_specific_node=None,
+                     default_edge_size=0.1)
 
 # num_list = [1, 5, 10, 100, 900]
 # for num in num_list:
@@ -117,17 +117,17 @@ visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
 
-# str_for_end = "_99"
+# str_for_end = "_147"
 # ticks = 5
 # multiplier = 100
-#
+# #
 # ax = sns.histplot([multiplier*(x.sblts.res.PassUtility_ns - x.sblts.res.PassUtility) / x.sblts.res.PassUtility_ns for x in e])
 # ax.set(xlabel="Utility gain", ylabel=None)
 # ax.xaxis.set_major_formatter(mtick.PercentFormatter())
 # plt.locator_params(axis='x', nbins=ticks)
 # plt.savefig(topological_config.path_results + "figs/relative_pass_utility" + str_for_end + ".png")
 # plt.close()
-
+#
 # ax = sns.histplot([multiplier*(x.sblts.res.PassHourTrav - x.sblts.res.PassHourTrav_ns) / x.sblts.res.PassHourTrav_ns for x in e])
 # ax.set(xlabel="Travel time extension", ylabel=None)
 # ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -142,4 +142,7 @@ visualize(G, config=json.load(open('data/configs/netwulf_config.json')))
 # plt.savefig(topological_config.path_results + "figs/relative_veh_hours" + str_for_end + ".png")
 # plt.close()
 
+
+# y = [(x.sblts.res.PassUtility_ns - x.sblts.res.PassUtility) / x.sblts.res.PassUtility_ns for x in e]
+# print(y)
 x = 0

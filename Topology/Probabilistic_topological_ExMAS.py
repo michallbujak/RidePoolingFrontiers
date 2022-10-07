@@ -43,10 +43,10 @@ if __name__ == "__main__":
     params = utils.update_probabilistic(topological_config, params)
     s = 1
     params.sampling_function = utils.mixed_discrete_norm_distribution((0.29, 0.57, 0.81, 1),
-                                                                      ((16.98/3600, 1.22), (s*1.68, s*0.122)),
-                                                                      ((14.02/3600, 1.135), (s*1.402, s*0.1135)),
-                                                                      ((26.25/3600, 1.049), (s*2.625, s*0.105)),
-                                                                      ((7.78/3600, 1.18), (s*0.778, s*0.118)))
+                                                                      ((16.98/3600, 1.22), (s*1.68/3600, s*0.122)),
+                                                                      ((14.02/3600, 1.135), (s*1.402/3600, s*0.1135)),
+                                                                      ((26.25/3600, 1.049), (s*2.625/3600, s*0.105)),
+                                                                      ((7.78/3600, 1.18), (s*0.778/3600, s*0.118)))
     # utils.display_text(params, is_dotmap=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
