@@ -7,7 +7,7 @@ from tqdm import tqdm
 import ExMAS.utils
 import logging
 import warnings
-from ExMAS.main_prob import noise_generator as stochastic_noise
+from ExMAS.main_prob_OLD import noise_generator as stochastic_noise
 
 
 def initialise_indata_dotmap():

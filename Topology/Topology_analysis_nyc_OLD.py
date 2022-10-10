@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
 import utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main_prob import main as exmas_algo
+from ExMAS.main_prob_OLD import main as exmas_algo
 from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
