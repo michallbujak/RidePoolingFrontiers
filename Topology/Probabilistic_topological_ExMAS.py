@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 1000
+    topological_config.replications = 100
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: (len(x.requests) < 95) &
-                                                                               (len(x.requests) > 105),
+                                                     filter_function=lambda x: (len(x.requests) < 210) &
+                                                                               (len(x.requests) > 190),
                                                      config=topological_config.initial_parameters)
 
     # ExMAS.utils.plot_demand(dotmaps_list[0], params)
@@ -84,12 +84,12 @@ if __name__ == "__main__":
     merged_results.to_excel(merged_file_path, index=False)
 
     """ Compute final results """
-    variables = ['Batch']
-    utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
-                              topological_config.path_results,
-                              topological_config.path_results + "temp/",
-                              variables,
-                              topological_config.graph_topological_properties,
-                              topological_config.kpis,
-                              topological_config.graph_properties_against_inputs,
-                              topological_config.dictionary_variables).do_all()
+    # variables = ['Batch']
+    # utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
+    #                           topological_config.path_results,
+    #                           topological_config.path_results + "temp/",
+    #                           variables,
+    #                           topological_config.graph_topological_properties,
+    #                           topological_config.kpis,
+    #                           topological_config.graph_properties_against_inputs,
+    #                           topological_config.dictionary_variables).do_all()

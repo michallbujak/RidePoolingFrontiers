@@ -13,7 +13,7 @@ import netwulf
 import seaborn as sns
 import matplotlib.ticker as mtick
 
-date = "07-10-22"
+date = "11-10-22"
 
 # with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)
@@ -28,6 +28,7 @@ topological_config = utils.get_parameters('data/configs/topology_settings3.json'
 # utils.create_results_directory(topological_config, date=date)
 topological_config.path_results = 'data/results/' + date + '/'
 
+# G = e[0]['pairs_matching']
 # G = e['pairs_shareability']
 
 # colours = []
@@ -117,10 +118,10 @@ topological_config.path_results = 'data/results/' + date + '/'
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
 
-str_for_end = "_147"
+str_for_end = "_198"
 ticks = 5
 multiplier = 100
-#
+
 ax = sns.histplot([multiplier*(x.sblts.res.PassUtility_ns - x.sblts.res.PassUtility) / x.sblts.res.PassUtility_ns for x in e])
 ax.set(xlabel="Utility gain", ylabel=None)
 ax.xaxis.set_major_formatter(mtick.PercentFormatter())
