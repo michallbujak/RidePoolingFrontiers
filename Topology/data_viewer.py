@@ -13,7 +13,9 @@ import netwulf
 import seaborn as sns
 import matplotlib.ticker as mtick
 
-date = "11-10-22"
+date = "22-10-22"
+special_name = ""
+sblts_exmas = "exmas"
 
 # with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)
@@ -26,7 +28,7 @@ with open('data/results/' + date + '/dotmap_list_' + date + '.obj', 'rb') as fil
 
 topological_config = utils.get_parameters('data/configs/topology_settings3.json')
 # utils.create_results_directory(topological_config, date=date)
-topological_config.path_results = 'data/results/' + date + '/'
+topological_config.path_results = 'data/results/' + date + special_name + '/'
 
 # G = e[0]['pairs_matching']
 # G = e['pairs_shareability']
@@ -118,32 +120,94 @@ topological_config.path_results = 'data/results/' + date + '/'
 # df.drop(columns=['index'], inplace=True)
 # df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
 
-str_for_end = "_198"
-ticks = 5
-multiplier = 100
+# str_for_end = "_198"
+# ticks = 5
+# multiplier = 100
+#
+# ax = sns.histplot([multiplier*(x[sblts_exmas].res.PassUtility_ns - x[sblts_exmas].res.PassUtility) / x[sblts_exmas].res.PassUtility_ns for x in e])
+# ax.set(xlabel="Utility gain", ylabel=None)
+# ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+# plt.locator_params(axis='x', nbins=ticks)
+# plt.savefig(topological_config.path_results + "figs/relative_pass_utility" + str_for_end + ".png")
+# plt.close()
+#
+# ax = sns.histplot([multiplier*(x[sblts_exmas].res.PassHourTrav - x[sblts_exmas].res.PassHourTrav_ns) / x[sblts_exmas].res.PassHourTrav_ns for x in e])
+# ax.set(xlabel="Travel time extension", ylabel=None)
+# ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+# plt.locator_params(axis='x', nbins=ticks)
+# plt.savefig(topological_config.path_results + "figs/relative_pass_hours" + str_for_end + ".png")
+# plt.close()
+#
+# ax = sns.histplot([multiplier*(x[sblts_exmas].res.VehHourTrav_ns - x[sblts_exmas].res.VehHourTrav) / x[sblts_exmas].res.VehHourTrav_ns for x in e])
+# ax.set(xlabel='Vehicle time shortening', ylabel=None)
+# ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+# plt.locator_params(axis='x', nbins=ticks)
+# plt.savefig(topological_config.path_results + "figs/relative_veh_hours" + str_for_end + ".png")
+# plt.close()
 
-ax = sns.histplot([multiplier*(x.sblts.res.PassUtility_ns - x.sblts.res.PassUtility) / x.sblts.res.PassUtility_ns for x in e])
-ax.set(xlabel="Utility gain", ylabel=None)
-ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-plt.locator_params(axis='x', nbins=ticks)
-plt.savefig(topological_config.path_results + "figs/relative_pass_utility" + str_for_end + ".png")
-plt.close()
 
-ax = sns.histplot([multiplier*(x.sblts.res.PassHourTrav - x.sblts.res.PassHourTrav_ns) / x.sblts.res.PassHourTrav_ns for x in e])
-ax.set(xlabel="Travel time extension", ylabel=None)
-ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-plt.locator_params(axis='x', nbins=ticks)
-plt.savefig(topological_config.path_results + "figs/relative_pass_hours" + str_for_end + ".png")
-plt.close()
-
-ax = sns.histplot([multiplier*(x.sblts.res.VehHourTrav_ns - x.sblts.res.VehHourTrav) / x.sblts.res.VehHourTrav_ns for x in e])
-ax.set(xlabel='Vehicle time shortening', ylabel=None)
-ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-plt.locator_params(axis='x', nbins=ticks)
-plt.savefig(topological_config.path_results + "figs/relative_veh_hours" + str_for_end + ".png")
-plt.close()
-
-
-# y = [(x.sblts.res.PassUtility_ns - x.sblts.res.PassUtility) / x.sblts.res.PassUtility_ns for x in e]
+# y = [(x[sblts_exmas].res.PassUtility_ns - x[sblts_exmas].res.PassUtility) / x[sblts_exmas].res.PassUtility_ns for x in e]
 # print(y)
-x = 0
+# x = 0
+
+# with open("C:/Users/szmat/Documents/GitHub/ExMAS_sideline/Topology/data/results/"
+#           + date + "/final_matching_" + date + ".json", "r") as file:
+#     matches = json.load(file)
+#
+# number_elements = 99
+# replications = 100
+#
+# # match_list = [list(map(lambda x: x.replace("(", "").replace(")", ""),
+# #                        list(matches.keys())[t].split(","))) for t in range(len(matches.keys()))]
+# #
+# # list(map(lambda x: x.pop(-1) if x[-1] == "" else x, match_list))
+#
+# str_for_end = "_" + str(number_elements)
+# ticks = 5
+#
+# sharing_prob = []
+#
+# for j in range(number_elements):
+#     sharing_prob.append((replications - matches.get("(" + str(j) + ",)", 0))*100/replications)
+#
+#
+# ax = sns.histplot(sharing_prob)
+# ax.set(xlabel='Probability of sharing', ylabel=None)
+# ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+# plt.locator_params(axis='x', nbins=ticks)
+# plt.xlim(0, 100)
+# plt.savefig(topological_config.path_results + "figs/prob_sharing" + str_for_end + ".png")
+# plt.close()
+
+
+probs = {"c0": np.array([0, 0]), "c1": np.array([0, 0]), "c2": np.array([0, 0]), "c3": np.array([0, 0])}
+for rep in e:
+    df = rep.prob.sampled_random_parameters.copy()
+    df["VoT"] *= 3600
+    df.set_index("new_index", inplace=True)
+    c0 = df.loc[df["class"] == 0]
+    c1 = df.loc[df["class"] == 1]
+    c2 = df.loc[df["class"] == 2]
+    c3 = df.loc[df["class"] == 3]
+
+    schedule = rep[sblts_exmas].schedule
+    indexes_sharing = schedule["indexes"].values
+    a1 = {frozenset(t) for t in indexes_sharing}
+    a2 = {next(iter(t)) for t in a1 if len(t) == 1}
+
+    probs["c0"] += np.array([len(a2.intersection(set(c0.index))), len(c0)])
+    probs["c1"] += np.array([len(a2.intersection(set(c1.index))), len(c1)])
+    probs["c2"] += np.array([len(a2.intersection(set(c2.index))), len(c2)])
+    probs["c3"] += np.array([len(a2.intersection(set(c3.index))), len(c3)])
+
+x = ("c0", "c1", "c2", "c3")
+
+
+def foo(i):
+    return (probs["c" + str(i)][1] - probs["c" + str(i)][0]) / probs["c" + str(i)][1]
+
+
+y = [foo(t) for t in range(4)]
+
+sns.barplot(data=pd.DataFrame({"names": x, "values": y}), x="names", y="values")
+plt.show()

@@ -7,6 +7,7 @@ import networkx as nx
 import json
 import os
 import sys
+import numpy as np
 
 sys.path.append(os.path.abspath(os.getcwd()))
 sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
@@ -33,7 +34,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: (len(x.requests) < 210) &
+                                                     filter_function=lambda x: (len(x.requests) < 200) &
                                                                                (len(x.requests) > 190),
                                                      config=topological_config.initial_parameters)
 
@@ -42,17 +43,31 @@ if __name__ == "__main__":
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
     s = 1
-    params.sampling_function = utils.mixed_discrete_norm_distribution((0.29, 0.57, 0.81, 1),
-                                                                      ((16.98/3600, 1.22), (s*1.68/3600, s*0.122)),
-                                                                      ((14.02/3600, 1.135), (s*1.402/3600, s*0.1135)),
-                                                                      ((26.25/3600, 1.049), (s*2.625/3600, s*0.105)),
-                                                                      ((7.78/3600, 1.18), (s*0.778/3600, s*0.118)))
+    params.sampling_function = utils.mixed_discrete_norm_distribution_with_index((0.29, 0.57, 0.81, 1),
+                                                                                 ((16.98 / 3600, 1.22),
+                                                                                  (s * 1.68 / 3600, s * 0.122)),
+                                                                                 ((14.02 / 3600, 1.135),
+                                                                                  (s * 1.402 / 3600, s * 0.1135)),
+                                                                                 ((26.25 / 3600, 1.049),
+                                                                                  (s * 2.625 / 3600, s * 0.105)),
+                                                                                 ((7.78 / 3600, 1.18),
+                                                                                  (s * 0.778 / 3600, s * 0.118)))
     # utils.display_text(params, is_dotmap=True)
+
+
+
+    # dotmaps_list_results = nyc_tools.testing_exmas_multicore(exmas_algo, params, dotmaps_list,
+    #                                                          topo_params=topological_config,
+    #                                                          replications=topological_config.replications,
+    #                                                          logger_level='INFO',
+    #                                                          sampling_function_with_index=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algo, params, dotmaps_list,
                                                                         topo_params=topological_config,
                                                                         replications=topological_config.replications,
-                                                                        logger_level='INFO')
+                                                                        logger_level='INFO',
+                                                                        sampling_function_with_index=True)
+
     utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
 
     """ Edges storing & counting """
@@ -64,24 +79,24 @@ if __name__ == "__main__":
     pool.close()
     utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
 
-    utils.analysis_all_graphs(all_graphs_list, topological_config)
+    # utils.analysis_all_graphs(all_graphs_list, topological_config)
 
     # visualize(rep_graphs['pairs_matching'])
     # visualize(utils.create_graph(dotmaps_list_results[0], 'all')['bipartite_matching'])
 
-    """ Perform topological analysis """
-    pool = mp.Pool(mp.cpu_count())
-    graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in
-                  dotmaps_list_results]
-    topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
-    topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)
-    pool.close()
-
-    """ Merge results """
-    merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
-    merged_file_path = topological_config.path_results + 'merged_files_' + \
-                       str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
-    merged_results.to_excel(merged_file_path, index=False)
+    # """ Perform topological analysis """
+    # pool = mp.Pool(mp.cpu_count())
+    # graph_list = [pool.apply(exmas_make_graph, args=(data.exmas.requests, data.exmas.rides)) for data in
+    #               dotmaps_list_results]
+    # topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
+    # topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)
+    # pool.close()
+    #
+    # """ Merge results """
+    # merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
+    # merged_file_path = topological_config.path_results + 'merged_files_' + \
+    #                    str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
+    # merged_results.to_excel(merged_file_path, index=False)
 
     """ Compute final results """
     # variables = ['Batch']

@@ -44,6 +44,7 @@ __email__ = "rafalkucharski.box _at_ gmail . com"
 
 import ast
 import math
+import random
 import time
 import sys
 from itertools import product
@@ -97,17 +98,27 @@ class SbltType(Enum):  # type of shared ride. first digit is the degree, second 
 ##############
 
 # ALGORITHM 3
-def main(_inData, params, plot=False):
+def main(_inData, params, manual_overwrite=False, plot=False):
     """
     main call
     :param _inData: input (graph, requests, .. )
     :param params: parameters
     :param plot: flag to plot charts for consecutive steps
-    :return: inData.sblts.schedule - selecgted shared rides
-    inData.sblts.rides - all ride candidates
-    inData.sblts.res -  KPIs
+    :return: inData.exmas.schedule - selecgted shared rides
+    inData.exmas.rides - all ride candidates
+    inData.exmas.res -  KPIs
+    @param _seed:
     """
     _inData.logger = init_log(params)  # initialize console logger
+
+    if manual_overwrite:
+        s = 1
+        from Topology.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
+        params.sampling_function = gen_func((0.29, 0.57, 0.81, 1),
+                                            ((16.98 / 3600, 1.22), (s * 1.68 / 3600, s * 0.122)),
+                                            ((14.02 / 3600, 1.135), (s * 1.402 / 3600, s * 0.1135)),
+                                            ((26.25 / 3600, 1.049), (s * 2.625 / 3600, s * 0.105)),
+                                            ((7.78 / 3600, 1.18), (s * 0.778 / 3600, s * 0.118)))
 
     _inData = sample_random_parameters(_inData, params)
     _inData = add_noise(_inData, params)
@@ -125,22 +136,22 @@ def main(_inData, params, plot=False):
     if degree < params.max_degree:
         _inData = make_shareability_graph(_inData, params)
 
-        while degree < params.max_degree and _inData.sblts.R[degree].shape[0] > 0:
+        while degree < params.max_degree and _inData.exmas.R[degree].shape[0] > 0:
             _inData.logger.info('trips to extend at degree {} : {}'.format(degree,
-                                                                           _inData.sblts.R[degree].shape[0]))
+                                                                           _inData.exmas.R[degree].shape[0]))
             _inData = extend_degree(_inData, params, degree)
             degree += 1
             _inData.logger.info('Degree {} \tCompleted'.format(degree))
         if degree == params.max_degree:
             _inData.logger.info('Max degree reached {}'.format(degree))
             _inData.logger.info('Trips still possible to extend at degree {} : {}'.format(degree,
-                                                                                          _inData.sblts.R[degree].shape[
+                                                                                          _inData.exmas.R[degree].shape[
                                                                                               0]))
         else:
             _inData.logger.info(('No more trips to exted at degree {}'.format(degree)))
 
-    _inData.sblts.rides = _inData.sblts.rides.reset_index(drop=True)  # set index
-    _inData.sblts.rides['index'] = _inData.sblts.rides.index  # copy index
+    _inData.exmas.rides = _inData.exmas.rides.reset_index(drop=True)  # set index
+    _inData.exmas.rides['index'] = _inData.exmas.rides.index  # copy index
 
     if params.get('without_matching', False):
         return _inData  # quit before matching
@@ -167,13 +178,13 @@ def single_rides(_inData, params):
 
     def f_delta():
         # maximal possible delay of a trip (computed before join)
-        return (1 / req.WtS - 1) * req.ttrav + \
-               (params.price * params.shared_discount * req.dist / 1000) / (req.VoT * req.WtS)
+        return list(map(lambda x: x if x >= 0 else 0, (1 / req.WtS - 1) * req.ttrav + \
+                        (params.price * params.shared_discount * req.dist / 1000) / (req.VoT * req.WtS)))
 
     # prepare data structures
-    _inData.sblts = DotMap(_dynamic=False)
-    _inData.sblts.log = DotMap(_dynamic=False)
-    _inData.sblts.log.sizes = DotMap(_dynamic=False)
+    _inData.exmas = DotMap(_dynamic=False)
+    _inData.exmas.log = DotMap(_dynamic=False)
+    _inData.exmas.log.sizes = DotMap(_dynamic=False)
     # prepare requests
     req = _inData.requests.copy().sort_index()
     if params.get('reset_ttrav', True):
@@ -184,17 +195,17 @@ def single_rides(_inData, params):
 
     """ NEW """
     if "VoT" in _inData.prob.sampled_random_parameters.columns:
-        req = req.assign(VoT=_inData.prob.sampled_random_parameters['VoT'].values)
+        req = pd.merge(req, _inData.prob.sampled_random_parameters['VoT'], left_index=True, right_index=True)
     else:
         req["VoT"] = params.VoT
 
     if "WtS" in _inData.prob.sampled_random_parameters.columns:
-        req = req.assign(WtS=_inData.prob.sampled_random_parameters['WtS'].values)
+        req = pd.merge(req, _inData.prob.sampled_random_parameters['WtS'], left_index=True, right_index=True)
     else:
         req["WtS"] = params.WtS
 
     if "delay_value" in _inData.prob.sampled_random_parameters.columns:
-        req = req.assign(delay_value=_inData.prob.sampled_random_parameters['delay_value'].values)
+        req = pd.merge(req, _inData.prob.sampled_random_parameters['delay_value'], left_index=True, right_index=True)
     else:
         req["delay_value"] = params.delay_value
     """ END OF NEW"""
@@ -208,8 +219,22 @@ def single_rides(_inData, params):
     req = req.sort_values(['treq', 'pax_id'])  # sort
     req = req.reset_index()
 
+    try:
+        _inData.prob.sampled_random_parameters
+    except NameError:
+        var_exists = False
+    else:
+        var_exists = True
+
+    if var_exists:
+        req["new_index"] = req.index
+        _inData.prob.sampled_random_parameters = \
+            pd.merge(_inData.prob.sampled_random_parameters, req[["id", "new_index"]], left_index=True, right_on="id")
+        _inData.prob.sampled_random_parameters.set_index("id", drop=True, inplace=True)
+        req.drop(columns="new_index", inplace=True)
+
     # output
-    _inData.sblts.requests = req.copy()
+    _inData.exmas.requests = req.copy()
     df = req.copy()
     df['kind'] = SbltType.SINGLE.value  # assign a type for a ride
     df['indexes'] = df.index
@@ -226,12 +251,12 @@ def single_rides(_inData, params):
     df['true_u_paxes'] = df['u_paxes']
     df = df[RIDE_COLS]
 
-    _inData.sblts.SINGLES = df.copy()  # single trips
-    _inData.sblts.log.sizes[1] = {'potential': df.shape[0], 'feasible': df.shape[0]}
-    _inData.sblts.rides = df.copy()
+    _inData.exmas.SINGLES = df.copy()  # single trips
+    _inData.exmas.log.sizes[1] = {'potential': df.shape[0], 'feasible': df.shape[0]}
+    _inData.exmas.rides = df.copy()
 
-    _inData.sblts.R = dict()  # all the feasible rides
-    _inData.sblts.R[1] = df.copy()  # of a given degree
+    _inData.exmas.R = dict()  # all the feasible rides
+    _inData.exmas.R[1] = df.copy()  # of a given degree
 
     return _inData
 
@@ -249,10 +274,10 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     :param process: boolean flag to calculate measures at the end of calulations
     :param check: run test to make sure results are consistent
     :param plot: plot matrices illustrating the shareability
-    :return: _inData with .sblts
+    :return: _inData with .exmas
     """
     # input
-    req = _inData.sblts.requests.copy()  # work with single requests
+    req = _inData.exmas.requests.copy()  # work with single requests
 
     # VECTORIZED FUNCTIONS TO QUICKLY COMPUTE FORMULAS ALONG THE DATAFRAME
     def utility_ns_i():
@@ -368,7 +393,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     r['j'] = r.index.get_level_values(1)
     r = r[~(r.i == r.j)]  # remove diagonal
     _inData.logger.info(str(r.shape[0]) + '\t nR*(nR-1)')
-    _inData.sblts.log.sizes[2] = {'potential': r.shape[0]}
+    _inData.exmas.log.sizes[2] = {'potential': r.shape[0]}
 
     # first condition (before querying any skim)
     if params.horizon > 0:
@@ -380,7 +405,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         _r[1] = 0
         sp_plot(_r, r, 0, 'departure compatibility')
     if len(r) == 0:
-        _inData.sblts.FIFO2 = r  # early exit with empty result
+        _inData.exmas.FIFO2 = r  # early exit with empty result
         return _inData
 
     # make the skim smaller  (query only between origins and destinations)
@@ -404,7 +429,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     if plot:
         sp_plot(_r, r, 1, 'origins shareability')
     if len(r) == 0:
-        _inData.sblts.FIFO2 = r  # early exit with empty result
+        _inData.exmas.FIFO2 = r  # early exit with empty result
         return _inData
 
     r = query_skim(r, 'origin_j', 'destination_i', 't_od')
@@ -423,11 +448,10 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
     r, sampled_noise = utility_for_r(r, "i", params, sampled_noise, 1)
 
-
     if plot:
         sp_plot(_r, r, 2, 'utility for i')
     if len(r) == 0:
-        _inData.sblts.FIFO2 = r
+        _inData.exmas.FIFO2 = r
         return _inData
     rLIFO = r.copy()
 
@@ -443,7 +467,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     if plot:
         sp_plot(_r, r, 3, 'utility for j')
     if len(r) == 0:
-        _inData.sblts.FIFO2 = r
+        _inData.exmas.FIFO2 = r
         return _inData
 
     # profitability
@@ -475,7 +499,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['u_pax'] = r['u_i'] + r['u_j']
         r['true_u_pax'] = r['true_u_i'] + r['true_u_j']
 
-    _inData.sblts.FIFO2 = r.copy()
+    _inData.exmas.FIFO2 = r.copy()
     del r
 
     # LIFO2
@@ -524,15 +548,15 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
         r['true_u_pax'] = r['true_u_i'] + r['true_u_j']
 
-    _inData.sblts.LIFO2 = r.copy()
-    _inData.sblts.pairs = pd.concat([_inData.sblts.FIFO2, _inData.sblts.LIFO2],
+    _inData.exmas.LIFO2 = r.copy()
+    _inData.exmas.pairs = pd.concat([_inData.exmas.FIFO2, _inData.exmas.LIFO2],
                                     sort=False).set_index(['i', 'j', 'kind'],
                                                           drop=False).sort_index()
-    _inData.sblts.log.sizes[2]['feasible'] = _inData.sblts.LIFO2.shape[0] + _inData.sblts.FIFO2.shape[0]
-    _inData.sblts.log.sizes[2]['feasibleFIFO'] = _inData.sblts.FIFO2.shape[0]
-    _inData.sblts.log.sizes[2]['feasibleLIFO'] = _inData.sblts.LIFO2.shape[0]
+    _inData.exmas.log.sizes[2]['feasible'] = _inData.exmas.LIFO2.shape[0] + _inData.exmas.FIFO2.shape[0]
+    _inData.exmas.log.sizes[2]['feasibleFIFO'] = _inData.exmas.FIFO2.shape[0]
+    _inData.exmas.log.sizes[2]['feasibleLIFO'] = _inData.exmas.LIFO2.shape[0]
 
-    for df in [_inData.sblts.FIFO2.copy(), _inData.sblts.LIFO2.copy()]:
+    for df in [_inData.exmas.FIFO2.copy(), _inData.exmas.LIFO2.copy()]:
         if df.shape[0] > 0:
             df['u_paxes'] = df.apply(lambda x: [x.u_i, x.u_j], axis=1)
             df['true_u_paxes'] = df.apply(lambda x: [x.true_u_i, x.true_u_j], axis=1)
@@ -542,7 +566,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
             df = df[RIDE_COLS]
 
-            _inData.sblts.rides = pd.concat([_inData.sblts.rides, df], sort=False)
+            _inData.exmas.rides = pd.concat([_inData.exmas.rides, df], sort=False)
     gain = (1 - float(r.shape[0]) / (params.nP * (params.nP - 1))) * 100
     _inData.logger.info('Reduction of feasible pairs by {:.2f}%'.format(gain))
     if plot:
@@ -560,10 +584,10 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 def make_shareability_graph(_inData, params):
     """
     Prepares the shareability graphs from trip pairs
-    :param _inData: inData.sblts.rides
-    :return: inDara.sblts.S
+    :param _inData: inData.exmas.rides
+    :return: inDara.exmas.S
     """
-    rides = _inData.sblts.rides
+    rides = _inData.exmas.rides
     rides['degree'] = rides.apply(lambda x: len(x.indexes), axis=1)
 
     R2 = rides[rides.degree == 2].copy()
@@ -572,7 +596,7 @@ def make_shareability_graph(_inData, params):
     R2 = R2.reset_index(drop=True)
     R2['index_copy'] = R2.index
 
-    _inData.sblts.R[2] = R2
+    _inData.exmas.R[2] = R2
     # New part for weighting a graph:
     df = R2.copy()
     # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.starting_probs.mu_prob, params.st_dev_prob)
@@ -580,7 +604,7 @@ def make_shareability_graph(_inData, params):
     # df['weight'] = df['true_u_pax']
     df['weight'] = df['u_paxes']
 
-    _inData.sblts.S = nx.from_pandas_edgelist(df, 'i', 'j',
+    _inData.exmas.S = nx.from_pandas_edgelist(df, 'i', 'j',
                                               edge_attr=['kind', 'index_copy', 'weight'],
                                               create_using=nx.MultiDiGraph())  # create a graph
     return _inData
@@ -610,27 +634,29 @@ def enumerate_ride_extensions(r, S):
 
 # ALGORITHM 2/3
 def extend_degree(_inData, params, degree):
-    R = _inData.sblts.R
+    R = _inData.exmas.R
 
     # faster queries through dict
-    dist_dict = _inData.sblts.requests.dist.to_dict()  # distances
-    ttrav_dict = _inData.sblts.requests.ttrav.to_dict()  # travel times
-    treq_dict = _inData.sblts.requests.treq.to_dict()  # requests times
-    VoT_dict = _inData.sblts.requests.VoT.to_dict()  # values of time
-    WtS_dict = _inData.sblts.requests.WtS.to_dict()
-    panel_noise_dict = {i: _inData.prob.panel_noise[i] for i in range(len(_inData.prob.panel_noise))}  # noise for utility
+    dist_dict = _inData.exmas.requests.dist.to_dict()  # distances
+    ttrav_dict = _inData.exmas.requests.ttrav.to_dict()  # travel times
+    treq_dict = _inData.exmas.requests.treq.to_dict()  # requests times
+    VoT_dict = _inData.exmas.requests.VoT.to_dict()  # values of time
+    WtS_dict = _inData.exmas.requests.WtS.to_dict()
+    panel_noise_dict = {i: _inData.prob.panel_noise[i] for i in
+                        range(len(_inData.prob.panel_noise))}  # noise for utility
 
     nPotential = 0
     retR = list()  # for output
 
     for _, r in R[degree].iterrows():  # iterate through all rides to extend
-        newtrips, nSearched = extend(r, _inData.sblts.S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict
+        newtrips, nSearched = extend(r, _inData.exmas.S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict
                                      , WtS_dict, panel_noise_dict)
         retR.extend(newtrips)
         nPotential += nSearched
 
     df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
-                                     'u_paxes', 'times', 'indexes_dest', 'true_u_pax', 'true_u_paxes'])  # data synthax for rides
+                                     'u_paxes', 'times', 'indexes_dest', 'true_u_pax',
+                                     'true_u_paxes'])  # data synthax for rides
 
     df = df[RIDE_COLS]
     df = df.reset_index()
@@ -638,8 +664,8 @@ def extend_degree(_inData, params, degree):
                                                                                            df.shape[0],
                                                                                            nPotential))
 
-    _inData.sblts.R[degree + 1] = df  # store output
-    _inData.sblts.rides = pd.concat([_inData.sblts.rides, df], sort=False)
+    _inData.exmas.R[degree + 1] = df  # store output
+    _inData.exmas.rides = pd.concat([_inData.exmas.rides, df], sort=False)
     if df.shape[0] > 0:
         assert_extension(_inData, params, degree + 1)
 
@@ -755,7 +781,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             # first assume null delays
             feasible_flag = True
             for i in range(degree + 1):
-                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i], WtS[i]) +\
+                if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i], WtS[i]) + \
                         panel_noise[i] < 0:
                     feasible_flag = False
                     break
@@ -788,8 +814,9 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                         feasible_flag = False
                         break
                 if feasible_flag:
-                    re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i in
-                                  range(degree + 1)]
+                    re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i
+                                       in
+                                       range(degree + 1)]
                     re.u_paxes = re.true_u_paxes + panel_noise
 
                     re.pos = pos
@@ -812,10 +839,10 @@ def matching(_inData, params, plot=False, make_assertion=True):
     :param _inData:
     :param plot:
     :param make_assertion: check if results are consistent
-    :return: inData.sblts.schedule - selected rides (and keys to them in inData.sblts.requests)
+    :return: inData.exmas.schedule - selected rides (and keys to them in inData.exmas.requests)
     """
-    rides = _inData.sblts.rides.copy()
-    requests = _inData.sblts.requests.copy()
+    rides = _inData.exmas.rides.copy()
+    requests = _inData.exmas.requests.copy()
 
     opt_outs = False
     multi_platform_matching = params.get('multi_platform_matching', False)
@@ -827,7 +854,7 @@ def matching(_inData, params, plot=False, make_assertion=True):
 
     else:  # matching to multiple platforms
         # select only rides for which all travellers are assigned to this platform
-        rides['platform'] = rides.apply(lambda row: list(set(_inData.sblts.requests.loc[row.indexes].platform.values)),
+        rides['platform'] = rides.apply(lambda row: list(set(_inData.exmas.requests.loc[row.indexes].platform.values)),
                                         axis=1)
 
         rides['platform'] = rides.platform.apply(lambda x: -2 if len(x) > 1 else x[0])
@@ -880,9 +907,9 @@ def matching(_inData, params, plot=False, make_assertion=True):
                 assert _inData.requests.loc[schedule.loc[i].indexes].platform.nunique() == 1
 
     # store the results back
-    _inData.sblts.rides = rides
-    _inData.sblts.schedule = schedule
-    _inData.sblts.requests = requests
+    _inData.exmas.rides = rides
+    _inData.exmas.schedule = schedule
+    _inData.exmas.requests = requests
     return _inData
 
 
@@ -999,9 +1026,9 @@ def evaluate_shareability(_inData, params, plot=False):
 
     # plot
     ret = DotMap()
-    r = _inData.sblts.requests.copy()
+    r = _inData.exmas.requests.copy()
 
-    schedule = _inData.sblts.schedule.copy()
+    schedule = _inData.exmas.schedule.copy()
     schedule['ttrav'] = schedule.apply(lambda x: sum(x.times[1:]), axis=1)
 
     fare = 0
@@ -1042,12 +1069,12 @@ def evaluate_shareability(_inData, params, plot=False):
     ret['PLUS5'] = schedule[(schedule.kind == 100)].shape[0]
     ret['shared_ratio'] = 1 - ret['SINGLE'] / ret['nR']
 
-    # df = pd.DataFrame(_inData.sblts.log.sizes).T[['potential', 'feasible']].reindex([1, 2, 3, 4])
+    # df = pd.DataFrame(_inData.exmas.log.sizes).T[['potential', 'feasible']].reindex([1, 2, 3, 4])
     nR = r.shape[0]
 
     # df['selected'] = [ret['SINGLE'], ret['PAIRS'], ret['TRIPLES'], ret['QUADRIPLES']]
     # df['theoretical'] = [nR, nR ** 2, nR ** 3, nR ** 4]
-    # _inData.sblts.log.sizes = df.fillna(0).astype(int)
+    # _inData.exmas.log.sizes = df.fillna(0).astype(int)
 
     r['start'] = pd.to_datetime(r.treq, unit='s')
     r['end'] = pd.to_datetime(r.treq + r.ttrav, unit='s')
@@ -1078,7 +1105,7 @@ def evaluate_shareability(_inData, params, plot=False):
         plt.legend()
 
     _inData.logger.info(ret)
-    _inData.sblts.res = pd.Series(ret)
+    _inData.exmas.res = pd.Series(ret)
     return _inData
 
 
@@ -1160,11 +1187,11 @@ def assert_extension(_inData, params, degree=3, nchecks=4, t=None):
     :return:
     """
     if t is None:
-        rides = _inData.sblts.R[degree]
+        rides = _inData.exmas.R[degree]
     else:
         rides = None
     the_skim = _inData.the_skim
-    r = _inData.sblts.requests
+    r = _inData.exmas.requests
     for _ in range(nchecks + 1):
         if t is None:
             t = rides.sample(1).iloc[0]
@@ -1206,8 +1233,8 @@ def add_noise(inData, params):
             except:
                 raise Exception('Passed seed cannot be set')
         inData.prob.panel_noise = np.random.normal(params.panel_noise.get('mean', 0),
-                                             params.panel_noise.get('st_dev', 0),
-                                             len(inData.requests))
+                                                   params.panel_noise.get('st_dev', 0),
+                                                   len(inData.requests))
     else:
         inData.prob.panel_noise = np.zeros(len(inData.requests))
 
@@ -1217,11 +1244,15 @@ def add_noise(inData, params):
 def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: FunctionType = lambda *args: None):
     """
     Function designed to
+    @param sampling_function_with_index:
     @param sampling_func:
     @param inData:
     @param params:
     @return:
     """
+    if params.get("sampling_function_with_index", "False") is False:
+        params["sampling_function_with_index"] = False
+
     if params.get("distribution_variables", None) is None:
         inData.prob.sampled_random_parameters = pd.DataFrame()
         return inData
@@ -1242,7 +1273,7 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
 
     if type_of_distribution == "discrete":
         assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details - " \
-                                                                       "should be dict"
+                                                              "should be dict"
         randomised_variables = dict()
 
         for key in params.distribution_details.keys():
@@ -1252,20 +1283,27 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
 
     elif type_of_distribution == "manual" and sampling_func(*zeros) is not None:
         sample_from_interval = np.random.random([number_of_requests, len(zeros)])
+        if not params["sampling_function_with_index"]:
+            columns = params.distribution_variables
+        else:
+            columns = params.distribution_variables + ["class"]
         inData.prob.sampled_random_parameters = pd.DataFrame([sampling_func(*sample_from_interval[j, :])
                                                               for j in range(len(sample_from_interval))],
-                                                             columns=params.distribution_variables)
+                                                             columns=columns)
     elif type_of_distribution == "normal":
         assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details - " \
-                                                                       "should be dict"
+                                                              "should be dict"
         randomised_variables = dict()
 
         for key in params.distribution_details.keys():
-            randomised_variables[key] = np.random.normal(size=number_of_requests, loc=params.distribution_details[key][0],
+            randomised_variables[key] = np.random.normal(size=number_of_requests,
+                                                         loc=params.distribution_details[key][0],
                                                          scale=params.distribution_details[key][1])
         inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
     else:
         raise Exception("currently not implemented/wrong arguments, check the code")
+
+    inData.prob.sampled_random_parameters.index = inData.requests.index
 
     return inData
 
@@ -1404,4 +1442,3 @@ def check_if_correct_attributes(params):
         assert {"mean", "st_dev"}.issubset(set(params.noise.keys())), "Incorrect noise (should be dict: mean, st_dev)"
     if "panel_noise" in params.keys():
         assert {"mean", "st_dev"}.issubset(set(params.panel_noise.keys()))
-

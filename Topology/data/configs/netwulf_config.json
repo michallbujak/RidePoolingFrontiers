@@ -1,5 +1,5 @@
 {
-	"zoom": 1,
+	"zoom": 1.2,
 	"node_charge": -45,
 	"node_gravity": 0.1,
 	"link_distance": 15,
@@ -10,16 +10,17 @@
 	"node_fill_color": "#000000",
 	"node_stroke_color": "#000000",
 	"node_label_color": "#000000",
-	"node_size": 4.214335745972449,
+	"node_size": 3.246964440589766,
 	"node_stroke_width": 1,
-	"node_size_variation": 0.43217371001634375,
+	"node_size_variation": 0,
 	"display_node_labels": false,
 	"scale_node_size_by_strength": true,
 	"link_color": "#000000",
-	"link_width": 9.931977585804342,
+	"link_width": 1,
 	"link_alpha": 1,
-	"link_width_variation": 0.8804576231613355,
+	"link_width_variation": 1.2,
 	"display_singleton_nodes": true,
 	"min_link_weight_percentile": 0,
 	"max_link_weight_percentile": 1
+	
 }

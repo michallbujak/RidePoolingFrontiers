@@ -301,7 +301,7 @@ def amend_merged_file(merged_file, alter_kpis=False, inplace=True):
 def merge_results(dotmaps_list_results, topo_dataframes, settings_list, logger_level="INFO"):
     logger = init_log(logger_level)
     logger.warning("Merging results")
-    res = [pd.concat([z, x, y.sblts.res]) for z, x, y in
+    res = [pd.concat([z, x, y.exmas.res]) for z, x, y in
            zip([pd.Series(k) for k in settings_list], topo_dataframes, dotmaps_list_results)]
     merged_file = pd.DataFrame()
     for item in res:
@@ -524,7 +524,7 @@ def analyse_noise(list_dotmaps, config, logger_level="INFO", date=None):
     logger = init_log(logger_level)
     logger.info("Analysing noise")
     df = pd.DataFrame()
-    df['Passenger_ID'] = list(range(len(list_dotmaps[0].sblts.requests)))
+    df['Passenger_ID'] = list(range(len(list_dotmaps[0].exmas.requests)))
 
     def foo(df, num):
         out_list = []
@@ -535,7 +535,7 @@ def analyse_noise(list_dotmaps, config, logger_level="INFO", date=None):
 
     for num, dmap in enumerate(list_dotmaps):
         df['Noise ' + str(num)] = dmap.prob.noise
-        df['Possible pairs ' + str(num)] = foo(dmap.sblts.pairs, num=len(dmap.sblts.requests))
+        df['Possible pairs ' + str(num)] = foo(dmap.exmas.pairs, num=len(dmap.exmas.requests))
 
     if date is None:
         date = str(datetime.date.today().strftime("%d-%m-%y"))
@@ -554,8 +554,8 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     logger.info("Counting shareability")
     pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
-        # shareable.extend(np.unique(np.array(indata.sblts.rides.indexes)))
-        shareable.extend([str(x) for x in np.unique(np.array(indata.sblts.rides.indexes))])
+        # shareable.extend(np.unique(np.array(indata.exmas.rides.indexes)))
+        shareable.extend([str(x) for x in np.unique(np.array(indata.exmas.rides.indexes))])
         pbar.update(1)
 
     my_dict = Counter(shareable)
@@ -576,8 +576,8 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     scheduled = []
     pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
-        # scheduled.extend(np.unique(np.array(indata.sblts.schedule.indexes)))
-        scheduled.extend([str(x) for x in np.unique(np.array(indata.sblts.schedule.indexes))])
+        # scheduled.extend(np.unique(np.array(indata.exmas.schedule.indexes)))
+        scheduled.extend([str(x) for x in np.unique(np.array(indata.exmas.schedule.indexes))])
         pbar.update(1)
 
     my_dict = Counter(scheduled)
@@ -599,7 +599,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     if list_types_of_graph is not None:
         logger.warning("Current implementation for graph creation assumes that all runs are on the same batch")
         indata = list_dotmaps[-1]
-        requests = indata.sblts.requests.copy()
+        requests = indata.exmas.requests.copy()
         graph_list = dict()
         if list_types_of_graph == 'all':
             list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
@@ -674,9 +674,9 @@ def create_graph(indata, list_types_of_graph, noise_coefficients="coefficients")
                                'pairs_matching', 'probability_pairs']
     list_types_of_graph = list(map(lambda x: x.lower(), list_types_of_graph))
     graph_list = dict()
-    requests = indata.sblts.requests.copy()
-    rides = indata.sblts.rides.copy()
-    schedule = indata.sblts.schedule.copy()
+    requests = indata.exmas.requests.copy()
+    rides = indata.exmas.rides.copy()
+    schedule = indata.exmas.schedule.copy()
     while len(list_types_of_graph) > 0:
         type_of_graph = list_types_of_graph[-1]
         if type_of_graph in ['bipartite_shareability', 'bipartite_matching']:
@@ -813,8 +813,7 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
                     colour_list.append("red")
                 else:
                     colour_list.append("black")
-            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size/5, edge_color=colour_list)
-
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size / 5, edge_color=colour_list)
 
     if save:
         if date is None:
@@ -942,6 +941,7 @@ def read_pickle(file_path: str):
 def inverse_normal(means, stds):
     def internal_function(*X):
         return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, means, stds)]
+
     return internal_function
 
 
@@ -956,6 +956,15 @@ def mixed_discrete_norm_distribution(probs, *args):
         z = random.random()
         index = bisect.bisect(probs, z)
         return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, args[index][0], args[index][1])]
+
+    return internal_function
+
+
+def mixed_discrete_norm_distribution_with_index(probs, *args):
+    def internal_function(*X):
+        z = random.random()
+        index = bisect.bisect(probs, z)
+        return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, args[index][0], args[index][1])] + [index]
 
     return internal_function
 
@@ -981,4 +990,3 @@ def display_text(text, is_dotmap=False, is_dict=False, height=30, width=100):
     button2 = tk.Button(window, text="Stop the code", command=quit)
     button2.pack()
     window.mainloop()
-
