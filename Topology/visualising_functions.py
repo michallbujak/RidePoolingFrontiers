@@ -14,6 +14,7 @@ from netwulf import visualize
 import matplotlib.ticker as mtick
 import os
 import tkinter as tk
+import multiprocessing as mp
 
 
 def create_figs_folder(config):
@@ -25,10 +26,11 @@ def create_figs_folder(config):
     config.path_results += '/'
 
 
-def config_initialisation(path, date):
+def config_initialisation(path, date, sblts_exmas="exmas"):
     topological_config = utils.get_parameters(path)
     topological_config.path_results = 'data/results/' + date + '/'
     topological_config.date = date
+    topological_config.sblts_exmas = sblts_exmas
     return topological_config
 
 
@@ -190,7 +192,8 @@ def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, no
                              config=topological_config, save=save, saving_number=num, date=topological_config.date)
 
 
-def kpis_gain(dotmap_list, topological_config, sblts_exmas="exmas", max_ticks=5):
+def kpis_gain(dotmap_list, topological_config, max_ticks=5):
+    sblts_exmas = topological_config.sblts_exmas
     str_for_end = "_" + str(len(dotmap_list[0][sblts_exmas].requests))
     multiplier = 100
 
@@ -219,8 +222,9 @@ def kpis_gain(dotmap_list, topological_config, sblts_exmas="exmas", max_ticks=5)
     plt.close()
 
 
-def probability_of_sharing_classes(dotmap_list, topological_config, sblts_exmas="exmas", name=None,
+def probability_of_sharing_classes(dotmap_list, topological_config, name=None,
                                    _class_names=("C1", "C2", "C3", "C4"), max_bins=5):
+    sblts_exmas = topological_config.sblts_exmas
     if name is None:
         name = "per_class_prob_" + str(len(dotmap_list[0][sblts_exmas].requests))
 
@@ -256,3 +260,26 @@ def probability_of_sharing_classes(dotmap_list, topological_config, sblts_exmas=
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(decimals=0))
     plt.locator_params(axis='x', nbins=max_bins)
     plt.savefig(topological_config.path_results + "figs/" + name + ".png")
+
+
+def amend_dotmap(dotmap, config):
+    sblts_exmas = config.sblts_exmas
+    df = dotmap[sblts_exmas].requests[["id", "ttrav", "ttrav_sh", "u", "u_sh"]]
+    probs = dotmap.prob.sampled_random_parameters
+    df = pd.merge(df, probs[["class"]], left_on="id", right_index=True)
+    return df
+
+
+def relative_travel_times(df):
+    df = df.assign(Relative_time_add=(df["ttrav_sh"] - df["ttrav"]))
+    df['Relative_time_add'] = df['Relative_time_add'].apply(lambda x: 0 if abs(x) <= 1 else x)
+    df['Relative_time_add'] = df['Relative_time_add']/df['ttrav']
+    return df
+
+
+def individual_analysis(dotmap_list, config):
+    pool = mp.Pool(mp.cpu_count())
+    results = [pool.apply(amend_dotmap, args=(indata, config)) for indata in dotmap_list]
+    results = [relative_travel_times(t) for t in results]
+    pool.close()
+
