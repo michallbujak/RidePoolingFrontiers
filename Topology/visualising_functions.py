@@ -1,5 +1,6 @@
 import warnings
 
+import seaborn
 import seaborn as sns
 import utils_topology as utils
 import matplotlib.pyplot as plt
@@ -264,7 +265,7 @@ def probability_of_sharing_classes(dotmap_list, topological_config, name=None,
 
 def amend_dotmap(dotmap, config):
     sblts_exmas = config.sblts_exmas
-    df = dotmap[sblts_exmas].requests[["id", "ttrav", "ttrav_sh", "u", "u_sh"]]
+    df = dotmap[sblts_exmas].requests[["id", "ttrav", "ttrav_sh", "u", "u_sh", "kind"]]
     probs = dotmap.prob.sampled_random_parameters
     df = pd.merge(df, probs[["class"]], left_on="id", right_index=True)
     return df
@@ -277,9 +278,38 @@ def relative_travel_times(df):
     return df
 
 
-def individual_analysis(dotmap_list, config):
-    pool = mp.Pool(mp.cpu_count())
-    results = [pool.apply(amend_dotmap, args=(indata, config)) for indata in dotmap_list]
-    results = [relative_travel_times(t) for t in results]
-    pool.close()
+def separate_by_classes(list_dfs):
+    classes = dict()
 
+    first_rep = True
+    for rep in list_dfs:
+        for class_no in [0, 1, 2, 3]:
+            if first_rep:
+                classes["C" + str(class_no + 1)] = rep.loc[rep["class"] == class_no]
+            else:
+                classes["C" + str(class_no + 1)] =\
+                    classes["C" + str(class_no + 1)].append(rep.loc[rep["class"] == class_no])
+        first_rep = False
+
+    return classes
+
+
+def individual_analysis(dotmap_list, config, percentile=95):
+    results = [amend_dotmap(indata, config) for indata in dotmap_list]
+    results = [relative_travel_times(df) for df in results]
+
+    maximal_delay_percentile = np.percentile(pd.concat(results, axis=0)["Relative_time_add"], percentile)
+
+    results_shared = [df.loc[df["kind"] > 1] for df in results]
+
+    classes_shared = separate_by_classes(results_shared)
+
+    datasets = [t["Relative_time_add"] for t in [v for k, v in classes_shared.items()]]
+    labels = [k for k, v in classes_shared.items()]
+
+    for data, _label in zip(datasets, labels):
+        plt.hist(data, density=True, stacked=True, histtype='step', alpha=0.6, bins=50, label=_label)
+    plt.legend(loc="upper right")
+    plt.show()
+
+    z = 0
