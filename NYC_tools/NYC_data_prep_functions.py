@@ -274,24 +274,26 @@ def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'v
                 for k in range(len(topo_params['values'])):
                     params[topo_params['variable']] = topo_params['values'][k]
                     try:
-                        temp = exmas_algorithm(indatas[i], params, None, False)
+                        # temp = exmas_algorithm(indatas[i], params, None, False)
+                        temp = exmas_algorithm(indatas[i], params, False)
                         results.append(temp.copy())
-                        # settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k],
-                        #                  'Start_time': indatas[i].requests.iloc[0,]['pickup_datetime'],
-                        #                  'End_time': indatas[i].requests.iloc[-1,]['pickup_datetime'],
-                        #                  'Demand_size': len(indatas[i].requests)})
-                        settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
+                        settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k],
+                                         'Start_time': indatas[i].requests.iloc[0,]['pickup_datetime'],
+                                         'End_time': indatas[i].requests.iloc[-1,]['pickup_datetime'],
+                                         'Demand_size': len(indatas[i].requests)})
+                        # settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
                     except:
                         logger.debug('Impossible to attach batch number: ' + str(i))
                         pass
 
     pbar.close()
-    logger.info("Number of calculated results for batches is: ", len(results))
+    logger.info("Number of calculated results for batches is: ", str(len(results)))
     logger.info("ExMAS calculated \n")
     return results, settings
 
 
-def testing_exmas_multicore(exmas_algorithm, params, indata_list_with_one, _seed=None, topo_params=DotMap({'variable': None}),
+def testing_exmas_multicore(exmas_algorithm, params, indata_list_with_one, _seed=None,
+                            topo_params=DotMap({'variable': None}),
                             replications=1, logger_level=None, multicore=None, sampling_function_with_index=False):
     logger = embed_logger(logger_level)
     results = []

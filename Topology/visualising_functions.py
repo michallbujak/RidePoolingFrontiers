@@ -16,6 +16,7 @@ import matplotlib.ticker as mtick
 import os
 import tkinter as tk
 import multiprocessing as mp
+import matplotlib as mpl
 
 
 def create_figs_folder(config):
@@ -223,8 +224,8 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5):
     plt.close()
 
 
-def probability_of_sharing_classes(dotmap_list, topological_config, name=None,
-                                   _class_names=("C1", "C2", "C3", "C4"), max_bins=5):
+def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
+                           _class_names=("C1", "C2", "C3", "C4"), max_bins=5):
     sblts_exmas = topological_config.sblts_exmas
     if name is None:
         name = "per_class_prob_" + str(len(dotmap_list[0][sblts_exmas].requests))
@@ -240,9 +241,8 @@ def probability_of_sharing_classes(dotmap_list, topological_config, name=None,
         c3 = df.loc[df["class"] == 3]
 
         schedule = rep[sblts_exmas].schedule
-        indexes_sharing = schedule["indexes"].values
-        a1 = {frozenset(t) for t in indexes_sharing}
-        a2 = {next(iter(t)) for t in a1 if len(t) == 1}
+        non_shared = schedule.loc[schedule["kind"] == 1]
+        a2 = frozenset(non_shared.index)
 
         probs["c0"] += np.array([len(a2.intersection(set(c0.index))), len(c0)])
         probs["c1"] += np.array([len(a2.intersection(set(c1.index))), len(c1)])
@@ -294,11 +294,26 @@ def separate_by_classes(list_dfs):
     return classes
 
 
-def individual_analysis(dotmap_list, config, percentile=95):
+def fix_hist_step_vertical_line_at_end(ax):
+    axpolygons = [poly for poly in ax.get_children() if isinstance(poly, mpl.patches.Polygon)]
+    for poly in axpolygons:
+        poly.set_xy(poly.get_xy()[:-1])
+
+
+def create_latex_output_df(df, column_format):
+    latex_df = df.to_latex(float_format="%.2f", column_format=column_format)
+    latex_df = latex_df.replace("\\midrule", "\\hline")
+    for rule in ["\\toprule", "\\bottomrule"]:
+        latex_df = latex_df.replace(rule, "")
+    return latex_df
+
+
+def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
     results = [amend_dotmap(indata, config) for indata in dotmap_list]
     results = [relative_travel_times(df) for df in results]
+    size = len(results[0])
 
-    maximal_delay_percentile = np.percentile(pd.concat(results, axis=0)["Relative_time_add"], percentile)
+    maximal_delay_percentile = np.nanpercentile(pd.concat(results, axis=0)["Relative_time_add"], percentile)
 
     results_shared = [df.loc[df["kind"] > 1] for df in results]
 
@@ -307,9 +322,62 @@ def individual_analysis(dotmap_list, config, percentile=95):
     datasets = [t["Relative_time_add"] for t in [v for k, v in classes_shared.items()]]
     labels = [k for k, v in classes_shared.items()]
 
-    for data, _label in zip(datasets, labels):
-        plt.hist(data, density=True, stacked=True, histtype='step', alpha=0.6, bins=50, label=_label)
+    fig, ax = plt.subplots()
+    plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
+    ax.axvline(x=maximal_delay_percentile, color='black', ls=':', label='95%', lw=1)
+    fix_hist_step_vertical_line_at_end(ax)
     plt.legend(loc="upper right")
-    plt.show()
+    plt.savefig(config.path_results + "figs/" + "cdf_class_time_delay_" + str(size) + ".png")
 
-    z = 0
+    means = [np.mean(t) for t in datasets]
+    st_devs = [np.std(t) for t in datasets]
+    percentiles = [(np.nanpercentile(t, 75), np.nanpercentile(t, 90), np.nanpercentile(t, 95)) for t in datasets]
+    df = pd.DataFrame({"Means": means, "St_dev": st_devs, "Q3": [t[0] for t in percentiles],
+                       "90": [t[1] for t in percentiles], "95": [t[2] for t in percentiles]})
+    df.index = ["C1", "C2", "C3", "C4"]
+
+    with open(config.path_results + 'per_class_time_' + str(size) + ".txt", "w") as file:
+        file.write(create_latex_output_df(df, "c|c|c|c|c|c"))
+
+
+def probability_of_pooling_aggregated(dotmaps_list, config):
+    sblts_exmas = config.sblts_exmas
+
+    prob = []
+
+    list_len = len(dotmaps_list[0][sblts_exmas].requests)
+
+    for rep in dotmaps_list:
+        schedule = rep[sblts_exmas].schedule
+        prob.append(list_len - len(schedule.loc[schedule["kind"] == 1]))
+
+    prob_list = [t/list_len for t in prob]
+
+    output = np.round_((np.mean(prob_list), np.std(prob_list)), 4)
+    print(list_len)
+    print(output)
+
+    return output
+
+
+def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3):
+    sblts_exmas = config.sblts_exmas
+    size = len(dotmaps_list[0][sblts_exmas].requests)
+
+    relative_perspective = []
+
+    for rep in dotmaps_list:
+        discounted_distance = sum(rep[sblts_exmas].requests.loc[rep[sblts_exmas].requests["kind"] > 1]["dist"])
+        veh_time_saved = rep[sblts_exmas].res["VehHourTrav_ns"] - rep[sblts_exmas].res["VehHourTrav"]
+        veh_distance_on_reduction = discounted_distance - veh_time_saved*speed
+
+        # basic_relation = sum(rep[sblts_exmas].requests["dist"])/(rep[sblts_exmas].res["VehHourTrav_ns"]*speed)
+        shared_relation = discounted_distance*(1 - sharing_discount)/veh_distance_on_reduction
+        # relative_perspective.append(shared_relation/basic_relation)
+        relative_perspective.append(shared_relation)
+
+    ax = sns.histplot(relative_perspective)
+    ax.set(ylabel='Profitability of sharing', xlabel=None)
+    plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
+
+

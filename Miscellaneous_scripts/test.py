@@ -1,17 +1,18 @@
-import tkinter as tk
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
+data = {
+       "A": pd.DataFrame({"X": [0, 0, 0, 2, 4]}),
+       "B": pd.DataFrame({"X": [0, 0, 0, 0, 1, 2]}),
+       "C": pd.DataFrame({"X": [0, 0, 2, 4]})
+}
 
-g = "elo"
+datasets = [t["X"] for t in [v for k, v in data.items()]]
+labels = [k for k, v in data.items()]
 
-text = "The following network is " + g.upper() + \
-       ". \n Please click 'Post to python' in the browser when investigated." + \
-       "\n Default name for the graph is: " + g + "_" + str(10)
-window = tk.Tk()
-lbl = tk.Label(window, text="Input")
-lbl.pack()
-txt = tk.Text(window, width=100, height=20)
-txt.pack()
-txt.insert("1.0", text)
-button = tk.Button(window, text="Show", command=window.destroy)
-button.pack()
-window.mainloop()
+bins = [0, 2, 4, np.inf]
+
+plt.hist(datasets, density=True, histtype='step', alpha=0.6, bins=bins, label=labels, cumulative=True)
+plt.legend(loc="upper right")
+plt.show()

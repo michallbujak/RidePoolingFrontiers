@@ -1,17 +1,6 @@
-import random
-import multiprocessing as mp
+import pickle
 
+with open("data/03-11-22/final_res_03-11-22.obj", "rb") as file:
+    e = pickle.load(file)
 
-def foo():
-    return random.random()
-
-
-def init_pool_processes():
-    random.seed()
-
-
-def foo2():
-    pool = mp.pool.ThreadPool(mp.cpu_count(), initializer=init_pool_processes)
-    res = pool.map(foo, range(3))
-    pool.close()
-    return res
+x = 0

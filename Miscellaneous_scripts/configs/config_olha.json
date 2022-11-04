@@ -2,5 +2,5 @@
 	"initial_parameters": "Miscellaneous_scripts/configs/initial_config_olha.json",
 	"path_results": "data/",
 	"variable": "shared_discount",
-	"values": [0.2, 0.24, 0.28]
+	"values": [0.32]
 }
