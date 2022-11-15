@@ -844,6 +844,14 @@ def matching(_inData, params, plot=False, make_assertion=True):
     rides = _inData.exmas.rides.copy()
     requests = _inData.exmas.requests.copy()
 
+    rides['ttrav'] = rides.times.apply(lambda x: sum(x[1:]))
+    rides['ttrav_ns'] = rides.indexes.apply(lambda x: sum([requests.iloc[t]['ttrav'] for t in x]))
+
+    shared_rides = rides.loc[[len(t) > 1 for t in rides.indexes]].copy()
+    shared_rides['saved_time'] = shared_rides["ttrav_ns"] - shared_rides["ttrav"]
+    shared_rides['earnings_on_shared'] = shared_rides['ttrav_ns'].values * params.avg_speed * (1 - params.shared_discount)
+    shared_rides['u_op'] = shared_rides['earnings_on_shared']/(shared_rides['saved_time']*params.avg_speed)
+
     opt_outs = False
     multi_platform_matching = params.get('multi_platform_matching', False)
 

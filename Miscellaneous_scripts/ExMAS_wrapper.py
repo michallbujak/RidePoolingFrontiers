@@ -12,7 +12,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 if __name__ == "__main__":
     # """ Load all the topological parameters """
     config = utils.get_parameters(
-        r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
+        r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
     #
     # """ Set up varying parameters (optional) """
     # # config.variable = 'shared_discount'
@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
     """ Run ExMAS """
     params = utils.update_probabilistic(config, params)
+    config.replications = 1
     s = 1
     params.sampling_function = utils.mixed_discrete_norm_distribution_with_index((0.29, 0.57, 0.81, 1),
                                                                       ((16.98 / 3600, 1.22),
@@ -52,11 +53,13 @@ if __name__ == "__main__":
                                                                        (s * 0.778 / 3600, s * 0.118)))
     # utils.display_text(params, is_dotmap=True)
 
-    dotmaps_list_results = nyc_tools.testing_exmas_multicore(exmas_algo, params, dotmaps_list,
-                                                             topo_params=config,
-                                                             replications=config.replications,
-                                                             logger_level='INFO',
-                                                             sampling_function_with_index=True)
+    dotmaps_list_results = nyc_tools.testing_exmas_basic(exmas_algorithm=exmas_algo,
+                                                         params=params,
+                                                         indatas=dotmaps_list,
+                                                         topo_params=config,
+                                                         replications=config.replications,
+                                                         logger_level='INFO',
+                                                         sampling_function_with_index=True)
 
     # final_results = zip([x.sblts.res for x in dotmaps_list_results], settings_list)
     # utils.save_with_pickle(final_results, 'final_res', config)
