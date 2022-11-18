@@ -817,7 +817,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                     re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i
                                        in
                                        range(degree + 1)]
-                    re.u_paxes = re.true_u_paxes + panel_noise
+                    re.u_paxes = [sum(x) for x in zip(re.true_u_paxes, panel_noise)]
 
                     re.pos = pos
                     re.times = new_times

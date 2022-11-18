@@ -12,7 +12,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 if __name__ == "__main__":
     # """ Load all the topological parameters """
     config = utils.get_parameters(
-        r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
+        r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings3.json")
     #
     # """ Set up varying parameters (optional) """
     # # config.variable = 'shared_discount'

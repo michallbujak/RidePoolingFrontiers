@@ -1,3 +1,4 @@
+import itertools
 import warnings
 
 import seaborn
@@ -271,10 +272,11 @@ def amend_dotmap(dotmap, config):
     return df
 
 
-def relative_travel_times(df):
+def relative_travel_times_utility(df):
     df = df.assign(Relative_time_add=(df["ttrav_sh"] - df["ttrav"]))
     df['Relative_time_add'] = df['Relative_time_add'].apply(lambda x: 0 if abs(x) <= 1 else x)
     df['Relative_time_add'] = df['Relative_time_add']/df['ttrav']
+    df['Relative_utility_gain'] = (df['u']-df['u_sh'])/df['u']
     return df
 
 
@@ -310,34 +312,42 @@ def create_latex_output_df(df, column_format):
 
 def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
     results = [amend_dotmap(indata, config) for indata in dotmap_list]
-    results = [relative_travel_times(df) for df in results]
+    results = [relative_travel_times_utility(df) for df in results]
     size = len(results[0])
-
-    maximal_delay_percentile = np.nanpercentile(pd.concat(results, axis=0)["Relative_time_add"], percentile)
 
     results_shared = [df.loc[df["kind"] > 1] for df in results]
 
     classes_shared = separate_by_classes(results_shared)
+    classes = separate_by_classes(results)
 
-    datasets = [t["Relative_time_add"] for t in [v for k, v in classes_shared.items()]]
-    labels = [k for k, v in classes_shared.items()]
+    for var, sharing in itertools.product(["Relative_time_add", "Relative_utility_gain"], ['shared', 'all']):
+        if sharing == 'shared':
+            classes_dict = classes_shared
+            res = results_shared
+        else:
+            classes_dict = classes
+            res = results
 
-    fig, ax = plt.subplots()
-    plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
-    ax.axvline(x=maximal_delay_percentile, color='black', ls=':', label='95%', lw=1)
-    fix_hist_step_vertical_line_at_end(ax)
-    plt.legend(loc="upper right")
-    plt.savefig(config.path_results + "figs/" + "cdf_class_time_delay_" + str(size) + ".png")
+        datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
+        labels = [k for k, v in classes_dict.items()]
+        maximal_delay_percentile = np.nanpercentile(pd.concat(res, axis=0)[var], percentile)
 
-    means = [np.mean(t) for t in datasets]
-    st_devs = [np.std(t) for t in datasets]
-    percentiles = [(np.nanpercentile(t, 75), np.nanpercentile(t, 90), np.nanpercentile(t, 95)) for t in datasets]
-    df = pd.DataFrame({"Means": means, "St_dev": st_devs, "Q3": [t[0] for t in percentiles],
-                       "90": [t[1] for t in percentiles], "95": [t[2] for t in percentiles]})
-    df.index = ["C1", "C2", "C3", "C4"]
+        fig, ax = plt.subplots()
+        plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
+        ax.axvline(x=maximal_delay_percentile, color='black', ls=':', label='95%', lw=1)
+        fix_hist_step_vertical_line_at_end(ax)
+        plt.legend(loc="upper right")
+        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png")
 
-    with open(config.path_results + 'per_class_time_' + str(size) + ".txt", "w") as file:
-        file.write(create_latex_output_df(df, "c|c|c|c|c|c"))
+        means = [np.mean(t) for t in datasets]
+        st_devs = [np.std(t) for t in datasets]
+        percentiles = [(np.nanpercentile(t, 75), np.nanpercentile(t, 90), np.nanpercentile(t, 95)) for t in datasets]
+        df = pd.DataFrame({"Means": means, "St_dev": st_devs, "Q3": [t[0] for t in percentiles],
+                           "90": [t[1] for t in percentiles], "95": [t[2] for t in percentiles]})
+        df.index = ["C1", "C2", "C3", "C4"]
+
+        with open(config.path_results + 'per_class_' + var + "_" + sharing + "_" + str(size) + ".txt", "w") as file:
+            file.write(create_latex_output_df(df, "c|c|c|c|c|c"))
 
 
 def probability_of_pooling_aggregated(dotmaps_list, config):
