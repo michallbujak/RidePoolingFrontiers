@@ -239,16 +239,15 @@ def single_rides(_inData, params):
     df['kind'] = SbltType.SINGLE.value  # assign a type for a ride
     df['indexes'] = df.index
     df['times'] = df.apply(lambda x: [x.treq, x.ttrav], axis=1)  # sequence of travel times
-    df = df[['indexes', 'u', 'ttrav', 'kind', 'times']]  # columns to store as a shared ride
+    df = df[['indexes', 'u', 'ttrav', 'kind', 'times', 'true_u']]  # columns to store as a shared ride
     df['indexes'] = df['indexes'].apply(lambda x: [x])
     df['u_paxes'] = df['u'].apply(lambda x: [x])
+    df['true_u_paxes'] = df['true_u'].apply(lambda x: [x])
 
-    df.columns = ['indexes', 'u_pax', 'u_veh', 'kind', 'times', 'u_paxes']  # synthax for the output rides
-    df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times']]
+    df.columns = ['indexes', 'u_pax', 'u_veh', 'kind', 'times', 'true_u_pax', 'u_paxes', 'true_u_paxes']  # synthax for the output rides
+    df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'true_u_pax', 'true_u_paxes']]
     df['indexes_orig'] = df.indexes  # copy order of origins for single rides
     df['indexes_dest'] = df.indexes  # and dest
-    df['true_u_pax'] = df['u_pax']
-    df['true_u_paxes'] = df['u_paxes']
     df = df[RIDE_COLS]
 
     _inData.exmas.SINGLES = df.copy()  # single trips
@@ -487,9 +486,6 @@ def pairs(_inData, params, process=True, check=True, plot=False):
 
         r = calculate_r_utility(r, "i", params, sampled_noise, 1)
         r = calculate_r_utility(r, "j", params, sampled_noise, 1)
-
-        # r['u_i'] = r['true_u_i'] + r['panel_noise_i'] + sampled_noise["i_utility_1"]
-        # r['u_j'] = r['true_u_j'] + r['panel_noise_j'] + sampled_noise["j_utility_1"]
 
         r['t_i'] = r.t_oo + r.t_od + params.pax_delay
         r['t_j'] = r.t_od + r.t_dd + params.pax_delay
@@ -817,7 +813,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                     re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i
                                        in
                                        range(degree + 1)]
-                    re.u_paxes = [sum(x) for x in zip(re.true_u_paxes, panel_noise)]
+                    re.u_paxes = [x[0] - x[1] for x in zip(re.true_u_paxes, panel_noise)]
 
                     re.pos = pos
                     re.times = new_times
@@ -1392,19 +1388,23 @@ def utility_for_r(r, ij, params, sampled_noise, one_or_two):
             sampled_noise[str(ij) + "_utility_" + one_two] = pd.DataFrame(data_temp)
             sampled_noise[str(ij) + "_utility_" + one_two][["i", "j"]] = r[["i", "j"]].values.copy()
             sampled_noise[str(ij) + "_utility_" + one_two].set_index(["i", "j"], drop=True, inplace=True)
-            r = r[r['true_utility_' + ij] + r['panel_noise_' + ij] +
-                  sampled_noise[ij + "_utility_" + one_two].iloc[:, 0].values > 0]
+            r['utility_' + ij] = r['true_utility_' + ij] + r['panel_noise_' + ij] + \
+                                 sampled_noise[ij + "_utility_" + one_two].iloc[:, 0].values
+            r = r[r['utility_' + ij] > 0]
         else:
-            r = r[r['true_utility_' + ij] + r['panel_noise_' + ij] > 0]
+            r['utility_' + ij] = r['true_utility_' + ij] + r['panel_noise_' + ij]
+            r = r[r['utility_' + ij] > 0]
     else:
         if params.get("noise", None) is not None:
             data_temp = np.random.normal(size=len(r), loc=params.noise["mean"], scale=params.noise["st_dev"])
             sampled_noise[str(ij) + "_utility_" + one_two] = pd.DataFrame(data_temp)
             sampled_noise[str(ij) + "_utility_" + one_two][["i", "j"]] = r[["i", "j"]].values.copy()
             sampled_noise[str(ij) + "_utility_" + one_two].set_index(["i", "j"], drop=True, inplace=True)
-            r = r[r['true_utility_' + ij] + sampled_noise[ij + "_utility_" + one_two].iloc[:, 0].values > 0]
+            r['utility_' + ij] = r['true_utility_' + ij] + sampled_noise[ij + "_utility_" + one_two].iloc[:, 0].values
+            r = r[r['utility_' + ij] > 0]
         else:
-            r = r[r['true_utility_' + ij] > 0]
+            r['utility_' + ij] = r['true_utility_' + ij]
+            r = r[r['utility_' + ij] > 0]
     return r, sampled_noise
 
 
@@ -1412,14 +1412,13 @@ def calculate_r_utility(r, ij, params, sampled_noise, one_or_two):
     one_two = str(1) if one_or_two == 1 else str(2)
     if params.get("panel_noise", None) is not None:
         if params.get("noise", None) is not None:
-            r['u_' + str(ij)] = r['true_utility_' + ij] + r['panel_noise_' + ij] \
-                                + sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
+            r['u_' + str(ij)] = r['true_utility_' + ij] - r['panel_noise_' + ij] \
+                                - sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
         else:
-            r['u_' + str(ij)] = r['true_utility_' + ij] + r['panel_noise_' + ij]
+            r['u_' + str(ij)] = r['true_utility_' + ij] - r['panel_noise_' + ij]
     else:
         if params.get("noise", None) is not None:
-            r['u_' + str(ij)] = r['true_utility_' + ij] + r['panel_noise_' + ij] \
-                                + sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
+            r['u_' + str(ij)] = r['true_utility_' + ij] - sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
         else:
             r['u_' + str(ij)] = r['true_utility_' + ij]
     return r
