@@ -1,4 +1,5 @@
 import itertools
+import sys
 import warnings
 
 import seaborn
@@ -18,6 +19,10 @@ import os
 import tkinter as tk
 import multiprocessing as mp
 import matplotlib as mpl
+
+import scienceplots
+
+plt.style.use(['science','no-latex'])
 
 
 def create_figs_folder(config):
@@ -262,6 +267,7 @@ def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(decimals=0))
     plt.locator_params(axis='x', nbins=max_bins)
     plt.savefig(topological_config.path_results + "figs/" + name + ".png")
+    plt.close()
 
 
 def amend_dotmap(dotmap, config):
@@ -328,7 +334,8 @@ def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
             classes_dict = classes
             res = results
 
-        datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
+        datasets = [t[var].apply(lambda x: x if x >= 0 else abs(x)) for t in [v for k, v in classes_dict.items()]]
+        # datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
         labels = [k for k, v in classes_dict.items()]
         maximal_delay_percentile = np.nanpercentile(pd.concat(res, axis=0)[var], percentile)
 
@@ -338,6 +345,7 @@ def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
         fix_hist_step_vertical_line_at_end(ax)
         plt.legend(loc="upper right")
         plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png")
+        plt.close()
 
         means = [np.mean(t) for t in datasets]
         st_devs = [np.std(t) for t in datasets]
@@ -385,6 +393,8 @@ def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3):
         shared_relation = discounted_distance*(1 - sharing_discount)/veh_distance_on_reduction
         # relative_perspective.append(shared_relation/basic_relation)
         relative_perspective.append(shared_relation)
+
+    plt.show()
 
     ax = sns.histplot(relative_perspective)
     ax.set(ylabel='Profitability of sharing', xlabel=None)

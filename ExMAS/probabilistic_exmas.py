@@ -800,11 +800,16 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                 #    pd.Series(d, index=x).plot()  # option plot d=f(dep)
                 u_paxes = list()
                 true_u_paxes = list()
+                noise = []
 
                 for i in range(degree + 1):
                     true_u_paxes.append(
                         trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i], WtS[i]))
-                    u_paxes.append(true_u_paxes[-1] + panel_noise[i])
+                    if params.noise is None:
+                        u_paxes.append(true_u_paxes[-1] + panel_noise[i])
+                    else:
+                        noise.append(np.random.normal(loc=params.noise.mean, scale=params.noise.st_dev))
+                        u_paxes.append(true_u_paxes[-1] + panel_noise[i] + noise[-1])
 
                     if u_paxes[-1] < 0:
                         feasible_flag = False
@@ -813,7 +818,10 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                     re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i
                                        in
                                        range(degree + 1)]
-                    re.u_paxes = [x[0] - x[1] for x in zip(re.true_u_paxes, panel_noise)]
+                    if params.noise is None:
+                        re.u_paxes = [x[0] - x[1] for x in zip(re.true_u_paxes, panel_noise)]
+                    else:
+                        re.u_paxes = [x[0] - x[1] - x[2] for x in zip(re.true_u_paxes, panel_noise, noise)]
 
                     re.pos = pos
                     re.times = new_times
