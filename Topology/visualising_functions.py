@@ -338,12 +338,14 @@ def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
         # datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
         labels = [k for k, v in classes_dict.items()]
         maximal_delay_percentile = np.nanpercentile(pd.concat(res, axis=0)[var], percentile)
+        xlim_end = np.nanpercentile(pd.concat(res, axis=0)[var], 99.5)
 
         fig, ax = plt.subplots()
         plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
         ax.axvline(x=maximal_delay_percentile, color='black', ls=':', label='95%', lw=1)
         fix_hist_step_vertical_line_at_end(ax)
-        plt.legend(loc="upper right")
+        plt.xlim(left=-0.05, right=xlim_end)
+        plt.legend(loc="lower right")
         plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png")
         plt.close()
 
