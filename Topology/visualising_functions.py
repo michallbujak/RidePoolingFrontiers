@@ -200,13 +200,13 @@ def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, no
                              config=topological_config, save=save, saving_number=num, date=topological_config.date)
 
 
-def kpis_gain(dotmap_list, topological_config, max_ticks=5):
+def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20):
     sblts_exmas = topological_config.sblts_exmas
     str_for_end = "_" + str(len(dotmap_list[0][sblts_exmas].requests))
     multiplier = 100
 
     ax = sns.histplot([multiplier * (x[sblts_exmas].res.PassUtility_ns - x[sblts_exmas].res.PassUtility) / x[
-        sblts_exmas].res.PassUtility_ns for x in dotmap_list])
+        sblts_exmas].res.PassUtility_ns for x in dotmap_list], bins=bins)
     ax.set(xlabel="Utility gain", ylabel=None)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
@@ -214,7 +214,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5):
     plt.close()
 
     ax = sns.histplot([multiplier * (x[sblts_exmas].res.PassHourTrav - x[sblts_exmas].res.PassHourTrav_ns) / x[
-        sblts_exmas].res.PassHourTrav_ns for x in dotmap_list])
+        sblts_exmas].res.PassHourTrav_ns for x in dotmap_list], bins=bins)
     ax.set(xlabel="Travel time extension", ylabel=None)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
@@ -222,7 +222,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5):
     plt.close()
 
     ax = sns.histplot([multiplier * (x[sblts_exmas].res.VehHourTrav_ns - x[sblts_exmas].res.VehHourTrav) / x[
-        sblts_exmas].res.VehHourTrav_ns for x in dotmap_list])
+        sblts_exmas].res.VehHourTrav_ns for x in dotmap_list], bins=bins)
     ax.set(xlabel='Vehicle time shortening', ylabel=None)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
@@ -231,7 +231,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5):
 
 
 def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
-                           _class_names=("C1", "C2", "C3", "C4"), max_bins=5):
+                                   _class_names=("C1", "C2", "C3", "C4"), max_ticks=5):
     sblts_exmas = topological_config.sblts_exmas
     if name is None:
         name = "per_class_prob_" + str(len(dotmap_list[0][sblts_exmas].requests))
@@ -265,7 +265,7 @@ def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
     ax = sns.barplot(data=pd.DataFrame({"names": x, "values": y}), x="names", y="values")
     ax.set(ylabel='Probability of sharing', xlabel=None)
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(decimals=0))
-    plt.locator_params(axis='x', nbins=max_bins)
+    plt.locator_params(axis='x', nbins=max_ticks)
     plt.savefig(topological_config.path_results + "figs/" + name + ".png")
     plt.close()
 
@@ -380,7 +380,7 @@ def probability_of_pooling_aggregated(dotmaps_list, config):
     return output
 
 
-def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3):
+def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3, bins=20):
     sblts_exmas = config.sblts_exmas
     size = len(dotmaps_list[0][sblts_exmas].requests)
 
@@ -398,8 +398,10 @@ def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3):
 
     plt.show()
 
-    ax = sns.histplot(relative_perspective)
+    ax = sns.histplot(relative_perspective, bins=bins)
     ax.set(ylabel='Profitability of sharing', xlabel=None)
     plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
+
+
 
 
