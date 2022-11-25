@@ -22,7 +22,7 @@ import matplotlib as mpl
 
 import scienceplots
 
-plt.style.use(['science','no-latex'])
+plt.style.use(['science', 'no-latex'])
 
 
 def create_figs_folder(config):
@@ -238,7 +238,7 @@ def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
 
     probs = {"c0": np.array([0, 0]), "c1": np.array([0, 0]), "c2": np.array([0, 0]), "c3": np.array([0, 0])}
     for rep in dotmap_list:
-        df = rep.prob.sampled_random_parameters.copy()
+        df = rep['prob'].sampled_random_parameters.copy()
         df["VoT"] *= 3600
         df.set_index("new_index", inplace=True)
         c0 = df.loc[df["class"] == 0]
@@ -273,7 +273,7 @@ def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
 def amend_dotmap(dotmap, config):
     sblts_exmas = config.sblts_exmas
     df = dotmap[sblts_exmas].requests[["id", "ttrav", "ttrav_sh", "u", "u_sh", "kind"]]
-    probs = dotmap.prob.sampled_random_parameters
+    probs = dotmap['prob'].sampled_random_parameters
     df = pd.merge(df, probs[["class"]], left_on="id", right_index=True)
     return df
 
@@ -281,8 +281,8 @@ def amend_dotmap(dotmap, config):
 def relative_travel_times_utility(df):
     df = df.assign(Relative_time_add=(df["ttrav_sh"] - df["ttrav"]))
     df['Relative_time_add'] = df['Relative_time_add'].apply(lambda x: 0 if abs(x) <= 1 else x)
-    df['Relative_time_add'] = df['Relative_time_add']/df['ttrav']
-    df['Relative_utility_gain'] = (df['u']-df['u_sh'])/df['u']
+    df['Relative_time_add'] = df['Relative_time_add'] / df['ttrav']
+    df['Relative_utility_gain'] = (df['u'] - df['u_sh']) / df['u']
     return df
 
 
@@ -295,7 +295,7 @@ def separate_by_classes(list_dfs):
             if first_rep:
                 classes["C" + str(class_no + 1)] = rep.loc[rep["class"] == class_no]
             else:
-                classes["C" + str(class_no + 1)] =\
+                classes["C" + str(class_no + 1)] = \
                     classes["C" + str(class_no + 1)].append(rep.loc[rep["class"] == class_no])
         first_rep = False
 
@@ -371,7 +371,7 @@ def probability_of_pooling_aggregated(dotmaps_list, config):
         schedule = rep[sblts_exmas].schedule
         prob.append(list_len - len(schedule.loc[schedule["kind"] == 1]))
 
-    prob_list = [t/list_len for t in prob]
+    prob_list = [t / list_len for t in prob]
 
     output = np.round_((np.mean(prob_list), np.std(prob_list)), 4)
     print(list_len)
@@ -389,19 +389,41 @@ def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3, b
     for rep in dotmaps_list:
         discounted_distance = sum(rep[sblts_exmas].requests.loc[rep[sblts_exmas].requests["kind"] > 1]["dist"])
         veh_time_saved = rep[sblts_exmas].res["VehHourTrav_ns"] - rep[sblts_exmas].res["VehHourTrav"]
-        veh_distance_on_reduction = discounted_distance - veh_time_saved*speed
+        veh_distance_on_reduction = discounted_distance - veh_time_saved * speed
 
         # basic_relation = sum(rep[sblts_exmas].requests["dist"])/(rep[sblts_exmas].res["VehHourTrav_ns"]*speed)
-        shared_relation = discounted_distance*(1 - sharing_discount)/veh_distance_on_reduction
+        shared_relation = discounted_distance * (1 - sharing_discount) / veh_distance_on_reduction
         # relative_perspective.append(shared_relation/basic_relation)
         relative_perspective.append(shared_relation)
 
     plt.show()
 
     ax = sns.histplot(relative_perspective, bins=bins)
-    ax.set(ylabel='Profitability of sharing', xlabel=None)
+    ax.set(ylabel=None, xlabel='Profitability of sharing')
     plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
 
 
+def partial_analysis(dotmap_list, config, no_elements=None, s=10):
+    sblts_exmas = 'exmas'
+    size = len(dotmap_list[0][sblts_exmas].requests)
+    if no_elements is None:
+        datasets = dotmap_list.copy()
+    else:
+        datasets = dotmap_list[:no_elements].copy()
 
+    datasets = [d['exmas']['requests'].merge(d['prob']['sampled_random_parameters']['class'],
+                                             left_on='id', right_index=True) for d in datasets]
 
+    data = [t.loc[t['kind'] > 1] for t in datasets]
+    agg_data = pd.concat(data)
+    agg_data = relative_travel_times_utility(agg_data)
+    agg_data['Relative_utility_gain'] = agg_data['Relative_utility_gain'].apply(lambda x: x if x >= 0 else abs(x))
+    agg_data['VoT'] = agg_data['VoT']*3600
+    dict_labels = {'Relative_utility_gain': "Utility gain", "Relative_time_add": "Time extension"}
+    for y_var, x_var in itertools.product(['Relative_utility_gain', 'Relative_time_add'], ['VoT', 'WtS']):
+        palette = {0: 'green', 1: "orange", 2: "blue", 3: "red"}
+        ax = sns.scatterplot(data=agg_data, x=x_var, y=y_var, hue="class", palette=palette, s=s)
+        ax.set_ylabel(dict_labels[y_var])
+        ax.set_ylim(bottom=0)
+        plt.savefig(config.path_results + "figs/" + x_var + '_' + y_var + "_" + str(size) + ".png")
+        plt.close()

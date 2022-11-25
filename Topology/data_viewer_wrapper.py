@@ -1,8 +1,8 @@
 import visualising_functions as vis_eff
 
-date = "21-11-22"
+date = "25-11-22"
 sblts_exmas = "exmas"
-special_name = "_mini"
+special_name = "_mini_n"
 
 if __name__ == '__main__':
     config = vis_eff.config_initialisation('data/configs/topology_settings3.json', date, sblts_exmas)
@@ -14,9 +14,10 @@ if __name__ == '__main__':
     rep_graphs, dotmap_list, all_graphs_list = vis_eff.load_data(config)
 
     # vis_eff.graph_visualisation_with_netwulf(all_graphs_list, rep_graphs)
-    # vis_eff.kpis_gain(dotmap_list, config, bins=20)
-    # vis_eff.probability_of_pooling_classes(dotmap_list, config)
-    # vis_eff.individual_analysis(dotmap_list, config)
-    # vis_eff.probability_of_pooling_aggregated(dotmap_list, config)
-    # vis_eff.analyse_profitability(dotmap_list, config, bins=20)
+    vis_eff.kpis_gain(dotmap_list, config, bins=20)
+    vis_eff.probability_of_pooling_classes(dotmap_list, config)
+    vis_eff.individual_analysis(dotmap_list, config)
+    vis_eff.probability_of_pooling_aggregated(dotmap_list, config)
+    vis_eff.analyse_profitability(dotmap_list, config, bins=20)
+    vis_eff.partial_analysis(dotmap_list, config)
 

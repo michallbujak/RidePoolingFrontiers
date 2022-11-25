@@ -216,6 +216,9 @@ def single_rides(_inData, params):
         assert isinstance(params.noise, dict), "Incorrect type of params.noise in json (expected dict)"
         req['u'] = req["true_u"] + np.random.normal(size=len(req), loc=params.noise.get("mean", 0),
                                                     scale=params.noise.get("st_dev", 0))
+
+    req['u'] = req['u'].apply(lambda x: x if x >= 0 else 0)
+
     req = req.sort_values(['treq', 'pax_id'])  # sort
     req = req.reset_index()
 
@@ -481,8 +484,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
         r['indexes_orig'] = r.indexes
         r['indexes_dest'] = r.apply(lambda x: [int(x.i), int(x.j)], axis=1)
 
-        r['true_u_i'] = utility_sh_i()
-        r['true_u_j'] = utility_sh_j()
+        r['true_u_i'] = utility_sh_i().copy()
+        r['true_u_j'] = utility_sh_j().copy()
 
         r = calculate_r_utility(r, "i", params, sampled_noise, 1)
         r = calculate_r_utility(r, "j", params, sampled_noise, 1)
@@ -776,7 +779,9 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
 
             # first assume null delays
             feasible_flag = True
+            noise = []
             for i in range(degree + 1):
+                noise.append(np.random.normal(size=1, loc=params.noise.get("mean", 0)))
                 if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i], WtS[i]) + \
                         panel_noise[i] < 0:
                     feasible_flag = False
@@ -1420,15 +1425,15 @@ def calculate_r_utility(r, ij, params, sampled_noise, one_or_two):
     one_two = str(1) if one_or_two == 1 else str(2)
     if params.get("panel_noise", None) is not None:
         if params.get("noise", None) is not None:
-            r['u_' + str(ij)] = r['true_utility_' + ij] - r['panel_noise_' + ij] \
+            r['u_' + str(ij)] = r['true_u_' + ij] - r['panel_noise_' + ij] \
                                 - sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
         else:
-            r['u_' + str(ij)] = r['true_utility_' + ij] - r['panel_noise_' + ij]
+            r['u_' + str(ij)] = r['true_u_' + ij] - r['panel_noise_' + ij]
     else:
         if params.get("noise", None) is not None:
-            r['u_' + str(ij)] = r['true_utility_' + ij] - sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
+            r['u_' + str(ij)] = r['true_u_' + ij] - sampled_noise[ij + "_utility_" + one_two].loc[r.index, 0].values
         else:
-            r['u_' + str(ij)] = r['true_utility_' + ij]
+            r['u_' + str(ij)] = r['true_u_' + ij]
     return r
 
 
