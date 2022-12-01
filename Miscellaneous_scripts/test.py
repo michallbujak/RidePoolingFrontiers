@@ -1,18 +1,6 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
+import pickle
 
-data = {
-       "A": pd.DataFrame({"X": [0, 0, 0, 2, 4]}),
-       "B": pd.DataFrame({"X": [0, 0, 0, 0, 1, 2]}),
-       "C": pd.DataFrame({"X": [0, 0, 2, 4]})
-}
+with open(r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\29-11-22\single_full_dotmap_29-11-22.obj", "rb") as file:
+       results=pickle.load(file)
 
-datasets = [t["X"] for t in [v for k, v in data.items()]]
-labels = [k for k, v in data.items()]
-
-bins = [0, 2, 4, np.inf]
-
-plt.hist(datasets, density=True, histtype='step', alpha=0.6, bins=bins, label=labels, cumulative=True)
-plt.legend(loc="upper right")
-plt.show()
+print(results[0].G.nodes._nodes)

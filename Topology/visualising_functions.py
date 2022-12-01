@@ -1,6 +1,7 @@
 import itertools
 import sys
 import warnings
+import pathlib
 
 import seaborn
 import seaborn as sns
@@ -39,6 +40,23 @@ def config_initialisation(path, date, sblts_exmas="exmas"):
     topological_config.path_results = 'data/results/' + date + '/'
     topological_config.date = date
     topological_config.sblts_exmas = sblts_exmas
+    init_config = None
+    try:
+        init_config = utils.get_parameters(topological_config.initial_parameters)
+    except:
+        pass
+    if init_config is None:
+        try:
+            init_config = utils.get_parameters(
+                os.path.join(pathlib.Path(os.getcwd()).parent.absolute(), topological_config.initial_parameters))
+        except:
+            pass
+
+    if init_config is not None:
+        for key in init_config.keys():
+            if key not in topological_config.keys():
+                topological_config[key] = init_config[key]
+
     return topological_config
 
 
@@ -316,7 +334,7 @@ def create_latex_output_df(df, column_format):
     return latex_df
 
 
-def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
+def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
     results = [amend_dotmap(indata, config) for indata in dotmap_list]
     results = [relative_travel_times_utility(df) for df in results]
     size = len(results[0])
@@ -360,29 +378,58 @@ def individual_analysis(dotmap_list, config, percentile=95, _bins=50):
             file.write(create_latex_output_df(df, "c|c|c|c|c|c"))
 
 
-def probability_of_pooling_aggregated(dotmaps_list, config):
+def aggregated_analysis(dotmaps_list, config):
     sblts_exmas = config.sblts_exmas
 
     prob = []
+    times = []
 
     list_len = len(dotmaps_list[0][sblts_exmas].requests)
 
     for rep in dotmaps_list:
         schedule = rep[sblts_exmas].schedule
+        results = rep[sblts_exmas].res
         prob.append(list_len - len(schedule.loc[schedule["kind"] == 1]))
+        times.append([results["PassHourTrav"], results["PassHourTrav_ns"]])
+
+    relative_times = [(x- y)/y for x, y in times]
 
     prob_list = [t / list_len for t in prob]
 
-    output = np.round_((np.mean(prob_list), np.std(prob_list)), 4)
-    print(list_len)
-    print(output)
+    output_prob = np.round_((np.mean(prob_list), np.std(prob_list)), 4)
+    output_times = np.round_((np.mean(relative_times), np.std(relative_times)), 6)
+    print(f"number of requestes is: {list_len}")
+    print(f"Pooling probability (mean, st.dev.): {output_prob}")
+    print(f"Relative time extension (mean, st.dev.): {output_times}")
 
-    return output
+    return output_prob, output_times
+
+
+def add_profitability(dotmap_data, config, speed=6, sharing_discount=0.3):
+    speed = config.get('avg_speed', 6)
+    sharing_discount = config.get('shared_discount', 0.3)
+    sblts_exmas = config.sblts_exmas
+
+    data = dotmap_data[sblts_exmas]['schedule'].loc[dotmap_data[sblts_exmas]['schedule']["kind"] > 1].copy()
+
+    # data['dist_ns'] = data['ttrav_ns'] * speed
+    # data['dist'] = data['ttrav'] * speed
+    # data['profitability'] = data['dist_ns'] * (1 - sharing_discount) / data['dist']
+    data['profitability'] = data['ttrav_ns'] * (1 - sharing_discount) / data['ttrav']
+
+    dotmap_data[sblts_exmas]['schedule']['profitability'] = 1
+    dotmap_data[sblts_exmas]['schedule']['dist'] = dotmap_data[sblts_exmas]['schedule']['ttrav']*speed
+    dotmap_data[sblts_exmas]['schedule'].loc[dotmap_data[sblts_exmas]['schedule']["kind"] > 1, "profitability"] = \
+        data['profitability'].values
+
+    return dotmap_data
 
 
 def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3, bins=20):
     sblts_exmas = config.sblts_exmas
     size = len(dotmaps_list[0][sblts_exmas].requests)
+    speed = config.get('avg_speed', 6)
+    sharing_discount = config.get('shared_discount', 0.3)
 
     relative_perspective = []
 
@@ -401,9 +448,10 @@ def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3, b
     ax = sns.histplot(relative_perspective, bins=bins)
     ax.set(ylabel=None, xlabel='Profitability of sharing')
     plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
+    plt.close()
 
 
-def partial_analysis(dotmap_list, config, no_elements=None, s=10):
+def individual_analysis(dotmap_list, config, no_elements=None, s=10):
     sblts_exmas = 'exmas'
     size = len(dotmap_list[0][sblts_exmas].requests)
     if no_elements is None:
@@ -418,12 +466,32 @@ def partial_analysis(dotmap_list, config, no_elements=None, s=10):
     agg_data = pd.concat(data)
     agg_data = relative_travel_times_utility(agg_data)
     agg_data['Relative_utility_gain'] = agg_data['Relative_utility_gain'].apply(lambda x: x if x >= 0 else abs(x))
-    agg_data['VoT'] = agg_data['VoT']*3600
+    agg_data['VoT'] = agg_data['VoT'] * 3600
     dict_labels = {'Relative_utility_gain': "Utility gain", "Relative_time_add": "Time extension"}
     for y_var, x_var in itertools.product(['Relative_utility_gain', 'Relative_time_add'], ['VoT', 'WtS']):
         palette = {0: 'green', 1: "orange", 2: "blue", 3: "red"}
         ax = sns.scatterplot(data=agg_data, x=x_var, y=y_var, hue="class", palette=palette, s=s)
         ax.set_ylabel(dict_labels[y_var])
+        ax.set_xlabel(x_var)
         ax.set_ylim(bottom=0)
         plt.savefig(config.path_results + "figs/" + x_var + '_' + y_var + "_" + str(size) + ".png")
         plt.close()
+
+
+def individual_rides_profitability(dotmap_list, config, s=20):
+    sblts_exmas = 'exmas'
+    size = len(dotmap_list[0][sblts_exmas].requests)
+    for rep in dotmap_list:
+        rep = add_profitability(rep, config)
+
+    dataset = pd.concat([t[sblts_exmas]['schedule'].loc[t[sblts_exmas]['schedule']["kind"] > 1] for t in dotmap_list])
+    dataset.reset_index(drop=True, inplace=True)
+    dataset.rename(columns={'degree': 'Degree'}, inplace=True)
+
+    ax = sns.scatterplot(x=dataset['dist'], y=dataset['profitability'], hue=dataset['Degree'], s=s,
+                         palette=sns.color_palette("tab10", max(dataset['Degree'])-1))
+    ax.set_ylabel("Profit")
+    ax.set_xlabel("Distance")
+    plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., title='Degree')
+    plt.savefig(config.path_results + "figs/" + 'individual_rides_profitability_' + str(size) + ".png")
+    plt.close()

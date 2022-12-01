@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     """ Run parameters """
     config.replications = 1
-    config.no_batches = 20000
+    config.no_batches = 1
 
     """ Prepare folder """
     utils.create_results_directory(config)
@@ -37,12 +37,12 @@ if __name__ == "__main__":
                                                                           replications=config.replications,
                                                                           logger_level='INFO')
 
-    final_results = zip([x.sblts.requests for x in dotmaps_list_results],
-                        [x.sblts.schedule for x in dotmaps_list_results],
-                        [x.sblts.res for x in dotmaps_list_results],
-                        settings_list)
-    final_results = [{"requests": x[0],
-                      "schedule": x[1],
-                      "results": x[2],
-                      "settings": x[3]} for x in final_results]
-    utils.save_with_pickle(final_results, 'final_res', config)
+    # final_results = zip([x.sblts.requests for x in dotmaps_list_results],
+    #                     [x.sblts.schedule for x in dotmaps_list_results],
+    #                     [x.sblts.res for x in dotmaps_list_results],
+    #                     settings_list)
+    # final_results = [{"requests": x[0],
+    #                   "schedule": x[1],
+    #                   "results": x[2],
+    #                   "settings": x[3]} for x in final_results]
+    utils.save_with_pickle(dotmaps_list_results, 'final_res', config)
