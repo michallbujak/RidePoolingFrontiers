@@ -352,11 +352,15 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
             classes_dict = classes
             res = results
 
-        datasets = [t[var].apply(lambda x: x if x >= 0 else abs(x)) for t in [v for k, v in classes_dict.items()]]
+        datasets = [t[var].apply(lambda x: x if x >= 0 else 0) for t in [v for k, v in classes_dict.items()]]
         # datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
         labels = [k for k, v in classes_dict.items()]
         maximal_delay_percentile = np.nanpercentile(pd.concat(res, axis=0)[var], percentile)
         xlim_end = np.nanpercentile(pd.concat(res, axis=0)[var], 99.5)
+
+        whole_dataset = [j for i in [t[var].apply(lambda x: x if x >= 0 else 0) for t in res] for j in i]
+        datasets = [whole_dataset] + datasets
+        labels = ["All"] + labels
 
         fig, ax = plt.subplots()
         plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
@@ -372,7 +376,7 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
         percentiles = [(np.nanpercentile(t, 75), np.nanpercentile(t, 90), np.nanpercentile(t, 95)) for t in datasets]
         df = pd.DataFrame({"Means": means, "St_dev": st_devs, "Q3": [t[0] for t in percentiles],
                            "90": [t[1] for t in percentiles], "95": [t[2] for t in percentiles]})
-        df.index = ["C1", "C2", "C3", "C4"]
+        df.index = ["All", "C1", "C2", "C3", "C4"]
 
         with open(config.path_results + 'per_class_' + var + "_" + sharing + "_" + str(size) + ".txt", "w") as file:
             file.write(create_latex_output_df(df, "c|c|c|c|c|c"))
