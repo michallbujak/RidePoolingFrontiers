@@ -218,34 +218,52 @@ def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, no
                              config=topological_config, save=save, saving_number=num, date=topological_config.date)
 
 
-def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20):
+def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     sblts_exmas = topological_config.sblts_exmas
     str_for_end = "_" + str(len(dotmap_list[0][sblts_exmas].requests))
     multiplier = 100
+    res = []
 
-    ax = sns.histplot([multiplier * (x[sblts_exmas].res.PassUtility_ns - x[sblts_exmas].res.PassUtility) / x[
-        sblts_exmas].res.PassUtility_ns for x in dotmap_list], bins=bins)
-    ax.set(xlabel="Utility gain", ylabel=None)
+    data = [multiplier * (x[sblts_exmas].res.PassUtility_ns - x[sblts_exmas].res.PassUtility) / x[
+        sblts_exmas].res.PassUtility_ns for x in dotmap_list]
+    res.append(["relative_pass_utility", np.mean(data), np.std(data),
+                np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
+    ax = sns.histplot(data, bins=bins)
+    ax.set(xlabel=None, ylabel=None, yticklabels=[])
+    plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
     plt.savefig(topological_config.path_results + "figs/relative_pass_utility" + str_for_end + ".png")
     plt.close()
 
-    ax = sns.histplot([multiplier * (x[sblts_exmas].res.PassHourTrav - x[sblts_exmas].res.PassHourTrav_ns) / x[
-        sblts_exmas].res.PassHourTrav_ns for x in dotmap_list], bins=bins)
-    ax.set(xlabel="Travel time extension", ylabel=None)
+    data = [multiplier * (x[sblts_exmas].res.PassHourTrav - x[sblts_exmas].res.PassHourTrav_ns) / x[
+        sblts_exmas].res.PassHourTrav_ns for x in dotmap_list]
+    res.append(["relative_pass_hours", np.mean(data), np.std(data),
+                np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
+    ax = sns.histplot(data, bins=bins)
+    ax.set(xlabel=None, ylabel=None, yticklabels=[])
+    plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
     plt.savefig(topological_config.path_results + "figs/relative_pass_hours" + str_for_end + ".png")
     plt.close()
 
-    ax = sns.histplot([multiplier * (x[sblts_exmas].res.VehHourTrav_ns - x[sblts_exmas].res.VehHourTrav) / x[
-        sblts_exmas].res.VehHourTrav_ns for x in dotmap_list], bins=bins)
-    ax.set(xlabel='Vehicle time shortening', ylabel=None)
+    data = [multiplier * (x[sblts_exmas].res.VehHourTrav_ns - x[sblts_exmas].res.VehHourTrav) / x[
+        sblts_exmas].res.VehHourTrav_ns for x in dotmap_list]
+    res.append(["relative_veh_hours", np.mean(data), np.std(data),
+                np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
+    ax = sns.histplot(data, bins=bins)
+    ax.set(xlabel=None, ylabel=None)
+    plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
     plt.savefig(topological_config.path_results + "figs/relative_veh_hours" + str_for_end + ".png")
     plt.close()
+
+    pd.DataFrame({"var": [t[0] for t in res], "mean": [t[1] for t in res], "st_dev": [t[2] for t in res],
+                  "P5": [t[3] for t in res], "P95": [t[4] for t in res]}) \
+        .to_csv(topological_config.path_results + "kpis_means" + str_for_end + ".txt",
+                sep=' ', index=False, header=False)
 
 
 def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
@@ -290,10 +308,14 @@ def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
 
 def amend_dotmap(dotmap, config):
     sblts_exmas = config.sblts_exmas
-    df = dotmap[sblts_exmas].requests[["id", "ttrav", "ttrav_sh", "u", "u_sh", "kind"]]
+    requests = dotmap[sblts_exmas].requests[["id", "ttrav", "ttrav_sh", "u", "u_sh", "kind"]]
+    schedule = dotmap[sblts_exmas].schedule
     probs = dotmap['prob'].sampled_random_parameters
-    df = pd.merge(df, probs[["class"]], left_on="id", right_index=True)
-    return df
+    class_dict = {int(t[1]['new_index']): int(t[1]['class']) for t in list(probs.iterrows())}
+    schedule["class"] = schedule["indexes"].apply(lambda x: [class_dict[t] for t in x])
+    schedule["Veh_saved"] = (schedule['ttrav_ns'] - schedule['ttrav']) / schedule['ttrav_ns']
+    requests = pd.merge(requests, probs[["class"]], left_on="id", right_index=True)
+    return requests, schedule
 
 
 def relative_travel_times_utility(df):
@@ -304,17 +326,24 @@ def relative_travel_times_utility(df):
     return df
 
 
-def separate_by_classes(list_dfs):
+def separate_by_classes(list_dfs, standard=True):
     classes = dict()
 
     first_rep = True
     for rep in list_dfs:
         for class_no in [0, 1, 2, 3]:
             if first_rep:
-                classes["C" + str(class_no + 1)] = rep.loc[rep["class"] == class_no]
+                if standard:
+                    classes["C" + str(class_no + 1)] = rep.loc[rep["class"] == class_no]
+                else:
+                    classes["C" + str(class_no + 1)] = rep.loc[[class_no in t for t in rep["class"]]]
             else:
-                classes["C" + str(class_no + 1)] = \
-                    classes["C" + str(class_no + 1)].append(rep.loc[rep["class"] == class_no])
+                if standard:
+                    classes["C" + str(class_no + 1)] = \
+                        classes["C" + str(class_no + 1)].append(rep.loc[rep["class"] == class_no])
+                else:
+                    classes["C" + str(class_no + 1)] = \
+                        classes["C" + str(class_no + 1)].append(rep.loc[[class_no in t for t in rep["class"]]])
         first_rep = False
 
     return classes
@@ -335,38 +364,65 @@ def create_latex_output_df(df, column_format):
 
 
 def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
-    results = [amend_dotmap(indata, config) for indata in dotmap_list]
-    results = [relative_travel_times_utility(df) for df in results]
-    size = len(results[0])
+    # Requests
+    results_req = [amend_dotmap(indata, config)[0] for indata in dotmap_list]
+    results_req = [relative_travel_times_utility(df) for df in results_req]
+    size = len(results_req[0])
+    classes_req = separate_by_classes(results_req)
 
-    results_shared = [df.loc[df["kind"] > 1] for df in results]
+    results_shared_req = [df.loc[df["kind"] > 1] for df in results_req]
+    classes_shared_req = separate_by_classes(results_shared_req)
 
-    classes_shared = separate_by_classes(results_shared)
-    classes = separate_by_classes(results)
+    # Schedule
+    results_sch = [add_profitability(indata, config) for indata in dotmap_list]
+    results_sch = [amend_dotmap(indata, config)[1] for indata in results_sch]
+    classes_sch = separate_by_classes(results_sch, standard=False)
 
-    for var, sharing in itertools.product(["Relative_time_add", "Relative_utility_gain"], ['shared', 'all']):
-        if sharing == 'shared':
-            classes_dict = classes_shared
-            res = results_shared
+    results_shared_sch = [df.loc[df["kind"] > 1] for df in results_sch]
+    classes_shared_sch = separate_by_classes(results_shared_sch, standard=False)
+
+    variables = ["Relative_time_add", "Relative_utility_gain", "Profitability", "Veh_saved"]
+
+    for var, sharing in itertools.product(variables, ['shared', 'all']):
+        if var in ["Relative_time_add", "Relative_utility_gain"]:
+            if sharing == 'shared':
+                classes_dict = classes_shared_req
+                res = results_shared_req
+            else:
+                classes_dict = classes_req
+                res = results_req
+            datasets = [t[var].apply(lambda x: x if x >= 0 else 0) for t in [v for k, v in classes_dict.items()]]
+            whole_dataset = [j for i in [t[var].apply(lambda x: x if x >= 0 else 0) for t in res] for j in i]
         else:
-            classes_dict = classes
-            res = results
+            if sharing == 'shared':
+                classes_dict = classes_shared_sch
+                res = results_shared_sch
+            else:
+                classes_dict = classes_sch
+                res = results_sch
+            datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
+            whole_dataset = [j for i in [t[var] for t in res] for j in i]
 
-        datasets = [t[var].apply(lambda x: x if x >= 0 else 0) for t in [v for k, v in classes_dict.items()]]
-        # datasets = [t[var] for t in [v for k, v in classes_dict.items()]]
         labels = [k for k, v in classes_dict.items()]
-        maximal_delay_percentile = np.nanpercentile(pd.concat(res, axis=0)[var], percentile)
+        maximal_percentile = np.nanpercentile(pd.concat(res, axis=0)[var], percentile)
         xlim_end = np.nanpercentile(pd.concat(res, axis=0)[var], 99.5)
 
-        whole_dataset = [j for i in [t[var].apply(lambda x: x if x >= 0 else 0) for t in res] for j in i]
         datasets = [whole_dataset] + datasets
         labels = ["All"] + labels
 
         fig, ax = plt.subplots()
-        plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
-        ax.axvline(x=maximal_delay_percentile, color='black', ls=':', label='95%', lw=1)
+        for data, line_type, label in zip(datasets, ['-', ':', '--', '-.', (0, (3, 5, 1, 5, 1, 5))], labels):
+            lw = 1.2 if label == "All" else 1
+            plt.hist(data, density=True, histtype='step', label=label, cumulative=True, bins=len(data),
+                     ls=line_type, lw=lw)
+        # plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
+        # ax.axvline(x=maximal_percentile, color='black', ls=':', label='95%', lw=1)
         fix_hist_step_vertical_line_at_end(ax)
-        plt.xlim(left=-0.05, right=xlim_end)
+        if var != "Veh_saved":
+            ax.set(xlabel=None, ylabel=None, yticklabels=[])
+        else:
+            ax.set(xlabel=None, ylabel=None)
+        plt.xlim(left=-0.05 if var != "Profitability" else None, right=xlim_end)
         plt.legend(loc="lower right")
         plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png")
         plt.close()
@@ -380,6 +436,8 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
 
         with open(config.path_results + 'per_class_' + var + "_" + sharing + "_" + str(size) + ".txt", "w") as file:
             file.write(create_latex_output_df(df, "c|c|c|c|c|c"))
+
+    x = 0
 
 
 def aggregated_analysis(dotmaps_list, config):
@@ -396,7 +454,7 @@ def aggregated_analysis(dotmaps_list, config):
         prob.append(list_len - len(schedule.loc[schedule["kind"] == 1]))
         times.append([results["PassHourTrav"], results["PassHourTrav_ns"]])
 
-    relative_times = [(x- y)/y for x, y in times]
+    relative_times = [(x - y) / y for x, y in times]
 
     prob_list = [t / list_len for t in prob]
 
@@ -419,21 +477,21 @@ def add_profitability(dotmap_data, config, speed=6, sharing_discount=0.3):
     # data['dist_ns'] = data['ttrav_ns'] * speed
     # data['dist'] = data['ttrav'] * speed
     # data['profitability'] = data['dist_ns'] * (1 - sharing_discount) / data['dist']
-    data['profitability'] = data['ttrav_ns'] * (1 - sharing_discount) / data['ttrav']
+    data['Profitability'] = data['ttrav_ns'] * (1 - sharing_discount) / data['ttrav']
 
-    dotmap_data[sblts_exmas]['schedule']['profitability'] = 1
-    dotmap_data[sblts_exmas]['schedule']['dist'] = dotmap_data[sblts_exmas]['schedule']['ttrav']*speed
-    dotmap_data[sblts_exmas]['schedule'].loc[dotmap_data[sblts_exmas]['schedule']["kind"] > 1, "profitability"] = \
-        data['profitability'].values
+    dotmap_data[sblts_exmas]['schedule']['Profitability'] = 1
+    dotmap_data[sblts_exmas]['schedule']['dist'] = dotmap_data[sblts_exmas]['schedule']['ttrav'] * speed
+    dotmap_data[sblts_exmas]['schedule'].loc[dotmap_data[sblts_exmas]['schedule']["kind"] > 1, "Profitability"] = \
+        data['Profitability'].values
 
     return dotmap_data
 
 
-def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3, bins=20):
+def analyse_profitability(dotmaps_list, config, shared_all='all', speed=6, sharing_discount=0.3, bins=20, y_max=20):
     sblts_exmas = config.sblts_exmas
     size = len(dotmaps_list[0][sblts_exmas].requests)
-    speed = config.get('avg_speed', 6)
-    sharing_discount = config.get('shared_discount', 0.3)
+    speed = config.get('avg_speed', speed)
+    sharing_discount = config.get('shared_discount', sharing_discount)
 
     relative_perspective = []
 
@@ -442,15 +500,28 @@ def analyse_profitability(dotmaps_list, config, speed=6, sharing_discount=0.3, b
         veh_time_saved = rep[sblts_exmas].res["VehHourTrav_ns"] - rep[sblts_exmas].res["VehHourTrav"]
         veh_distance_on_reduction = discounted_distance - veh_time_saved * speed
 
-        # basic_relation = sum(rep[sblts_exmas].requests["dist"])/(rep[sblts_exmas].res["VehHourTrav_ns"]*speed)
-        shared_relation = discounted_distance * (1 - sharing_discount) / veh_distance_on_reduction
-        # relative_perspective.append(shared_relation/basic_relation)
-        relative_perspective.append(shared_relation)
+        ns_dist = sum(rep[sblts_exmas].requests.loc[rep[sblts_exmas].requests["kind"] == 1]["dist"])
 
-    plt.show()
+        # basic_relation = sum(rep[sblts_exmas].requests["dist"])/(rep[sblts_exmas].res["VehHourTrav_ns"]*speed)
+
+        if shared_all == 'shared':
+            profit_relation = discounted_distance * (1 - sharing_discount) / veh_distance_on_reduction
+        elif shared_all == 'all':
+            profit_relation = (discounted_distance * (1 - sharing_discount) + ns_dist) / (
+                    veh_distance_on_reduction + ns_dist)
+        else:
+            raise Exception('Incorrect parameter "shared_all" it should be either "shared" or "all"')
+        # relative_perspective.append(shared_relation/basic_relation)
+        relative_perspective.append(profit_relation)
+
+    pd.DataFrame({"var": "Profitability", "mean": np.mean(relative_perspective), "st_dev": np.std(relative_perspective),
+                  "P5": np.nanpercentile(relative_perspective, 5), "P95": np.nanpercentile(relative_perspective, 95)},
+                 index=[0]).to_csv(config.path_results + "profitability_mean_" + str(size) + ".txt",
+                                   sep=' ', index=False, header=False)
 
     ax = sns.histplot(relative_perspective, bins=bins)
-    ax.set(ylabel=None, xlabel='Profitability of sharing')
+    ax.set(xlabel=None, ylabel=None, yticklabels=[])
+    plt.ylim(0, y_max)
     plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
     plt.close()
 
@@ -471,12 +542,12 @@ def individual_analysis(dotmap_list, config, no_elements=None, s=10):
     agg_data = relative_travel_times_utility(agg_data)
     agg_data['Relative_utility_gain'] = agg_data['Relative_utility_gain'].apply(lambda x: x if x >= 0 else abs(x))
     agg_data['VoT'] = agg_data['VoT'] * 3600
-    dict_labels = {'Relative_utility_gain': "Utility gain", "Relative_time_add": "Time extension"}
+    agg_data.rename(columns={"class": "Class"}, inplace=True)
+    dict_labels = {'Relative_utility_gain': "$\mathcal{U}_r$", "Relative_time_add": "$\mathcal{T}_r$"}
     for y_var, x_var in itertools.product(['Relative_utility_gain', 'Relative_time_add'], ['VoT', 'WtS']):
         palette = {0: 'green', 1: "orange", 2: "blue", 3: "red"}
-        ax = sns.scatterplot(data=agg_data, x=x_var, y=y_var, hue="class", palette=palette, s=s)
-        ax.set_ylabel(dict_labels[y_var])
-        ax.set_xlabel(x_var)
+        ax = sns.scatterplot(data=agg_data, x=x_var, y=y_var, hue="Class", palette=palette, s=s)
+        ax.set(xlabel=None, ylabel=dict_labels[y_var])
         ax.set_ylim(bottom=0)
         plt.savefig(config.path_results + "figs/" + x_var + '_' + y_var + "_" + str(size) + ".png")
         plt.close()
@@ -492,10 +563,11 @@ def individual_rides_profitability(dotmap_list, config, s=20):
     dataset.reset_index(drop=True, inplace=True)
     dataset.rename(columns={'degree': 'Degree'}, inplace=True)
 
-    ax = sns.scatterplot(x=dataset['dist'], y=dataset['profitability'], hue=dataset['Degree'], s=s,
-                         palette=sns.color_palette("tab10", max(dataset['Degree'])-1))
+    ax = sns.scatterplot(x=dataset['dist'], y=dataset['Profitability'], hue=dataset['Degree'], s=s,
+                         palette=sns.color_palette("tab10", max(dataset['Degree']) - 1))
     ax.set_ylabel("Profit")
     ax.set_xlabel("Distance")
+    ax.set(xlabel=None, ylabel=None)
     plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., title='Degree')
     plt.savefig(config.path_results + "figs/" + 'individual_rides_profitability_' + str(size) + ".png")
     plt.close()
