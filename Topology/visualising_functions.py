@@ -553,7 +553,7 @@ def individual_analysis(dotmap_list, config, no_elements=None, s=10):
         plt.close()
 
 
-def individual_rides_profitability(dotmap_list, config, s=20):
+def individual_rides_profitability(dotmap_list, config, s=20, dpi=200):
     sblts_exmas = 'exmas'
     size = len(dotmap_list[0][sblts_exmas].requests)
     for rep in dotmap_list:
@@ -562,12 +562,15 @@ def individual_rides_profitability(dotmap_list, config, s=20):
     dataset = pd.concat([t[sblts_exmas]['schedule'].loc[t[sblts_exmas]['schedule']["kind"] > 1] for t in dotmap_list])
     dataset.reset_index(drop=True, inplace=True)
     dataset.rename(columns={'degree': 'Degree'}, inplace=True)
+    dataset["Distance"] = dataset['dist']/1000
 
-    ax = sns.scatterplot(x=dataset['dist'], y=dataset['Profitability'], hue=dataset['Degree'], s=s,
+    ax = sns.scatterplot(x=dataset['Distance'], y=dataset['Profitability'], hue=dataset['Degree'], s=s,
                          palette=sns.color_palette("tab10", max(dataset['Degree']) - 1))
     ax.set_ylabel("Profit")
     ax.set_xlabel("Distance")
     ax.set(xlabel=None, ylabel=None)
+    # ax.set(xlabel=None, ylabel=None, yticklabels=[])
+    # plt.ylim(0.6, 2.2)
     plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., title='Degree')
-    plt.savefig(config.path_results + "figs/" + 'individual_rides_profitability_' + str(size) + ".png")
+    plt.savefig(config.path_results + "figs/" + 'individual_rides_profitability_' + str(size) + ".png", dpi=dpi)
     plt.close()
