@@ -1,5 +1,4 @@
 {
 	"initial_parameters": "Topology/data/configs/initial_config.json",
-	"path_results": "data/",
-	"distribution_variables": ["VoT","WtS"]
+	"path_results": "data/"
 }

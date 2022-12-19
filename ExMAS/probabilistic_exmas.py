@@ -1286,7 +1286,7 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
 
     type_of_distribution = params.get("type_of_distribution", None)
     number_of_requests = len(inData.requests)
-    zeros = [0] * len(params.distribution_variables)
+    zeros = [0] * len(params.get("distribution_variables", []))
 
     if type_of_distribution == "discrete":
         assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details - " \
@@ -1318,9 +1318,10 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
                                                          scale=params.distribution_details[key][1])
         inData.prob.sampled_random_parameters = pd.DataFrame(randomised_variables)
     else:
-        raise Exception("currently not implemented/wrong arguments, check the code")
+        inData.prob.sampled_random_parameters = pd.DataFrame()
 
-    inData.prob.sampled_random_parameters.index = inData.requests.index
+    if len(inData.prob.sampled_random_parameters) > 0:
+        inData.prob.sampled_random_parameters.index = inData.requests.index
 
     return inData
 

@@ -7,25 +7,27 @@ import networkx as nx
 import json
 import os
 import sys
+import numpy as np
 
 sys.path.append(os.path.abspath(os.getcwd()))
 sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
 import utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
-from ExMAS.main_prob_OLD import main as exmas_algo
+from ExMAS.probabilistic_exmas import main as exmas_algo
 from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('data/configs/topology_settings.json')
+    topological_config = utils.get_parameters('data/configs/topology_settings_like_old.json')
 
     """ Set up varying parameters (optional) """
-    # topological_config.variable = 'shared_discount'
-    # topological_config.values = [0.22, 0.24]
+    topological_config.variable = 'shared_discount'
+    # topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
+    topological_config.values = [0.2]
 
     """ Run parameters """
-    topological_config.replications = 2
+    topological_config.replications = 1
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -45,13 +47,15 @@ if __name__ == "__main__":
                                                                           topo_params=topological_config,
                                                                           replications=topological_config.replications,
                                                                           logger_level='INFO')
-    utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', topological_config)
+    utils.save_with_pickle([{'sblts': d['sblts']} for d in dotmaps_list_results], 'dotmap_list', topological_config)
 
     """ Noise analysis """
-    utils.analyse_noise(dotmaps_list_results, topological_config)
+    # utils.analyse_noise(dotmaps_list_results, topological_config)
     """ Edges storing & counting """
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
     utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
+
+    utils.create_graph(dotmaps_list_results, 'all', 'noise')
 
     pool = mp.Pool(mp.cpu_count())
     all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all', "noise")) for indata in dotmaps_list_results]
@@ -78,7 +82,7 @@ if __name__ == "__main__":
     merged_results.to_excel(merged_file_path, index=False)
 
     """ Compute final results """
-    variables = ['Batch']
+    variables = ['shared_discount']
     utils.APosterioriAnalysis(pd.read_excel(merged_file_path),
                               topological_config.path_results,
                               topological_config.path_results + "temp/",
