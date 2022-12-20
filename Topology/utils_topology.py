@@ -327,7 +327,14 @@ class APosterioriAnalysis:
         :param labels: dictionary of labels
         :param err_style: for line plots style of the error
         """
-        self.dataset = dataset.drop(columns=['Replication_ID'])
+        if 'Replication_ID' in dataset.columns or 'Replication' in dataset.columns:
+            for x in ['Replication_ID', 'Replication']:
+                if x in dataset.columns:
+                    self.dataset = dataset.drop(columns=[x])
+                else:
+                    pass
+        else:
+            self.dataset = dataset
         self.input_variables = input_variables
         self.all_graph_properties = all_graph_properties
         self.dataset_grouped = self.dataset.groupby(self.input_variables)

@@ -23,8 +23,8 @@ if __name__ == "__main__":
 
     """ Set up varying parameters (optional) """
     topological_config.variable = 'shared_discount'
-    # topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
-    topological_config.values = [0.2]
+    topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
+    # topological_config.values = [0.2, 0.3]
 
     """ Run parameters """
     topological_config.replications = 1
@@ -41,13 +41,13 @@ if __name__ == "__main__":
     # ExMAS.utils.plot_demand(dotmaps_list[0], params)
 
     """ Run ExMAS """
-    dotmaps_list_results, settings_list = nyc_tools.run_exmas_nyc_batches(exmas_algo, params, dotmaps_list,
-                                                                          noise_generator='wiener',
-                                                                          stepwise=False,
-                                                                          topo_params=topological_config,
-                                                                          replications=topological_config.replications,
-                                                                          logger_level='INFO')
-    utils.save_with_pickle([{'sblts': d['sblts']} for d in dotmaps_list_results], 'dotmap_list', topological_config)
+    dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algorithm=exmas_algo,
+                                                                        params=params,
+                                                                        indatas=dotmaps_list,
+                                                                        topo_params=topological_config,
+                                                                        replications=topological_config.replications,
+                                                                        logger_level='INFO')
+    utils.save_with_pickle([{'exmas': t['exmas']} for t in dotmaps_list_results], 'dotmap_list', topological_config)
 
     """ Noise analysis """
     # utils.analyse_noise(dotmaps_list_results, topological_config)
@@ -55,11 +55,11 @@ if __name__ == "__main__":
     rep_graphs = utils.analyse_edge_count(dotmaps_list_results, topological_config, list_types_of_graph='all')
     utils.save_with_pickle(rep_graphs, 'rep_graphs', topological_config)
 
-    utils.create_graph(dotmaps_list_results, 'all', 'noise')
+    all_graphs_list = [utils.create_graph(indata, "all") for indata in dotmaps_list_results]
 
-    pool = mp.Pool(mp.cpu_count())
-    all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all', "noise")) for indata in dotmaps_list_results]
-    pool.close()
+    # pool = mp.Pool(mp.cpu_count())
+    # all_graphs_list = [pool.apply(utils.create_graph, args=(indata, 'all')) for indata in dotmaps_list_results]
+    # pool.close()
     utils.save_with_pickle(all_graphs_list, 'all_graphs_list', topological_config)
 
     utils.analysis_all_graphs(all_graphs_list, topological_config)
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     """ Perform topological analysis """
     pool = mp.Pool(mp.cpu_count())
-    graph_list = [pool.apply(exmas_make_graph, args=(data.sblts.requests, data.sblts.rides)) for data in
+    graph_list = [pool.apply(exmas_make_graph, args=(data.exmas.requests, data.exmas.rides)) for data in
                   dotmaps_list_results]
     topological_stats = [utils.GraphStatistics(graph, "INFO") for graph in graph_list]
     topo_dataframes = pool.map(utils.worker_topological_properties, topological_stats)

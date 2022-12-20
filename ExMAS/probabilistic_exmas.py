@@ -216,6 +216,8 @@ def single_rides(_inData, params):
         assert isinstance(params.noise, dict), "Incorrect type of params.noise in json (expected dict)"
         req['u'] = req["true_u"] + np.random.normal(size=len(req), loc=params.noise.get("mean", 0),
                                                     scale=params.noise.get("st_dev", 0))
+    else:
+        req['u'] = req["true_u"]
 
     req['u'] = req['u'].apply(lambda x: x if x >= 0 else 0)
 
@@ -781,7 +783,10 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             feasible_flag = True
             noise = []
             for i in range(degree + 1):
-                noise.append(np.random.normal(size=1, loc=params.noise.get("mean", 0)))
+                if params.get("noise", None) is None:
+                    noise.append(0)
+                else:
+                    noise.append(np.random.normal(size=1, loc=params.noise.get("mean")))
                 if trip_sharing_utility(params, dists[i], 0, ttrav[i], ttrav_ns[i], VoT[i], WtS[i]) + \
                         panel_noise[i] < 0:
                     feasible_flag = False
@@ -810,10 +815,10 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                 for i in range(degree + 1):
                     true_u_paxes.append(
                         trip_sharing_utility(params, dists[i], delays[i], ttrav[i], ttrav_ns[i], VoT[i], WtS[i]))
-                    if params.noise is None:
+                    if params.get("noise", None) is None:
                         u_paxes.append(true_u_paxes[-1] + panel_noise[i])
                     else:
-                        noise.append(np.random.normal(loc=params.noise.mean, scale=params.noise.st_dev))
+                        noise.append(np.random.normal(loc=params.noise.get("mean", 0), scale=params.noise.get("st_dev", 0)))
                         u_paxes.append(true_u_paxes[-1] + panel_noise[i] + noise[-1])
 
                     if u_paxes[-1] < 0:
@@ -823,7 +828,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                     re.true_u_paxes = [shared_trip_utility(params, dists[i], delays[i], ttrav[i], VoT[i], WtS[i]) for i
                                        in
                                        range(degree + 1)]
-                    if params.noise is None:
+                    if params.get("noise", None) is None:
                         re.u_paxes = [x[0] - x[1] for x in zip(re.true_u_paxes, panel_noise)]
                     else:
                         re.u_paxes = [x[0] - x[1] - x[2] for x in zip(re.true_u_paxes, panel_noise, noise)]

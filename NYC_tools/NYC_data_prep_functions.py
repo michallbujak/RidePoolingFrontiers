@@ -273,18 +273,18 @@ def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'v
             else:
                 for k in range(len(topo_params['values'])):
                     params[topo_params['variable']] = topo_params['values'][k]
-                    try:
+                    # try:
                         # temp = exmas_algorithm(indatas[i], params, None, False)
-                        temp = exmas_algorithm(indatas[i], params, False)
-                        results.append(temp.copy())
-                        settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k],
-                                         'Start_time': indatas[i].requests.iloc[0,]['pickup_datetime'],
-                                         'End_time': indatas[i].requests.iloc[-1,]['pickup_datetime'],
-                                         'Demand_size': len(indatas[i].requests)})
+                    temp = exmas_algorithm(indatas[i], params, False)
+                    results.append(temp.copy())
+                    settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k],
+                                     'Start_time': indatas[i].requests.iloc[0,]['pickup_datetime'],
+                                     'End_time': indatas[i].requests.iloc[-1,]['pickup_datetime'],
+                                     'Demand_size': len(indatas[i].requests)})
                         # settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
-                    except:
-                        logger.debug('Impossible to attach batch number: ' + str(i))
-                        pass
+                    # except:
+                    logger.debug('Impossible to attach batch number: ' + str(i))
+                    pass
 
     pbar.close()
     logger.info("Number of calculated results for batches is: ", str(len(results)))
