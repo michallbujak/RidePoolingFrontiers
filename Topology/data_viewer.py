@@ -1,17 +1,9 @@
 import pickle
-import networkx as nx
 import pandas as pd
-from netwulf import visualize
-import json
 import numpy as np
-from utils_topology import draw_bipartite_graph
-import utils_topology as utils
+from Utils import utils_topology as utils
 import matplotlib.pyplot as plt
-import datetime
-import matplotlib.image as mpimg
-import netwulf
 import seaborn as sns
-import matplotlib.ticker as mtick
 
 date = "22-10-22"
 special_name = ""

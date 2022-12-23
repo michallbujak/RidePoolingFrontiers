@@ -1,10 +1,6 @@
 import pandas as pd
 import multiprocessing as mp
 import datetime
-from netwulf import visualize
-import pickle
-import networkx as nx
-import json
 import os
 import sys
 import numpy as np
@@ -12,7 +8,7 @@ import numpy as np
 sys.path.append(os.path.abspath(os.getcwd()))
 sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
-import utils_topology as utils
+from Utils import utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.probabilistic_exmas import main as exmas_algo
 from ExMAS.utils import make_graph as exmas_make_graph

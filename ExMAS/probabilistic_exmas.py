@@ -43,15 +43,11 @@ __maintainer__ = "Rafal Kucharski"
 __email__ = "rafalkucharski.box _at_ gmail . com"
 
 import ast
-import math
-import random
-import time
 import sys
 from itertools import product
 import logging
 from types import FunctionType
 
-import scipy.stats
 from dotmap import DotMap
 from enum import Enum
 
@@ -59,7 +55,6 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import pulp
-from scipy.stats import norm
 import platform
 
 import matplotlib.pyplot as plt
@@ -113,7 +108,7 @@ def main(_inData, params, manual_overwrite=False, plot=False):
 
     if manual_overwrite:
         s = 1
-        from Topology.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
+        from Utils.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
         params.sampling_function = gen_func((0.29, 0.57, 0.81, 1),
                                             ((16.98 / 3600, 1.22), (s * 1.68 / 3600, s * 0.122)),
                                             ((14.02 / 3600, 1.135), (s * 1.402 / 3600, s * 0.1135)),

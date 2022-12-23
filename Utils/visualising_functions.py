@@ -5,7 +5,7 @@ import pathlib
 
 import seaborn
 import seaborn as sns
-import utils_topology as utils
+import utils_topology as utils_topology
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -26,6 +26,16 @@ import scienceplots
 plt.style.use(['science', 'no-latex'])
 
 
+def get_parameters(path, time_correction=False):
+    with open(path) as json_file:
+        data = json.load(json_file)
+        config = DotMap(data)
+    if time_correction:
+        config['t0'] = pd.Timestamp('15:00')
+
+    return config
+
+
 def create_figs_folder(config):
     try:
         os.mkdir(config.path_results + "figs")
@@ -36,18 +46,18 @@ def create_figs_folder(config):
 
 
 def config_initialisation(path, date, sblts_exmas="exmas"):
-    topological_config = utils.get_parameters(path)
+    topological_config = get_parameters(path)
     topological_config.path_results = 'data/results/' + date + '/'
     topological_config.date = date
     topological_config.sblts_exmas = sblts_exmas
     init_config = None
     try:
-        init_config = utils.get_parameters(topological_config.initial_parameters)
+        init_config = get_parameters(topological_config.initial_parameters)
     except:
         pass
     if init_config is None:
         try:
-            init_config = utils.get_parameters(
+            init_config = get_parameters(
                 os.path.join(pathlib.Path(os.getcwd()).parent.absolute(), topological_config.initial_parameters))
         except:
             pass
@@ -199,7 +209,7 @@ def graph_visualisation_with_netwulf(all_graphs=None, rep_graphs=None, graph_lis
         else:
             raise Warning("incorrect graph_list")
 
-        visualize(graph, config=json.load(open('data/configs/netwulf_config.json')))
+        visualize(graph, config=json.load(open('../Topology/data/configs/netwulf_config.json')))
 
 
 def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, node_size=1, dpi=80,
@@ -212,9 +222,9 @@ def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, no
             obj = [dotmap_list[1]]
         else:
             obj = dotmap_list[:num]
-        draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
-                                                      list_types_of_graph=['bipartite_matching'],
-                                                      logger_level='WARNING')[
+        draw_bipartite_graph(utils_topology.analyse_edge_count(obj, topological_config,
+                                                               list_types_of_graph=['bipartite_matching'],
+                                                               logger_level='WARNING')[
                                  'bipartite_matching'],
                              num, node_size=node_size, dpi=dpi, figsize=fig_size, plot=plot, width_power=width_power,
                              config=topological_config, save=save, saving_number=num, date=topological_config.date)

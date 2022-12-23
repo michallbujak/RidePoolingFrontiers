@@ -1,4 +1,3 @@
-import pickle
 import os
 import sys
 import numpy as np
@@ -6,7 +5,7 @@ import numpy as np
 sys.path.append(os.path.abspath(os.getcwd()))
 sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
 
-import Topology.utils_topology as utils
+import Utils.utils_topology as utils
 import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.main_ORIGINAL import main as exmas_algo
 
