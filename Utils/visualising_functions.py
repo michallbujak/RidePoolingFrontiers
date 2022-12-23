@@ -5,7 +5,7 @@ import pathlib
 
 import seaborn
 import seaborn as sns
-import utils_topology as utils_topology
+import Utils.utils_topology as utils_topology
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -367,7 +367,9 @@ def fix_hist_step_vertical_line_at_end(ax):
         poly.set_xy(poly.get_xy()[:-1])
 
 
-def create_latex_output_df(df, column_format):
+def create_latex_output_df(df, column_format=None):
+    if column_format is None:
+        column_format = df.shape[1]*"c|" + "c"
     latex_df = df.to_latex(float_format="%.2f", column_format=column_format)
     latex_df = latex_df.replace("\\midrule", "\\hline")
     for rule in ["\\toprule", "\\bottomrule"]:
