@@ -21,6 +21,8 @@ import pickle
 import tkinter as tk
 import bisect
 
+pd.options.mode.chained_assignment = None
+
 
 def get_parameters(path, time_correction=False):
     with open(path) as json_file:
@@ -235,7 +237,7 @@ def worker_topological_properties(GraphStatObj):
     data_output = pd.DataFrame()
     GraphStatObj.all_analysis()
     if GraphStatObj.bipartite:
-        data_output = data_output.append([GraphStatObj.num_nodes_group0, GraphStatObj.num_nodes_group1,
+        data_output = pd.concat([data_output, GraphStatObj.num_nodes_group0, GraphStatObj.num_nodes_group1,
                                           GraphStatObj.average_degree, GraphStatObj.maximum_degree,
                                           GraphStatObj.average_degree_group0,
                                           GraphStatObj.average_degree_group1,
@@ -246,6 +248,17 @@ def worker_topological_properties(GraphStatObj):
                                           GraphStatObj.number_of_isolated_pairs,
                                           GraphStatObj.average_clustering_group0_reduced,
                                           GraphStatObj.average_clustering_group1_reduced])
+        # data_output = data_output.append([GraphStatObj.num_nodes_group0, GraphStatObj.num_nodes_group1,
+        #                                   GraphStatObj.average_degree, GraphStatObj.maximum_degree,
+        #                                   GraphStatObj.average_degree_group0,
+        #                                   GraphStatObj.average_degree_group1,
+        #                                   GraphStatObj.average_clustering_coefficient,
+        #                                   GraphStatObj.proportion_max_component, len(GraphStatObj.components),
+        #                                   GraphStatObj.average_clustering_group0,
+        #                                   GraphStatObj.average_clustering_group1,
+        #                                   GraphStatObj.number_of_isolated_pairs,
+        #                                   GraphStatObj.average_clustering_group0_reduced,
+        #                                   GraphStatObj.average_clustering_group1_reduced])
         data_output.index = ['No_nodes_group0', 'No_nodes_group1', 'Average_degree',
                              'Maximum_degree', 'Average_degree_group0', 'Average_degree_group1',
                              'Avg_clustering',
@@ -473,7 +486,9 @@ class APosterioriAnalysis:
         for column in df.columns:
             df.rename(columns={column: self.labels[column]}, inplace=True)
 
-        corr = df.corr()
+        df = df.astype(float)
+
+        corr = df.corr(numeric_only=True)
         self.heatmap = corr
         plt.figure(figsize=(10, 10))
         sns.heatmap(corr,
