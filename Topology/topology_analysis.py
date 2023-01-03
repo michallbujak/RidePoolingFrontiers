@@ -35,20 +35,11 @@ if __name__ == "__main__":
     df = pd.DataFrame()
 
     for d, s_d, res in zip(graph_list_obj_calculated, topological_config["values"], data):
-        d_to_append = pd.concat([d, pd.DataFrame({d.columns[0]: s_d})], ignore_index=True)
+        d_to_append = pd.concat([d, pd.DataFrame({d.columns[0]: [s_d]})], ignore_index=True)
         d_to_append = d_to_append.append(pd.DataFrame(res["exmas"]["res"])[:-2], ignore_index=True)
         d_to_append.index = row_names
         df = pd.concat([df, d_to_append.T])
 
     df.reset_index(inplace=True, drop=True)
-    variables = ['shared_discount']
-    utils_topology.APosterioriAnalysis(df,
-                                       topological_config.path_results,
-                                       topological_config.path_results + "temp/",
-                                       variables,
-                                       topological_config.graph_topological_properties,
-                                       topological_config.kpis,
-                                       topological_config.graph_properties_against_inputs,
-                                       topological_config.dictionary_variables).do_all()
+    x = 0
 
-    e = 0
