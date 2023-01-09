@@ -15,6 +15,7 @@ import datetime
 import json
 from dotmap import DotMap
 from netwulf import visualize
+import netwulf as nw
 import matplotlib.ticker as mtick
 import os
 import tkinter as tk
@@ -674,4 +675,35 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2):
 
     plt.tight_layout()
     plt.savefig(config.path_results + "figs/mixed_" + var + ".png", dpi=200)
+    plt.close()
+
+
+def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", dpi=200, figsize=(6, 6), edge_width=1,
+                                      alpha_diff=0.6, thicker_common=1.5, alpha_common=0.7):
+    """
+    Function designed to produce a graph presenting combination of two graphs with the same nodes
+    @param dpi:
+    @param figsize:
+    @param edge_width:
+    @param alpha_common:
+    @param thicker_common:
+    @param alpha_diff:
+    @param config: config with run charactersitcs, especially including path-results
+    @param spec_name: used in naming the output
+    @param g1: graph
+    @param g2: graph with the same nodes as g1
+    @return: saved figure
+    """
+    stylized_network, netwulf_config = nw.visualize(g1)
+    layout = {i: nw.tools.node_pos(stylized_network, i) for i in range(len(list(g1.nodes)))}
+    plt.figure(1, figsize=figsize, dpi=dpi)
+    ax = nx.draw_networkx_nodes(g1, pos=layout, node_color="black", node_size=20)
+    edges1 = set(g1.edges)
+    edges2 = set(g2.edges)
+    nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.intersection(edges2), width=thicker_common*edge_width, edge_color="red", alpha=alpha_common)
+    nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.difference(edges2), width=edge_width, edge_color="blue", alpha=alpha_diff)
+    nx.draw_networkx_edges(g2, pos=layout, edgelist=edges2.difference(edges1), width=edge_width, edge_color="green", alpha=alpha_diff)
+    plt.box(False)
+    plt.tick_params(axis='both', which='both', bottom=False, top=False, right=False, left=False, labelbottom=False)
+    plt.savefig(config.path_results + "figs/mixed_" + spec_name + "_graph.png", transparent=True, pad_inches=0)
     plt.close()

@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     """ Set up varying parameters (optional) """
     topological_config.variable = 'shared_discount'
-    topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
-    # topological_config.values = [0.2, 0.3]
+    # topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
+    topological_config.values = [0.2, 0.25, 0.3]
 
     """ Run parameters """
     topological_config.replications = 1
@@ -75,6 +75,10 @@ if __name__ == "__main__":
     merged_results = utils.merge_results(dotmaps_list_results, topo_dataframes, settings_list)
     merged_file_path = topological_config.path_results + 'merged_files_' + \
                        str(datetime.date.today().strftime("%d-%m-%y")) + '.xlsx'
+    # date_columns = merged_results.select_dtypes(include=['datetime64[ns]']).columns
+    for column in merged_results.columns:
+        merged_results[column] = merged_results[column].apply(lambda a: str(a))
+
     merged_results.to_excel(merged_file_path, index=False)
 
     """ Compute final results """

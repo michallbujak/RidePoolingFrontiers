@@ -237,17 +237,29 @@ def worker_topological_properties(GraphStatObj):
     data_output = pd.DataFrame()
     GraphStatObj.all_analysis()
     if GraphStatObj.bipartite:
-        data_output = data_output.append([GraphStatObj.num_nodes_group0, GraphStatObj.num_nodes_group1,
-                                          GraphStatObj.average_degree, GraphStatObj.maximum_degree,
-                                          GraphStatObj.average_degree_group0,
-                                          GraphStatObj.average_degree_group1,
-                                          GraphStatObj.average_clustering_coefficient,
-                                          GraphStatObj.proportion_max_component, len(GraphStatObj.components),
-                                          GraphStatObj.average_clustering_group0,
-                                          GraphStatObj.average_clustering_group1,
-                                          GraphStatObj.number_of_isolated_pairs,
-                                          GraphStatObj.average_clustering_group0_reduced,
-                                          GraphStatObj.average_clustering_group1_reduced])
+        # data_output = data_output.append([GraphStatObj.num_nodes_group0, GraphStatObj.num_nodes_group1,
+        #                                   GraphStatObj.average_degree, GraphStatObj.maximum_degree,
+        #                                   GraphStatObj.average_degree_group0,
+        #                                   GraphStatObj.average_degree_group1,
+        #                                   GraphStatObj.average_clustering_coefficient,
+        #                                   GraphStatObj.proportion_max_component, len(GraphStatObj.components),
+        #                                   GraphStatObj.average_clustering_group0,
+        #                                   GraphStatObj.average_clustering_group1,
+        #                                   GraphStatObj.number_of_isolated_pairs,
+        #                                   GraphStatObj.average_clustering_group0_reduced,
+        #                                   GraphStatObj.average_clustering_group1_reduced])
+        data_output = pd.concat(
+            [data_output, pd.DataFrame([GraphStatObj.num_nodes_group0, GraphStatObj.num_nodes_group1,
+                                        GraphStatObj.average_degree, GraphStatObj.maximum_degree,
+                                        GraphStatObj.average_degree_group0,
+                                        GraphStatObj.average_degree_group1,
+                                        GraphStatObj.average_clustering_coefficient,
+                                        GraphStatObj.proportion_max_component, len(GraphStatObj.components),
+                                        GraphStatObj.average_clustering_group0,
+                                        GraphStatObj.average_clustering_group1,
+                                        GraphStatObj.number_of_isolated_pairs,
+                                        GraphStatObj.average_clustering_group0_reduced,
+                                        GraphStatObj.average_clustering_group1_reduced])])
         data_output.index = ['No_nodes_group0', 'No_nodes_group1', 'Average_degree',
                              'Maximum_degree', 'Average_degree_group0', 'Average_degree_group1',
                              'Avg_clustering',
@@ -508,7 +520,7 @@ class APosterioriAnalysis:
                                    self.output_temp + 'temp_boxplot_' + str(counter) + '.png')
 
         worksheet = workbook.add_worksheet('Lineplots')
-        for counter in range(len(self.graph_properties_to_plot)):
+        for counter in range(len(self.input_variables)):
             worksheet.insert_image('B' + str(counter * 25 + 1),
                                    self.output_temp + 'temp_lineplot_' + str(counter) + '.png')
 
@@ -975,7 +987,8 @@ def mixed_discrete_norm_distribution_with_index(probs, *args):
     def internal_function(*X):
         z = random.random()
         index = bisect.bisect(probs, z)
-        return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, args[index][0], args[index][1])] + [index]
+        return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, args[index][0], args[index][1])] + [
+            index]
 
     return internal_function
 

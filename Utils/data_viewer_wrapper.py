@@ -1,4 +1,7 @@
 import visualising_functions as vis_eff
+import networkx as nx
+import matplotlib.pyplot as plt
+import netwulf as nw
 
 date = "25-11-22"
 sblts_exmas = "exmas"
@@ -21,6 +24,13 @@ if __name__ == '__main__':
     # vis_eff.analyse_profitability(dotmap_list, config, shared_all='all', bins=20, y_max=18)
     # vis_eff.individual_analysis(dotmap_list, config, s=3)
     # vis_eff.individual_rides_profitability(dotmap_list, config, s=3)
+
+    graph1 = all_graphs_list[0]["pairs_shareability"]
+    graph2 = all_graphs_list[1]["pairs_shareability"]
+
+    vis_eff.visualize_two_shareability_graphs(graph1, graph2, config, spec_name="shareability", edge_width=0.7, alpha_diff=0.6,
+                                              thicker_common=1.5, alpha_common=1)
+
 
 
     x = 0

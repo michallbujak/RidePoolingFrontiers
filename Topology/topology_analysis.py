@@ -4,42 +4,33 @@ import pandas as pd
 import Utils.utils_topology as utils_topology
 import multiprocessing as mp
 import Utils.visualising_functions as vf
+import matplotlib.pyplot as plt
+import seaborn as sns
+import scienceplots
 
-if __name__ == "__main__":
-    """ Load all the topological parameters """
-    topological_config = utils_topology.get_parameters('data/configs/topology_settings_like_old.json')
+plt.style.use(['science', 'no-latex'])
 
-    """ Set up varying parameters (optional) """
-    topological_config.variable = 'shared_discount'
-    topological_config.values = np.round(np.arange(0.1, 0.12, 0.01), 2)
 
-    utils_topology.create_results_directory(topological_config, date="20-12-22")
+""" Load all the topological parameters """
+topological_config = utils_topology.get_parameters('data/configs/topology_settings_like_old.json')
 
-    with open(
-            r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\20-12-22\all_graphs_list_20-12-22.obj",
-            "rb") as file:
-        graph_list = pickle.load(file)
+""" Set up varying parameters (optional) """
+topological_config.variable = 'shared_discount'
+topological_config.values = np.round(np.arange(0.10, 0.51, 0.01), 2)
 
-    with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\20-12-22\dotmap_list_20-12-22.obj",
-              "rb") as file:
-        data = pickle.load(file)
+utils_topology.create_results_directory(topological_config, date="20-12-22")
 
-    graph_list = [g['bipartite_shareability'] for g in graph_list]
-    graph_list_obj = [utils_topology.GraphStatistics(graph, "CRITICAL") for graph in graph_list]
+path = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\20-12-22\merged_files_20-12-22.xlsx"
+df = pd.read_excel(path)
+df["Shareable_travellers"] = df["Demand_size"] - df["No_isolated_pairs"]
 
-    pool = mp.Pool(mp.cpu_count())
-    graph_list_obj_calculated = pool.map(utils_topology.worker_topological_properties, graph_list_obj)
-    pool.close()
+fig, ax1 = plt.subplots(figsize=(8, 6), dpi=200)
+ax2 = ax1.twinx()
+sns.lineplot(data=df, x="shared_discount", y="Shareable_travellers", ax=ax1, color="red")
+sns.lineplot(data=df, x="shared_discount", y="Average_clustering_group1", ax=ax2, color="blue")
+ax1.set(ylabel="Greatest component")
+ax2.set(ylabel="Avg. sq. clustering of trav. node")
+plt.show()
+plt.close()
 
-    row_names = list(graph_list_obj_calculated[0].index) + ["shared_discount"] + list(data[0]["exmas"]["res"].index)[:-2]
-    df = pd.DataFrame()
-
-    for d, s_d, res in zip(graph_list_obj_calculated, topological_config["values"], data):
-        d_to_append = pd.concat([d, pd.DataFrame({d.columns[0]: [s_d]})], ignore_index=True)
-        d_to_append = d_to_append.append(pd.DataFrame(res["exmas"]["res"])[:-2], ignore_index=True)
-        d_to_append.index = row_names
-        df = pd.concat([df, d_to_append.T])
-
-    df.reset_index(inplace=True, drop=True)
-    x = 0
 

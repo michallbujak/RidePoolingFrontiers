@@ -6,7 +6,11 @@
 		"Average_degree_group0",
 		"Average_degree_group1",
 		"Proportion_max_component",
-		"Fraction_isolated"		
+		"Fraction_isolated",
+		"Average_clustering_group0",
+		"Average_clustering_group0_reduced",
+		"Average_clustering_group1",
+		"Average_clustering_group1_reduced"
 	],
 	"kpis": [
 		"shared_ratio",
