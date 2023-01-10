@@ -1439,11 +1439,11 @@ def calculate_r_utility(r, ij, params, sampled_noise, one_or_two):
 
 
 def check_if_correct_attributes(params):
-    if "distribution_variables" in params.keys():
+    if params.get("distribution_variables", None) is not None:
         assert isinstance(params.distribution_variables, list), "distribution_variables should be a list"
         for j in params.distribution_variables:
             assert isinstance(j, str), "Elements of list params.distribution_variables should be str"
-    if "type_of_distribution" in params.keys():
+    if params.get("type_of_distribution", None) is not None:
         params.type_of_distribution = params.type_of_distribution.lower()
         assert params.type_of_distribution in ["discrete", "manual", "normal"], \
             "Incorrect type_of_distribution. Admissible: 'discrete', 'manual', 'normal'"
@@ -1459,7 +1459,7 @@ def check_if_correct_attributes(params):
                 "distribution_details must be provided for normal distribution (mean, st_dev)"
             assert {"mean", "st_dev"}.issubset(set(params.distribution_details.keys())), \
                 "distribution_details: {mean: x, st_dev: y} is the ony admissible form."
-    if "noise" in params.keys():
+    if params.get("noise", None) is not None:
         assert {"mean", "st_dev"}.issubset(set(params.noise.keys())), "Incorrect noise (should be dict: mean, st_dev)"
-    if "panel_noise" in params.keys():
+    if params.get("panel_noise", None) is not None:
         assert {"mean", "st_dev"}.issubset(set(params.panel_noise.keys()))
