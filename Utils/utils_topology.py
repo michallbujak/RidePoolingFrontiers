@@ -578,7 +578,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
         # shareable.extend(np.unique(np.array(indata.exmas.rides.indexes)))
-        shareable.extend([str(x) for x in np.unique(np.array(indata.exmas.rides.indexes))])
+        shareable.extend([str(x) for x in np.unique(np.array(indata['exmas']['rides'].indexes))])
         pbar.update(1)
 
     my_dict = Counter(shareable)
@@ -600,7 +600,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     pbar = tqdm(total=len(list_dotmaps))
     for indata in list_dotmaps:
         # scheduled.extend(np.unique(np.array(indata.exmas.schedule.indexes)))
-        scheduled.extend([str(x) for x in np.unique(np.array(indata.exmas.schedule.indexes))])
+        scheduled.extend([str(x) for x in np.unique(np.array(indata['exmas']['schedule'].indexes))])
         pbar.update(1)
 
     my_dict = Counter(scheduled)
@@ -622,7 +622,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
     if list_types_of_graph is not None:
         logger.warning("Current implementation for graph creation assumes that all runs are on the same batch")
         indata = list_dotmaps[-1]
-        requests = indata.exmas.requests.copy()
+        requests = indata['exmas']['requests'].copy()
         graph_list = dict()
         if list_types_of_graph == 'all':
             list_types_of_graph = ['bipartite_shareability', 'bipartite_matching', 'pairs_shareability',
@@ -844,9 +844,10 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
         else:
             date = str(date)
         if name is None:
-            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png")
+            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png",
+                        transparent=True, pad_inches=0)
         else:
-            plt.savefig(config.path_results + "temp/" + name + ".png")
+            plt.savefig(config.path_results + "temp/" + name + ".png", transparent=True, pad_inches=0)
     if plot:
         plt.show()
 

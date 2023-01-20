@@ -151,7 +151,8 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
         else:
             date = str(date)
         if name is None:
-            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png")
+            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png",
+                        transparent=True, pad_inches=0)
         else:
             plt.savefig(config.path_results + "temp/" + name + ".png")
     if plot:
@@ -175,7 +176,7 @@ def graph_visualisation_with_netwulf(all_graphs=None, rep_graphs=None, graph_lis
             if g in graph_list:
                 graph_list.remove(g)
     else:
-        no_nodes = len(all_graphs[0]["pairs_matching"].nodes)
+        no_nodes = len(rep_graphs["pairs_matching"].nodes)
 
     try:
         no_nodes
@@ -593,89 +594,131 @@ def individual_rides_profitability(dotmap_list, config, s=20, dpi=200):
     plt.close()
 
 
-def mixed_datasets_kpi(var, config, date, name0, name1, name2):
+def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, graph_type='kde'):
     sblts_exmas = config.sblts_exmas
-    assert var in ['profit', 'veh', 'utility', 'pass'], "wrong var"
+    if type(var) == str:
+        assert var in ['profit', 'veh', 'utility', 'pass'], "wrong var"
+    else:
+        assert type(var) == list, "wrong var"
 
     config.path_results0 = 'data/results/' + date + name0 + '/'
     config.path_results1 = 'data/results/' + date + name1 + '/'
     config.path_results2 = 'data/results/' + date + name2 + '/'
 
-    if var == 'profit':
-        config0path = "profitability_mean_147.txt"
-        config0path_num = 0
+    if type(var) == list:
+        vars = var
     else:
-        config0path = "kpis_means_147.txt"
-        multiplier = 100
+        vars = [var]
 
-    if var == 'veh':
-        config0path_num = 2
-        var1 = "VehHourTrav_ns"
-        var2 = "VehHourTrav"
-        var3 = var1
+    if graph_all:
+        rep_graphs0, dotmap_list0, all_graphs_list0 = load_data(config, config.path_results0)
 
-    elif var == 'utility':
-        config0path_num = 0
-        var1 = "PassUtility_ns"
-        var2 = "PassUtility"
-        var3 = var1
-
-    elif var == 'pass':
-        config0path_num = 1
-        var1 = "PassHourTrav"
-        var2 = "PassHourTrav_ns"
-        var3 = var2
-
-    else:
-        pass
-
-    if var == 'pass':
-        _lw = 2
-    else:
-        _lw = 1.5
-
-    with open(config.path_results0 + config0path, "r") as file:
-        hline_val = file.readlines()
-
-    h_line_value = float(hline_val[config0path_num].split()[1])
     rep_graphs1, dotmap_list1, all_graphs_list1 = load_data(config, config.path_results1)
     rep_graphs2, dotmap_list2, all_graphs_list2 = load_data(config, config.path_results2)
 
-    if var in ['veh', 'utility', 'pass']:
-        data1 = [multiplier * (x[sblts_exmas].res[var1] - x[sblts_exmas].res[var2]) / x[
-            sblts_exmas].res[var3] for x in dotmap_list1]
-        data2 = [multiplier * (x[sblts_exmas].res[var1] - x[sblts_exmas].res[var2]) / x[
-            sblts_exmas].res[var3] for x in dotmap_list2]
-    else:
-        data1 = analyse_profitability(dotmap_list1, config, save_results=False)
-        data2 = analyse_profitability(dotmap_list2, config, save_results=False)
+    for var in vars:
 
-    data = pd.concat(axis=0, ignore_index=True, objs=[
-        pd.DataFrame.from_dict({'value': data1, 'Demand size': 'small'}),
-        pd.DataFrame.from_dict({'value': data2, 'Demand size': 'big'})
-    ])
+        if var == 'profit':
+            config0path = "profitability_mean_147.txt"
+            config0path_num = 0
+        else:
+            config0path = "kpis_means_147.txt"
+            multiplier = 100
 
-    if var == "profit":
-        plt.figure(figsize=(5.2, 3))
-    else:
+        if var == 'veh':
+            config0path_num = 2
+            var1 = "VehHourTrav_ns"
+            var2 = "VehHourTrav"
+            var3 = var1
+
+        elif var == 'utility':
+            config0path_num = 0
+            var1 = "PassUtility_ns"
+            var2 = "PassUtility"
+            var3 = var1
+
+        elif var == 'pass':
+            config0path_num = 1
+            var1 = "PassHourTrav"
+            var2 = "PassHourTrav_ns"
+            var3 = var2
+
+        else:
+            pass
+
+        if var == 'pass':
+            _lw = 2
+        else:
+            _lw = 1.5
+
+        with open(config.path_results0 + config0path, "r") as file:
+            hline_val = file.readlines()
+
+        h_line_value = float(hline_val[config0path_num].split()[1])
+
+        if var in ['veh', 'utility', 'pass']:
+            if graph_all:
+                data0 = [multiplier * (x[sblts_exmas].res[var1] - x[sblts_exmas].res[var2]) / x[
+                    sblts_exmas].res[var3] for x in dotmap_list0]
+            data1 = [multiplier * (x[sblts_exmas].res[var1] - x[sblts_exmas].res[var2]) / x[
+                sblts_exmas].res[var3] for x in dotmap_list1]
+            data2 = [multiplier * (x[sblts_exmas].res[var1] - x[sblts_exmas].res[var2]) / x[
+                sblts_exmas].res[var3] for x in dotmap_list2]
+        else:
+            if graph_all:
+                data0 = analyse_profitability(dotmap_list0, config, save_results=False)
+            data1 = analyse_profitability(dotmap_list1, config, save_results=False)
+            data2 = analyse_profitability(dotmap_list2, config, save_results=False)
+
+        if graph_all:
+            data = pd.concat(axis=0, ignore_index=True, objs=[
+                pd.DataFrame.from_dict({'value': data0, 'Demand size': 'baseline'}),
+                pd.DataFrame.from_dict({'value': data1, 'Demand size': 'small'}),
+                pd.DataFrame.from_dict({'value': data2, 'Demand size': 'big'})
+            ])
+        else:
+            data = pd.concat(axis=0, ignore_index=True, objs=[
+                pd.DataFrame.from_dict({'value': data1, 'Demand size': 'small'}),
+                pd.DataFrame.from_dict({'value': data2, 'Demand size': 'big'})
+            ])
+
+        # if var == "profit":
+        #     plt.figure(figsize=(3.5, 3), constrained_layout=True)
+        # else:
         plt.figure(figsize=(3.5, 3))
 
-    ax = sns.histplot(data, x='value', hue='Demand size', bins=20,
-                      palette=['red', 'blue'])  # multiple="dodge", shrink=.8
-    ax.set(xlabel=None, ylabel=None, yticklabels=[])
-    ax.axvline(x=h_line_value, color='black', ls='--', label='Baseline mean', lw=_lw)
-    plt.locator_params(axis='x', nbins=5)
+        data2 = pd.DataFrame()
+        data2["value"] = data["value"]
+        data2["Demand size"] = data["Demand size"]
 
-    if var != "profit":
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-        ax.get_legend().remove()
-    else:
-        plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=.0, labels=['Baseline mean', 'Sparse', 'Dense'],
-                   title='Demand')
+        if graph_type == "kde":
+            ax = sns.kdeplot(data=data2, x='value', hue='Demand size', palette=['red', 'blue', 'green'],
+                             common_norm=False,
+                             fill=True, alpha=.5, linewidth=0)
+        elif graph_type == "hist":
+            ax = sns.histplot(data, x='value', hue='Demand size', bins=20,
+                              palette=['red', 'blue'])  # multiple="dodge", shrink=.8
+        else:
+            raise Exception("currently not implemented, graph type should be either 'kde' or 'hist'")
+        ax.set(xlabel=None, ylabel=None, yticklabels=[])
+        if not graph_all:
+            ax.axvline(x=h_line_value, color='black', ls='--', label='Baseline mean', lw=_lw)
+        plt.locator_params(axis='x', nbins=5)
 
-    plt.tight_layout()
-    plt.savefig(config.path_results + "figs/mixed_" + var + ".png", dpi=200)
-    plt.close()
+        if var != "profit":
+            ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+            ax.get_legend().remove()
+        else:
+            if graph_all:
+                legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Baseline', 'Sparse', 'Dense'],
+                                    title='Demand', borderaxespad=0)
+            else:
+                legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Baseline mean', 'Sparse', 'Dense'],
+                                    title='Demand', borderaxespad=0)
+
+        plt.tight_layout()
+        plt.savefig(config.path_results + "figs/mixed_" + var + ".png", dpi=200)
+        plt.close()
 
 
 def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", dpi=200, figsize=(6, 6), edge_width=1,

@@ -15,15 +15,15 @@ from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('data/configs/topology_settings_like_old.json')
+    topological_config = utils.get_parameters('data/configs/topology_settings_panel.json')
 
     """ Set up varying parameters (optional) """
-    topological_config.variable = 'shared_discount'
+    # topological_config.variable = 'shared_discount'
     # topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
-    topological_config.values = [0.2, 0.25, 0.3]
+    # # topological_config.values = [0.2, 0.25, 0.3]
 
     """ Run parameters """
-    topological_config.replications = 1
+    topological_config.replications = 1000
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -34,7 +34,7 @@ if __name__ == "__main__":
                                                      filter_function=lambda x: len(x.requests) < 150,
                                                      config=topological_config.initial_parameters)
 
-    # ExMAS.utils.plot_demand(dotmaps_list[0], params)
+    params = utils.update_probabilistic(topological_config, params)
 
     """ Run ExMAS """
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algorithm=exmas_algo,
