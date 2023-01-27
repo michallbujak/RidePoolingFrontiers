@@ -243,6 +243,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     res.append(["relative_pass_utility", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
+    ax.axvline(4.5, ls=":")
     ax.set(xlabel=None, ylabel=None, yticklabels=[])
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -255,6 +256,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     res.append(["relative_pass_hours", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
+    ax.axvline(9.8, ls=":")
     ax.set(xlabel=None, ylabel=None, yticklabels=[])
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -267,6 +269,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     res.append(["relative_veh_hours", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
+    ax.axvline(30, ls=":")
     ax.set(xlabel=None, ylabel=None)
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -379,7 +382,7 @@ def create_latex_output_df(df, column_format=None):
     return latex_df
 
 
-def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
+def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6), dpi=200):
     # Requests
     results_req = [amend_dotmap(indata, config)[0] for indata in dotmap_list]
     results_req = [relative_travel_times_utility(df) for df in results_req]
@@ -426,7 +429,7 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
         datasets = [whole_dataset] + datasets
         labels = ["All"] + labels
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
         for data, line_type, label in zip(datasets, ['-', ':', '--', '-.', (0, (3, 5, 1, 5, 1, 5))], labels):
             lw = 1.2 if label == "All" else 1
             plt.hist(data, density=True, histtype='step', label=label, cumulative=True, bins=len(data),
@@ -439,8 +442,10 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50):
         else:
             ax.set(xlabel=None, ylabel=None)
         plt.xlim(left=-0.05 if var != "Profitability" else None, right=xlim_end)
-        plt.legend(loc="lower right")
-        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png")
+        if var == "Profitability":
+            # plt.legend([plt.Line2D(0, 0) for j in ax.get_legend_handles_labels()],loc="lower right")
+            plt.legend(loc="lower right")
+        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png", dpi=dpi)
         plt.close()
 
         means = [np.mean(t) for t in datasets]
@@ -538,6 +543,7 @@ def analyse_profitability(dotmaps_list, config, shared_all='all', speed=6, shari
                                        sep=' ', index=False, header=False)
 
         ax = sns.histplot(relative_perspective, bins=bins)
+        ax.axvline(1.097, ls=":")
         ax.set(xlabel=None, ylabel=None, yticklabels=[])
         plt.ylim(0, y_max)
         plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
@@ -722,7 +728,7 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
 
 
 def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", dpi=200, figsize=(6, 6), edge_width=1,
-                                      alpha_diff=0.6, thicker_common=1.5, alpha_common=0.7):
+                                      alpha_diff=0.6, thicker_common=1.5, alpha_common=0.7, only_netwulf=False):
     """
     Function designed to produce a graph presenting combination of two graphs with the same nodes
     @param dpi:
@@ -737,16 +743,30 @@ def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", 
     @param g2: graph with the same nodes as g1
     @return: saved figure
     """
-    stylized_network, netwulf_config = nw.visualize(g1)
-    layout = {i: nw.tools.node_pos(stylized_network, i) for i in range(len(list(g1.nodes)))}
-    plt.figure(1, figsize=figsize, dpi=dpi)
-    ax = nx.draw_networkx_nodes(g1, pos=layout, node_color="black", node_size=20)
-    edges1 = set(g1.edges)
-    edges2 = set(g2.edges)
-    nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.intersection(edges2), width=thicker_common*edge_width, edge_color="red", alpha=alpha_common)
-    nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.difference(edges2), width=edge_width, edge_color="blue", alpha=alpha_diff)
-    nx.draw_networkx_edges(g2, pos=layout, edgelist=edges2.difference(edges1), width=edge_width, edge_color="green", alpha=alpha_diff)
-    plt.box(False)
-    plt.tick_params(axis='both', which='both', bottom=False, top=False, right=False, left=False, labelbottom=False)
-    plt.savefig(config.path_results + "figs/mixed_" + spec_name + "_graph.png", transparent=True, pad_inches=0)
-    plt.close()
+    if not only_netwulf:
+        stylized_network, netwulf_config = nw.visualize(g1)
+        layout = {i: nw.tools.node_pos(stylized_network, i) for i in range(len(list(g1.nodes)))}
+        plt.figure(1, figsize=figsize, dpi=dpi)
+        ax = nx.draw_networkx_nodes(g1, pos=layout, node_color="black", node_size=20)
+        edges1 = set(g1.edges)
+        edges2 = set(g2.edges)
+        nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.intersection(edges2), width=thicker_common*edge_width, edge_color="red", alpha=alpha_common)
+        nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.difference(edges2), width=edge_width, edge_color="blue", alpha=alpha_diff)
+        nx.draw_networkx_edges(g2, pos=layout, edgelist=edges2.difference(edges1), width=edge_width, edge_color="green", alpha=alpha_diff)
+        plt.box(False)
+        plt.tick_params(axis='both', which='both', bottom=False, top=False, right=False, left=False, labelbottom=False)
+        plt.savefig(config.path_results + "figs/mixed_" + spec_name + "_graph.png", transparent=True, pad_inches=0)
+        plt.close()
+    else:
+        edges1 = set(g1.edges)
+        edges2 = set(g2.edges)
+        edges0 = edges1.intersection(edges2)
+        edges_o1 = edges1.difference(edges2)
+        edges_o2 = edges2.difference(edges1)
+        G = nx.Graph()
+        G.add_weighted_edges_from([(x, y, 2) for x, y in edges0])
+        G.add_weighted_edges_from([(x, y, 1) for x, y in edges_o1])
+        G.add_weighted_edges_from([(x, y, 1) for x, y in edges_o2])
+        visualize(G)
+
+

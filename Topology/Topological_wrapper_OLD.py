@@ -15,7 +15,7 @@ from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('data/configs/topology_settings_panel.json')
+    topological_config = utils.get_parameters('Topology/data/configs/topology_settings_no_random.json')
 
     """ Set up varying parameters (optional) """
     # topological_config.variable = 'shared_discount'
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # # topological_config.values = [0.2, 0.25, 0.3]
 
     """ Run parameters """
-    topological_config.replications = 1000
+    topological_config.replications = 1
     topological_config.no_batches = 1
 
     """ Prepare folder """

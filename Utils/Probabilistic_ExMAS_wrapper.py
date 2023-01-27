@@ -17,20 +17,24 @@ import NYC_tools.NYC_data_prep_functions as nyc_tools
 from ExMAS.probabilistic_exmas import main as exmas_algo
 from ExMAS.utils import make_graph as exmas_make_graph
 
+os.chdir(os.path.dirname(os.getcwd()))
+
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('data/configs/topology_settings_like_old.json')
+    topological_config = utils.get_parameters('Topology/data/configs/topology_settings_no_random.json')
 
     """ Set up varying parameters (optional) """
     # topological_config.variable = 'shared_discount'
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 1000
+    topological_config.replications = 1
     topological_config.no_batches = 1
 
     """ Prepare folder """
+    topological_config.path_results = "Topology/" + topological_config.path_results
     utils.create_results_directory(topological_config)
+
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
