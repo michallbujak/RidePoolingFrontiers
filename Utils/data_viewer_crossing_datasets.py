@@ -1,5 +1,7 @@
 import visualising_functions as vis_eff
+import os
 
+os.chdir(os.path.dirname(os.getcwd()) + r"\\Topology\\")
 
 date = "25-11-22"
 name0 = "_full_n"

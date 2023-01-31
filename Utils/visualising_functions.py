@@ -21,11 +21,12 @@ import os
 import tkinter as tk
 import multiprocessing as mp
 import matplotlib as mpl
+from matplotlib.lines import Line2D
 
 import scienceplots
 
 plt.style.use(['science', 'no-latex'])
-
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def get_parameters(path, time_correction=False):
     with open(path) as json_file:
@@ -430,10 +431,12 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
         labels = ["All"] + labels
 
         fig, ax = plt.subplots(figsize=figsize)
-        for data, line_type, label in zip(datasets, ['-', ':', '--', '-.', (0, (3, 5, 1, 5, 1, 5))], labels):
+        _line_styles = ['-', ':', '--', '-.', (0, (3, 5, 1, 5, 1, 5))]
+        cmap = mpl.cm.get_cmap("tab10").colors
+        for data, line_type, label, color in zip(datasets, _line_styles, labels, cmap):
             lw = 1.2 if label == "All" else 1
             plt.hist(data, density=True, histtype='step', label=label, cumulative=True, bins=len(data),
-                     ls=line_type, lw=lw)
+                     ls=line_type, lw=lw, color=color)
         # plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
         # ax.axvline(x=maximal_percentile, color='black', ls=':', label='95%', lw=1)
         fix_hist_step_vertical_line_at_end(ax)
@@ -444,7 +447,9 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
         plt.xlim(left=-0.05 if var != "Profitability" else None, right=xlim_end)
         if var == "Profitability":
             # plt.legend([plt.Line2D(0, 0) for j in ax.get_legend_handles_labels()],loc="lower right")
-            plt.legend(loc="lower right")
+            custom_lines = [Line2D([0], [0], color=color, lw=1, ls=_ls) for color, _ls in zip(cmap, _line_styles)]
+
+            plt.legend(custom_lines, labels,  loc="lower right", fontsize=15)
         plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png", dpi=dpi)
         plt.close()
 
@@ -569,11 +574,23 @@ def individual_analysis(dotmap_list, config, no_elements=None, s=10):
     agg_data['Relative_utility_gain'] = agg_data['Relative_utility_gain'].apply(lambda x: x if x >= 0 else abs(x))
     agg_data['VoT'] = agg_data['VoT'] * 3600
     agg_data.rename(columns={"class": "Class"}, inplace=True)
+    agg_data["Class"] = agg_data["Class"] + 1
+    agg_data["Class"] = agg_data["Class"].apply(lambda x: "C" + str(x))
     dict_labels = {'Relative_utility_gain': "$\mathcal{U}_r$", "Relative_time_add": "$\mathcal{T}_r$"}
     for y_var, x_var in itertools.product(['Relative_utility_gain', 'Relative_time_add'], ['VoT', 'WtS']):
-        palette = {0: 'green', 1: "orange", 2: "blue", 3: "red"}
+        # palette = {0: 'green', 1: "orange", 2: "blue", 3: "red"}
+        palette = {"C1": 'green', "C2": "orange", "C3": "blue", "C4": "red"}
         ax = sns.scatterplot(data=agg_data, x=x_var, y=y_var, hue="Class", palette=palette, s=s)
         ax.set(xlabel=None, ylabel=dict_labels[y_var])
+        if y_var == "Relative_utility_gain" and x_var == "WtS":
+            # plt.legend(labels=["C1", "C2", "C3", "C4"])
+            # for handle in lgnd.legendHandles:
+            #     handle.set_sizes([6.0])
+            handles, labels = plt.gca().get_legend_handles_labels()
+            order = [1, 0, 2, 3]
+            plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+        else:
+            ax.get_legend().remove()
         ax.set_ylim(bottom=0)
         plt.savefig(config.path_results + "figs/" + x_var + '_' + y_var + "_" + str(size) + ".png")
         plt.close()
@@ -688,10 +705,10 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
                 pd.DataFrame.from_dict({'value': data2, 'Demand size': 'big'})
             ])
 
-        # if var == "profit":
-        #     plt.figure(figsize=(3.5, 3), constrained_layout=True)
-        # else:
-        plt.figure(figsize=(3.5, 3))
+        if var == "profit":
+            plt.figure(figsize=(4.7, 3))
+        else:
+            plt.figure(figsize=(3.5, 3))
 
         data2 = pd.DataFrame()
         data2["value"] = data["value"]
@@ -716,14 +733,14 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
             ax.get_legend().remove()
         else:
             if graph_all:
-                legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Baseline', 'Sparse', 'Dense'],
+                legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Dense', 'Sparse', 'Baseline'],
                                     title='Demand', borderaxespad=0)
             else:
                 legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Baseline mean', 'Sparse', 'Dense'],
                                     title='Demand', borderaxespad=0)
 
         plt.tight_layout()
-        plt.savefig(config.path_results + "figs/mixed_" + var + ".png", dpi=200)
+        plt.savefig(config.path_results0 + "figs/mixed_" + var + ".png", dpi=200)
         plt.close()
 
 
