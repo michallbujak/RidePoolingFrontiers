@@ -5,14 +5,16 @@ from Utils import utils_topology as utils
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# plt.style.use(['science', 'no-latex'])
+
 date = "19-01-23"
-special_name = ""
+special_name = "_full"
 sblts_exmas = "exmas"
 
 # with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)
 
-with open('data/results/' + date + '/dotmap_list_' + date + '.obj', 'rb') as file:
+with open('data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
     e = pickle.load(file)
 
 # with open('data/results/' + date + '/all_graphs_list_' + date + '.obj', 'rb') as file:
@@ -60,12 +62,17 @@ for num in num_list:
         obj = [e[1]]
     else:
         obj = e[:num]
-    utils.draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
+    z = utils.analyse_edge_count(obj, topological_config,
                                                         list_types_of_graph=['bipartite_matching'],
                                                         logger_level='WARNING')[
-                                   'bipartite_matching'],
-                               num, node_size=1, dpi=80, figsize=(10, 24), plot=False, width_power=1,
-                               config=topological_config, save=True, saving_number=num, date=date)
+                                   'bipartite_matching']
+    t = 0
+    # utils.draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
+    #                                                     list_types_of_graph=['bipartite_matching'],
+    #                                                     logger_level='WARNING')[
+    #                                'bipartite_matching'],
+    #                            num, node_size=1, dpi=80, figsize=(10, 24), plot=False, width_power=1,
+    #                            config=topological_config, save=True, saving_number=num, date=date)
 
 # fig, axes = plt.subplots(nrows=2, ncols=5, sharex='col', sharey='row')
 #
@@ -95,23 +102,24 @@ for num in num_list:
 #
 # df.to_excel(topological_config.path_results + 'all_graphs_properties_' + '31-05-22' + '.xlsx')
 
-# num_list = list(range(1000))
-# df = pd.DataFrame()
-# for num in num_list:
-#     if num == 0:
-#         obj = [e[0]]
-#     else:
-#         obj = e[:num]
-#     temp_graph = utils.analyse_edge_count(obj, topological_config, list_types_of_graph=['pairs_matching'],
-#                              logger_level='WARNING')['pairs_matching']
-#     t = utils.graph_mini_graphstatistics(temp_graph)
-#     temp_df = pd.DataFrame.from_dict({'average_degree': [t.average_degree], 'max_comp': [t.proportion_max_component],
-#                                       'number_of_isolated': [t.number_of_isolated_pairs]})
-#     df = pd.concat([df, temp_df])
+num_list = list(range(1000))
+df = pd.DataFrame()
+for num in num_list:
+    if num == 0:
+        obj = [e[0]]
+    else:
+        obj = e[:num]
+    temp_graph = utils.analyse_edge_count(obj, topological_config, list_types_of_graph=['pairs_matching'],
+                             logger_level='WARNING')['pairs_matching']
+    t = utils.graph_mini_graphstatistics(temp_graph)
+    temp_df = pd.DataFrame.from_dict({'average_degree': [t.average_degree], 'max_comp': [t.proportion_max_component],
+                                      'number_of_isolated': [t.number_of_isolated_pairs]})
+    df = pd.concat([df, temp_df])
+
 #
-# df.reset_index(inplace=True)
-# df.drop(columns=['index'], inplace=True)
-# df.to_excel(topological_config.path_results + 'frame_evolution_06-06-22.xlsx', index=False)
+df.reset_index(inplace=True)
+df.drop(columns=['index'], inplace=True)
+df.to_excel(topological_config.path_results + 'frame_evolution_' + date + '.xlsx', index=False)
 
 # str_for_end = "_198"
 # ticks = 5
@@ -443,3 +451,149 @@ for num in num_list:
 # plt.savefig("Topology/data/results/20-12-22/figs/simple_both_discount")
 # plt.close()
 
+# class TempClass:
+#     def __init__(self, dataset: pd.DataFrame, output_path: str, output_temp: str, input_variables: list,
+#                  all_graph_properties: list, kpis: list, graph_properties_to_plot: list, labels: dict,
+#                  err_style: str = "band", date: str = '000'):
+#         """
+#         Class designed to performed analysis on merged results from shareability graph properties.
+#         :param dataset: input merged datasets from replications
+#         :param output_path: output for final results
+#         :param output_temp: output for temporal results required in the process
+#         :param input_variables: search space variables
+#         :param all_graph_properties: all graph properties for heatmap/correlation analysis
+#         :param kpis: final matching coefficients to take into account
+#         :param graph_properties_to_plot: properties of graph to be plotted
+#         :param labels: dictionary of labels
+#         :param err_style: for line plots style of the error
+#         """
+#         if 'Replication_ID' in dataset.columns or 'Replication' in dataset.columns:
+#             for x in ['Replication_ID', 'Replication']:
+#                 if x in dataset.columns:
+#                     self.dataset = dataset.drop(columns=[x])
+#                 else:
+#                     pass
+#         else:
+#             self.dataset = dataset
+#         self.input_variables = input_variables
+#         self.all_graph_properties = all_graph_properties
+#         self.dataset_grouped = self.dataset.groupby(self.input_variables)
+#         self.output_path = output_path
+#         self.output_temp = output_temp
+#         self.kpis = kpis
+#         self.graph_properties_to_plot = graph_properties_to_plot
+#         self.labels = labels
+#         self.err_style = err_style
+#         self.heatmap = None
+#         self.date = date
+#
+#     def alternate_kpis(self):
+#         if 'nP' in self.dataset.columns:
+#             pass
+#         else:
+#             self.dataset['nP'] = self.dataset['No_nodes_group1']
+#
+#         self.dataset['Proportion_singles'] = self.dataset['SINGLE'] / self.dataset['nR']
+#         self.dataset['Proportion_pairs'] = self.dataset['PAIRS'] / self.dataset['nR']
+#         self.dataset['Proportion_triples'] = self.dataset['TRIPLES'] / self.dataset['nR']
+#         self.dataset['Proportion_triples_plus'] = (self.dataset['nR'] - self.dataset['SINGLE'] -
+#                                                    self.dataset['PAIRS']) / self.dataset['nR']
+#         self.dataset['Proportion_quadruples'] = self.dataset['QUADRIPLES'] / self.dataset['nR']
+#         self.dataset['Proportion_quintets'] = self.dataset['QUINTETS'] / self.dataset['nR']
+#         self.dataset['Proportion_six_plus'] = self.dataset['PLUS5'] / self.dataset['nR']
+#         self.dataset['SavedVehHours'] = (self.dataset['VehHourTrav_ns'] - self.dataset['VehHourTrav']) / \
+#                                         self.dataset['VehHourTrav_ns']
+#         self.dataset['AddedPasHours'] = (self.dataset['PassHourTrav'] - self.dataset['PassHourTrav_ns']) / \
+#                                         self.dataset['PassHourTrav_ns']
+#         self.dataset['UtilityGained'] = (self.dataset['PassUtility_ns'] - self.dataset['PassUtility']) / \
+#                                         self.dataset['PassUtility_ns']
+#         self.dataset['Fraction_isolated'] = self.dataset['No_isolated_pairs'] / self.dataset['nP']
+#         self.dataset_grouped = self.dataset.groupby(self.input_variables)
+#
+#     def plot_kpis_properties(self):
+#         plot_arguments = [(x, y) for x in self.graph_properties_to_plot for y in self.kpis]
+#         dataset = self.dataset.copy()
+#         binning = False
+#         for counter, value in enumerate(self.input_variables):
+#             min_val = min(self.dataset[value])
+#             max_val = max(self.dataset[value])
+#             if min_val == 0 and max_val == 0:
+#                 binning = False
+#             else:
+#                 step = (max_val - min_val) / 3
+#                 if min_val < 5:
+#                     bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 3)
+#                     bins = np.round(np.arange(0, 0.51, 0.1), 3)
+#                 else:
+#                     bins = np.round(np.append(np.arange(min_val * 0.98, max_val * 1.02, step), [max_val + step]), 0)
+#                 labels = [f'{i}+' if j == np.inf else f'{i}-{j}' for i, j in
+#                           zip(bins, bins[1:])]  # additional part with infinity
+#                 dataset[self.labels[value] + " bin"] = pd.cut(dataset[value], bins, labels=labels)
+#                 binning = True
+#
+#         for counter, j in enumerate(plot_arguments):
+#             if not binning:
+#                 fig, ax = plt.subplots()
+#                 sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
+#                 ax.set_xlabel(self.labels[j[0]])
+#                 ax.set_ylabel(self.labels[j[1]])
+#                 plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+#                 plt.close()
+#             else:
+#                 if len(self.input_variables) == 1:
+#                     fig, ax = plt.subplots()
+#                     sns.scatterplot(x=j[0], y=j[1], data=dataset,
+#                                     hue=dataset[self.labels[self.input_variables[0]] + " bin"], palette="crest")
+#                     ax.set_xlabel(None)
+#                     ax.set_ylabel(None)
+#                     plt.legend(fontsize=8, title="Sharing discount", title_fontsize=9)
+#                     # ax.get_legend().remove()
+#                     plt.savefig(self.output_temp + j[0] + '###' + j[1] + '.png')
+#                     plt.close()
+#                 elif len(self.input_variables) == 2:
+#                     fix, ax = plt.subplots()
+#                     sns.scatterplot(x=j[0], y=j[1], data=dataset,
+#                                     hue=dataset[self.labels[self.input_variables[0]] + " bin"],
+#                                     size=dataset[self.labels[self.input_variables[1]] + " bin"], palette="crest")
+#                     ax.set_xlabel(self.labels[j[0]])
+#                     ax.set_ylabel(self.labels[j[1]])
+#                     plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+#                     plt.close()
+#                 else:
+#                     fig, ax = plt.subplots()
+#                     sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
+#                     ax.set_xlabel(self.labels[j[0]])
+#                     ax.set_ylabel(self.labels[j[1]])
+#                     plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+#                     plt.close()
+#     def do(self):
+#         self.alternate_kpis()
+#         self.plot_kpis_properties()
+#
+#
+# variables = ['shared_discount']
+# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
+#           topological_config.path_results,
+#           topological_config.path_results + "temp/",
+#           variables,
+#           topological_config.graph_topological_properties,
+#           topological_config.kpis,
+#           topological_config.graph_properties_against_inputs,
+#           topological_config.dictionary_variables).do()
+
+# plt.style.use(['science', 'no-latex'])
+# 
+# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
+#
+# plt, ax1 = plt.subplots(figsize=(4, 3), dpi=200)
+# ax2 = ax1.twinx()
+# # ax1.plot(df["average_degree"], label="Average degree", color='blue', lw=.5, marker='o', linestyle='solid', markersize=1)
+# # ax2.plot(df["max_comp"], label="Greatest component", color='red', lw=.5, marker='o', linestyle='solid', markersize=1)
+# ax1.plot(df["average_degree"], label="Average degree", color='blue', lw=1)
+# ax2.plot(df["max_comp"], label="Greatest component", color='red', lw=1)
+# ax1.spines['left'].set_color('blue')
+# ax2.spines['right'].set_color('red')
+# ax1.tick_params(axis='y', colors='blue', which="both")
+# ax2.tick_params(axis='y', colors='red', which="both")
+# plt.legend(loc=(0.5, 0.2), fontsize=7)
+# plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\temp.png")

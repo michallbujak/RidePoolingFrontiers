@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     """ Set up varying parameters (optional) """
     config.variable = 'shared_discount'
-    config.values = np.arange(0, 0.51, 0.01)
+    config.values = [0.30] # np.arange(0, 0.51, 0.01)
 
     """ Run parameters """
     config.replications = 1
@@ -64,6 +64,6 @@ if __name__ == "__main__":
                                                                         logger_level='INFO',
                                                                         sampling_function_with_index=True)
 
-    final_results = zip([x.exmas for x in dotmaps_list_results], settings_list)
-    utils.save_with_pickle(final_results, 'final_res', config)
+    # final_results = zip([x.exmas for x in dotmaps_list_results], settings_list)
+    utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', config)
     x = 0
