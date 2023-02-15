@@ -7,9 +7,12 @@ date = "25-11-22"
 sblts_exmas = "exmas"
 special_name = "_full_n" # "_full_n"
 
+import os
+os.chdir(os.path.dirname(os.getcwd()))
+
 if __name__ == '__main__':
-    config = vis_eff.config_initialisation('data/configs/topology_settings3.json', date, sblts_exmas)
-    config.path_results = 'data/results/' + date + special_name + '/'
+    config = vis_eff.config_initialisation('Topology/data/configs/nyc_prob_coeffs.json', date, sblts_exmas)
+    config.path_results = 'Topology/data/results/' + date + special_name + '/'
     config.date = date
 
     vis_eff.create_figs_folder(config)
