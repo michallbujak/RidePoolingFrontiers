@@ -17,11 +17,11 @@ if __name__ == '__main__':
     rep_graphs, dotmap_list, all_graphs_list = vis_eff.load_data(config)
 
     # vis_eff.graph_visualisation_with_netwulf(all_graphs_list, rep_graphs)
-    # vis_eff.kpis_gain(dotmap_list, config, bins=20, y_max=155)
+    vis_eff.kpis_gain(dotmap_list, config, bins=20, y_max=155)
     # vis_eff.probability_of_pooling_classes(dotmap_list, config)
     # vis_eff.classes_analysis(dotmap_list, config)
     # vis_eff.aggregated_analysis(dotmap_list, config)
-    # vis_eff.analyse_profitability(dotmap_list, config, shared_all='all', bins=20, y_max=155, save_results=True)
+    vis_eff.analyse_profitability(dotmap_list, config, shared_all='all', bins=20, y_max=155, save_results=True)
     # vis_eff.individual_analysis(dotmap_list, config, s=1)
     # vis_eff.individual_rides_profitability(dotmap_list, config, s=3)
     #

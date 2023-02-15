@@ -244,7 +244,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     res.append(["relative_pass_utility", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
-    ax.axvline(4.5, ls=":")
+    ax.axvline(4.5, ls=":", lw=2)
     ax.set(xlabel=None, ylabel=None, yticklabels=[])
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -257,7 +257,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     res.append(["relative_pass_hours", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
-    ax.axvline(9.8, ls=":")
+    ax.axvline(9.8, ls=":", lw=2)
     ax.set(xlabel=None, ylabel=None, yticklabels=[])
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -270,7 +270,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     res.append(["relative_veh_hours", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
-    ax.axvline(30, ls=":")
+    ax.axvline(30, ls=":", lw=2)
     ax.set(xlabel=None, ylabel=None)
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
@@ -548,7 +548,7 @@ def analyse_profitability(dotmaps_list, config, shared_all='all', speed=6, shari
                                        sep=' ', index=False, header=False)
 
         ax = sns.histplot(relative_perspective, bins=bins)
-        ax.axvline(1.097, ls=":")
+        ax.axvline(1.097, ls=":", lw=2)
         ax.set(xlabel=None, ylabel=None, yticklabels=[])
         plt.ylim(0, y_max)
         plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
