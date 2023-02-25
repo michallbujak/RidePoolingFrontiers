@@ -87,7 +87,7 @@ def load_data(config, other_var=None):
     return rep_graphs, dotmap_list, all_graphs_list
 
 
-def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_number=0, width_power=1,
+def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_number=0, width_power=1,
                          figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None,
                          default_edge_size=1, name=None, colour_specific_node=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
@@ -152,10 +152,10 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
         else:
             date = str(date)
         if name is None:
-            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png",
+            plt.savefig(config.path_results + "figs/graph_" + date + "_no_" + str(saving_number) + ".png",
                         transparent=True, pad_inches=0)
         else:
-            plt.savefig(config.path_results + "temp/" + name + ".png")
+            plt.savefig(config.path_results + "figs/" + name + ".png", transparent=True, pad_inches=0)
     if plot:
         plt.show()
 
@@ -212,7 +212,7 @@ def graph_visualisation_with_netwulf(all_graphs=None, rep_graphs=None, graph_lis
         else:
             raise Warning("incorrect graph_list")
 
-        visualize(graph, config=json.load(open('../Topology/data/configs/netwulf_config.json')))
+        visualize(graph, config=json.load(open('Topology/data/configs/netwulf_config.json')))
 
 
 def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, node_size=1, dpi=80,
@@ -383,7 +383,7 @@ def create_latex_output_df(df, column_format=None):
     return latex_df
 
 
-def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6), dpi=200):
+def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6), dpi=200, c_map=None):
     # Requests
     results_req = [amend_dotmap(indata, config)[0] for indata in dotmap_list]
     results_req = [relative_travel_times_utility(df) for df in results_req]
@@ -432,9 +432,12 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
 
         fig, ax = plt.subplots(figsize=figsize)
         _line_styles = ['-', ':', '--', '-.', (0, (3, 5, 1, 5, 1, 5))]
-        cmap = mpl.cm.get_cmap("tab10").colors
+        if c_map is None:
+            cmap = mpl.cm.get_cmap("tab10").colors
+        else:
+            cmap = c_map
         for data, line_type, label, color in zip(datasets, _line_styles, labels, cmap):
-            lw = 1.2 if label == "All" else 1
+            lw = 2 if label == "All" else 1
             plt.hist(data, density=True, histtype='step', label=label, cumulative=True, bins=len(data),
                      ls=line_type, lw=lw, color=color)
         # plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
@@ -445,7 +448,7 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
         else:
             ax.set(xlabel=None, ylabel=None)
         plt.xlim(left=-0.05 if var != "Profitability" else None, right=xlim_end)
-        if var == "Profitability":
+        if var == "Relative_time_add":
             # plt.legend([plt.Line2D(0, 0) for j in ax.get_legend_handles_labels()],loc="lower right")
             custom_lines = [Line2D([0], [0], color=color, lw=1, ls=_ls) for color, _ls in zip(cmap, _line_styles)]
 
@@ -617,7 +620,7 @@ def individual_rides_profitability(dotmap_list, config, s=20, dpi=200):
     plt.close()
 
 
-def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, graph_type='kde'):
+def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, graph_type='kde', legend_box=True):
     sblts_exmas = config.sblts_exmas
     if type(var) == str:
         assert var in ['profit', 'veh', 'utility', 'pass'], "wrong var"
@@ -706,7 +709,10 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
             ])
 
         if var == "profit":
-            plt.figure(figsize=(4.7, 3))
+            if legend_box:
+                plt.figure(figsize=(4.7, 3))
+            else:
+                plt.figure(figsize=(3.5, 3))
         else:
             plt.figure(figsize=(3.5, 3))
 
@@ -733,11 +739,17 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
             ax.get_legend().remove()
         else:
             if graph_all:
-                legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Dense', 'Sparse', 'Baseline'],
-                                    title='Demand', borderaxespad=0)
+                if legend_box:
+                    legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Supercritical', 'Subcritical', 'Critical'],
+                                        title='Demand', borderaxespad=0)
+                else:
+                    legend = plt.legend(loc="upper right", labels=['Supercritical', 'Subcritical', 'Critical'])
             else:
-                legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Baseline mean', 'Sparse', 'Dense'],
-                                    title='Demand', borderaxespad=0)
+                if legend_box:
+                    legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Critical mean', 'Subcritical', 'Supercritical'],
+                                        title='Demand', borderaxespad=0)
+                else:
+                    legend = plt.legend(loc="upper right", labels=['Critical mean', 'Subcritical', 'Supercritical'])
 
         plt.tight_layout()
         plt.savefig(config.path_results0 + "figs/mixed_" + var + ".png", dpi=200)

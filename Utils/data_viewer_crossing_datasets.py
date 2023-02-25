@@ -12,5 +12,5 @@ config = vis_eff.config_initialisation('data/configs/topology_settings3.json', d
 config.sblts_exmas = "exmas"
 
 # for var in ['profit', 'veh', 'utility', 'pass']:
-vis_eff.mixed_datasets_kpi('profit', config, date, name0, name1, name2)
+vis_eff.mixed_datasets_kpi('profit', config, date, name0, name1, name2, legend_box=False)
 

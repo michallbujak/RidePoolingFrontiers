@@ -405,3 +405,32 @@ plt.close()
 # plt.legend(loc=(0.5, 0.2), fontsize=7)
 # plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\temp.png")
 
+# import os
+#
+# import networkx as nx
+# import collections
+# import numpy as np
+# import pickle
+# import matplotlib.pyplot as plt
+# import Utils.visualising_functions as vf
+# import Utils.utils_topology as utils
+# import ExMAS.utils as ut
+# import pandas as pd
+# import seaborn as sns
+# import scienceplots
+# from collections import Counter
+#
+# date = "18-01-23"
+# special_name = "_net_fixed"
+# sblts_exmas = "exmas"
+#
+# os.chdir(os.path.dirname(os.getcwd()))
+#
+# # with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
+# #     e = pickle.load(file)[31]
+#
+# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\14-02-23\dotmap_list_14-02-23.obj", 'rb') as file:
+#     e = pickle.load(file)[0]
+#
+# ut.plot_map_rides(e, [715], light=True, lw=3, fontsize=30, m_size=1)
+

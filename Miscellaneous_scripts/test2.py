@@ -1,60 +1,31 @@
-import pickle
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-import pickle
-import matplotlib.ticker as mtick
 import os
-import scienceplots
+
 import networkx as nx
 import collections
 import numpy as np
-import time
-
+import pickle
+import matplotlib.pyplot as plt
+import Utils.visualising_functions as vf
+import Utils.utils_topology as utils
+import ExMAS.utils as ut
+import pandas as pd
+import seaborn as sns
 import scienceplots
+from collections import Counter
 
 plt.style.use(['science', 'no-latex'])
-os.chdir(os.path.dirname(os.getcwd()))
 
-with open('res_bip.obj', 'rb') as file:
-    res_bip = pickle.load(file)
+df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
 
-with open('res_sim.obj', 'rb') as file:
-    res_sim = pickle.load(file)
-
-name = "clustering"
-
-x = [e["disc"] for e in res_bip]
-y1 = [e["average_" + name + "_group1"] for e in res_bip]
-y2 = [e["average_" + name + "_group0"] for e in res_bip]
-
-#
-# fig, ax1 = plt.subplots()
-# ax2 = ax1.twinx()
-# ax1.plot(x, y1, 'g-')
-# ax2.plot(x, y2, label='b-')
-# ax1.set_xlabel('Sharing discount')
-# plt.xlim(left=0, right=0.5)
-# ax1.set_ylabel("Av. " + name + " travellers", color='g')
-# ax2.set_ylabel("Av. " + name + " rides", color='b')
-# plt.savefig("Topology/data/results/18-01-23_net_fixed/figs/" + name + "_discount")
-# plt.close()
-
-x = [e["disc"] for e in res_sim]
-y1 = [e["average_degree"] for e in res_sim]
-y2 = [e["average_clustering"] for e in res_sim]
-
-# fig, ax1 = plt.subplots()
-# ax2 = ax1.twinx()
-# ax1.plot(x, y1, 'g-')
-# ax2.plot(x, y2, label='b-')
-# ax1.set_xlabel('Sharing discount')
-# plt.xlim(left=0, right=0.5)
-# ax1.set_ylabel('Av. degree', color='g')
-# ax2.set_ylabel('Av. clustering', color='b')
-# plt.savefig("Topology/data/results/18-01-23_net_fixed/figs/simple_both_discount")
-# plt.close()
-
-e = 0
-
-
+plt, ax1 = plt.subplots(figsize=(4, 3), dpi=200)
+ax2 = ax1.twinx()
+# ax1.plot(df["average_degree"], label="Average degree", color='blue', lw=.5, marker='o', linestyle='solid', markersize=1)
+# ax2.plot(df["max_comp"], label="Greatest component", color='red', lw=.5, marker='o', linestyle='solid', markersize=1)
+ax1.plot(df["average_degree"], label="Average degree", color='blue', lw=1)
+ax2.plot(df["max_comp"], label="Largest component", color='red', lw=1)
+ax1.spines['left'].set_color('blue')
+ax2.spines['right'].set_color('red')
+ax1.tick_params(axis='y', colors='blue', which="both")
+ax2.tick_params(axis='y', colors='red', which="both")
+plt.legend(loc=(0.5, 0.2), fontsize=7)
+plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\temp.png")
