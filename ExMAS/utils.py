@@ -681,8 +681,8 @@ def plot_demand(inData, params, t0=None, vehicles=False, s=40):
                             show=False, close=False,
                             edge_color='grey', bgcolor='white', dpi=600)
     for _, r in inData.requests.iterrows():
-        ax.scatter(inData.G.nodes[r.origin]['x'], inData.G.nodes[r.origin]['y'], c='green', s=4*s, marker='D')
-        ax.scatter(inData.G.nodes[r.destination]['x'], inData.G.nodes[r.destination]['y'], c='orange', s=4*s)
+        ax.scatter(inData.G.nodes[r.origin]['x'], inData.G.nodes[r.origin]['y'], c='blue', s=4*s, marker='D')
+        ax.scatter(inData.G.nodes[r.destination]['x'], inData.G.nodes[r.destination]['y'], c='purple', s=4*s)
     if vehicles:
         for _, r in inData.vehicles.iterrows():
             ax.scatter(inData.G.nodes[r.pos]['x'], inData.G.nodes[r.pos]['y'], c='blue', s=s, marker='x')
@@ -690,7 +690,7 @@ def plot_demand(inData, params, t0=None, vehicles=False, s=40):
     #            s=10 * s, marker='+')
     # plt.title(
     #     'Demand in {} with origins marked in green, destinations in orange'.format(params.city))
-    plt.savefig(params.path_results + 'AAAAAAAAAA.png')
+    plt.savefig('AAAAAAAAAA.png')
     # plt.show()
 
 
@@ -1016,4 +1016,4 @@ def plot_map_rides(inData, ride_indexes, light=True, m_size=30, lw=3, fontsize =
     fig.add_subplot(ax)
 
     # plt.show()
-    plt.savefig('map_rotated3.png', dpi = 300)
+    plt.savefig('map_rotated_new.png', dpi = 300)

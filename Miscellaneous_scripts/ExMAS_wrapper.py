@@ -66,4 +66,5 @@ if __name__ == "__main__":
 
     # final_results = zip([x.exmas for x in dotmaps_list_results], settings_list)
     utils.save_with_pickle(dotmaps_list_results, 'dotmap_list', config)
+    utils.save_with_pickle(settings_list, 'config', config)
     x = 0

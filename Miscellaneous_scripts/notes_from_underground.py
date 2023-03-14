@@ -433,4 +433,5 @@ plt.close()
 #     e = pickle.load(file)[0]
 #
 # ut.plot_map_rides(e, [715], light=True, lw=3, fontsize=30, m_size=1)
+# ut.plot_map_rides(e, [680], light=True, lw=3, fontsize=30, m_size=1)
 
