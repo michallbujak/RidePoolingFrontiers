@@ -665,13 +665,13 @@ def load_requests(path):
     return requests
 
 
-def plot_demand(inData, params, t0=None, vehicles=False, s=40):
+def plot_demand(inData, params, t0=None, vehicles=False, s=40, **kwargs):
     if t0 is None:
         t0 = inData.requests.treq.mean()
 
     # plot osmnx graph, its center, scattered nodes of requests origins and destinations
     # plots requests temporal distribution
-    fig, ax = plt.subplots(1, 3, figsize=(12, 4))
+    fig, ax = plt.subplots(1, 3, figsize=(12, 4), dpi=kwargs.get("dpi", 300))
     ((t0 - inData.requests.treq) / np.timedelta64(1, 'h')).plot.kde(title='Temporal distribution', ax=ax[0])
     (inData.requests.ttrav / np.timedelta64(1, 'm')).plot(kind='box', title='Trips travel times [min]', ax=ax[1])
     inData.requests.dist.plot(kind='box', title='Trips distance [m]', ax=ax[2])
@@ -679,10 +679,10 @@ def plot_demand(inData, params, t0=None, vehicles=False, s=40):
     plt.show()
     fig, ax = ox.plot_graph(inData.G, figsize=(s, s), node_size=0, edge_linewidth=0.5,
                             show=False, close=False,
-                            edge_color='grey', bgcolor='white', dpi=600)
+                            edge_color='grey', bgcolor='white', dpi=kwargs.get("dpi", 300))
     for _, r in inData.requests.iterrows():
-        ax.scatter(inData.G.nodes[r.origin]['x'], inData.G.nodes[r.origin]['y'], c='blue', s=4*s, marker='D')
-        ax.scatter(inData.G.nodes[r.destination]['x'], inData.G.nodes[r.destination]['y'], c='purple', s=4*s)
+        ax.scatter(inData.G.nodes[r.origin]['x'], inData.G.nodes[r.origin]['y'], c=kwargs.get("origin_colour", 'blue'), s=4*s, marker='D')
+        ax.scatter(inData.G.nodes[r.destination]['x'], inData.G.nodes[r.destination]['y'], c=kwargs.get("destination_colour", 'purple'), s=4*s)
     if vehicles:
         for _, r in inData.vehicles.iterrows():
             ax.scatter(inData.G.nodes[r.pos]['x'], inData.G.nodes[r.pos]['y'], c='blue', s=s, marker='x')
@@ -690,7 +690,7 @@ def plot_demand(inData, params, t0=None, vehicles=False, s=40):
     #            s=10 * s, marker='+')
     # plt.title(
     #     'Demand in {} with origins marked in green, destinations in orange'.format(params.city))
-    plt.savefig('AAAAAAAAAA.png')
+    plt.savefig('BBBBB.jpeg', dpi=kwargs.get("dpi", 300))
     # plt.show()
 
 

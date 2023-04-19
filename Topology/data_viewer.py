@@ -56,17 +56,17 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 #                      name="full_bi_matching", dpi=200, colour_specific_node=None,
 #                      default_edge_size=0.1)
 
-num_list = [1, 5, 10, 100, 900]
-for num in num_list:
-    if num == 1:
-        obj = [e[1]]
-    else:
-        obj = e[:num]
-    z = utils.analyse_edge_count(obj, topological_config,
-                                                        list_types_of_graph=['bipartite_matching'],
-                                                        logger_level='WARNING')[
-                                   'bipartite_matching']
-    t = 0
+# num_list = [1, 5, 10, 100, 900]
+# for num in num_list:
+#     if num == 1:
+#         obj = [e[1]]
+#     else:
+#         obj = e[:num]
+#     z = utils.analyse_edge_count(obj, topological_config,
+#                                                         list_types_of_graph=['bipartite_matching'],
+#                                                         logger_level='WARNING')[
+#                                    'bipartite_matching']
+#     t = 0
     # utils.draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
     #                                                     list_types_of_graph=['bipartite_matching'],
     #                                                     logger_level='WARNING')[
@@ -102,24 +102,24 @@ for num in num_list:
 #
 # df.to_excel(topological_config.path_results + 'all_graphs_properties_' + '31-05-22' + '.xlsx')
 
-num_list = list(range(1000))
-df = pd.DataFrame()
-for num in num_list:
-    if num == 0:
-        obj = [e[0]]
-    else:
-        obj = e[:num]
-    temp_graph = utils.analyse_edge_count(obj, topological_config, list_types_of_graph=['pairs_matching'],
-                             logger_level='WARNING')['pairs_matching']
-    t = utils.graph_mini_graphstatistics(temp_graph)
-    temp_df = pd.DataFrame.from_dict({'average_degree': [t.average_degree], 'max_comp': [t.proportion_max_component],
-                                      'number_of_isolated': [t.number_of_isolated_pairs]})
-    df = pd.concat([df, temp_df])
-
+# num_list = list(range(1000))
+# df = pd.DataFrame()
+# for num in num_list:
+#     if num == 0:
+#         obj = [e[0]]
+#     else:
+#         obj = e[:num]
+#     temp_graph = utils.analyse_edge_count(obj, topological_config, list_types_of_graph=['pairs_matching'],
+#                              logger_level='WARNING')['pairs_matching']
+#     t = utils.graph_mini_graphstatistics(temp_graph)
+#     temp_df = pd.DataFrame.from_dict({'average_degree': [t.average_degree], 'max_comp': [t.proportion_max_component],
+#                                       'number_of_isolated': [t.number_of_isolated_pairs]})
+#     df = pd.concat([df, temp_df])
 #
-df.reset_index(inplace=True)
-df.drop(columns=['index'], inplace=True)
-df.to_excel(topological_config.path_results + 'frame_evolution_' + date + '.xlsx', index=False)
+# #
+# df.reset_index(inplace=True)
+# df.drop(columns=['index'], inplace=True)
+# df.to_excel(topological_config.path_results + 'frame_evolution_' + date + '.xlsx', index=False)
 
 # str_for_end = "_198"
 # ticks = 5

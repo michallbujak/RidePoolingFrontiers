@@ -89,7 +89,7 @@ def load_data(config, other_var=None):
 
 def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_number=0, width_power=1,
                          figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None,
-                         default_edge_size=1, name=None, colour_specific_node=None):
+                         default_edge_size=1, name=None, colour_specific_node=None, emphasize_coloured_node=5, alpha=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -123,19 +123,32 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
         assert isinstance(colour_specific_node, int), "Passed node number is not an integer"
         colour_list[colour_specific_node] = "r"
 
-    plt.figure(figsize=figsize, dpi=dpi)
+    p, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size)
+    nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size, node_shape=".", linewidths=node_size/10)
 
     if nx.is_weighted(G1):
         for weight in range(1, max_weight + 1):
             edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
+            if colour_specific_node is None:
+                colour_list = ["black" for num in edge_list]
+            else:
+                colour_list = []
+                widths = []
+                base_width = default_edge_size * np.power(weight, width_power) / np.power(max_weight, width_power)
+                for item in edge_list:
+                    if item[0] == colour_specific_node:
+                        colour_list.append("red")
+                        widths.append(base_width*emphasize_coloured_node)
+                    else:
+                        colour_list.append("black")
+                        widths.append(base_width)
             nx.draw_networkx_edges(G1, new_pos, edgelist=edge_list,
-                                   width=default_edge_size * np.power(weight, width_power)
-                                         / np.power(max_weight, width_power))
+                                   width=widths,
+                                   edge_color=colour_list, ax=ax, alpha=alpha)
     else:
         if colour_specific_node is None:
-            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size)
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size, ax=ax, alpha=alpha)
         else:
             assert isinstance(colour_specific_node, int), "Passed node number is not an integer"
             colour_list = []
@@ -144,18 +157,19 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
                     colour_list.append("red")
                 else:
                     colour_list.append("black")
-            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size / 5, edge_color=colour_list)
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size / 5, edge_color=colour_list, ax=ax, alpha=alpha)
 
     if save:
+        ax.axis("off")
         if date is None:
             date = str(datetime.date.today().strftime("%d-%m-%y"))
         else:
             date = str(date)
         if name is None:
             plt.savefig(config.path_results + "figs/graph_" + date + "_no_" + str(saving_number) + ".png",
-                        transparent=True, pad_inches=0)
+                        transparent=True, pad_inches=0, dpi=dpi)
         else:
-            plt.savefig(config.path_results + "figs/" + name + ".png", transparent=True, pad_inches=0)
+            plt.savefig(config.path_results + "figs/" + name + ".jpeg", transparent=True, pad_inches=0, dpi=dpi)
     if plot:
         plt.show()
 
@@ -799,3 +813,26 @@ def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", 
         visualize(G)
 
 
+def overwrite_netwulf(G, config, emph_node, **kwargs):
+    stylized_network, netwulf_config = nw.visualize(G, config=kwargs.get("netwulf_config", None))
+    layout = {i: nw.tools.node_pos(stylized_network, i) for i in range(len(list(G.nodes)))}
+    fig, ax = plt.subplots(1, figsize=kwargs.get("figsize", (6, 6)))
+    widths = []
+    colours = []
+    for edge in stylized_network["links"]:
+        if edge["source"] == emph_node or edge["target"] == emph_node:
+            widths.append(edge["width"])
+            colours.append("red")
+        else:
+            widths.append(edge["width"])
+            colours.append("black")
+
+    nx.draw_networkx_nodes(G, pos=layout, node_color=["red" if node["id"]==emph_node else "black" for node in stylized_network["nodes"]], node_size=kwargs.get('node_size', 10), ax=ax)
+    nx.draw_networkx_edges(G, pos=layout, width=widths,
+                           edge_color=colours,
+                           alpha=kwargs.get("alpha", None), ax=ax)
+    plt.box(False)
+    ax.axis("off")
+    # plt.tick_params(axis='both', which='both', bottom=False, top=False, right=False, left=False, labelbottom=False)
+    plt.savefig(config.path_results + "figs/" + kwargs.get("save_name", "HAHA") + ".jpeg", transparent=True, pad_inches=0, dpi=kwargs.get("dpi", 300))
+    plt.close()
