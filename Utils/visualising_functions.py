@@ -132,6 +132,7 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
             edge_list = [(u, v) for (u, v, d) in G1.edges(data=True) if d["weight"] == weight]
             if colour_specific_node is None:
                 colour_list = ["black" for num in edge_list]
+                widths = default_edge_size * np.power(weight, width_power) / np.power(max_weight, width_power)
             else:
                 colour_list = []
                 widths = []
@@ -152,12 +153,16 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
         else:
             assert isinstance(colour_specific_node, int), "Passed node number is not an integer"
             colour_list = []
+            widths = []
+            base_width = default_edge_size
             for item in G1.edges:
-                if item[0] == colour_specific_node or item[1] == colour_specific_node:
+                if item[0] == colour_specific_node:
                     colour_list.append("red")
+                    widths.append(base_width * emphasize_coloured_node)
                 else:
                     colour_list.append("black")
-            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size / 5, edge_color=colour_list, ax=ax, alpha=alpha)
+                    widths.append(base_width)
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=widths, edge_color=colour_list, ax=ax, alpha=alpha)
 
     if save:
         ax.axis("off")
@@ -826,6 +831,9 @@ def overwrite_netwulf(G, config, emph_node, **kwargs):
         else:
             widths.append(edge["width"])
             colours.append("black")
+
+    if emph_node is None:
+        colours = ["black" for t in colours]
 
     nx.draw_networkx_nodes(G, pos=layout, node_color=["red" if node["id"]==emph_node else "black" for node in stylized_network["nodes"]], node_size=kwargs.get('node_size', 10), ax=ax)
     nx.draw_networkx_edges(G, pos=layout, width=widths,
