@@ -344,18 +344,20 @@ plt.close()
 #                 sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
 #                 ax.set_xlabel(self.labels[j[0]])
 #                 ax.set_ylabel(self.labels[j[1]])
-#                 plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+#                 plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.jpeg', dpi=300)
 #                 plt.close()
 #             else:
 #                 if len(self.input_variables) == 1:
 #                     fig, ax = plt.subplots()
 #                     sns.scatterplot(x=j[0], y=j[1], data=dataset,
 #                                     hue=dataset[self.labels[self.input_variables[0]] + " bin"], palette="crest")
-#                     ax.set_xlabel(None)
-#                     ax.set_ylabel(None)
-#                     plt.legend(fontsize=8, title="Sharing discount", title_fontsize=9)
-#                     # ax.get_legend().remove()
-#                     plt.savefig(self.output_temp + j[0] + '###' + j[1] + '.png')
+#                     ax.set_xlabel(self.labels[j[0]])
+#                     ax.set_ylabel(self.labels[j[1]])
+#                     # ax.set_xlabel(None)
+#                     # ax.set_ylabel(None)
+#                     # plt.legend(fontsize=8, title="Sharing discount", title_fontsize=9)
+#                     ax.get_legend().remove()
+#                     plt.savefig(self.output_temp + j[0] + j[1] + '.jpeg', dpi=300)
 #                     plt.close()
 #                 elif len(self.input_variables) == 2:
 #                     fix, ax = plt.subplots()
@@ -364,18 +366,29 @@ plt.close()
 #                                     size=dataset[self.labels[self.input_variables[1]] + " bin"], palette="crest")
 #                     ax.set_xlabel(self.labels[j[0]])
 #                     ax.set_ylabel(self.labels[j[1]])
-#                     plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+#                     plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.jpeg', dpi=300)
 #                     plt.close()
 #                 else:
 #                     fig, ax = plt.subplots()
 #                     sns.scatterplot(x=j[0], y=j[1], data=dataset, palette="crest")
 #                     ax.set_xlabel(self.labels[j[0]])
 #                     ax.set_ylabel(self.labels[j[1]])
-#                     plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.png')
+#                     plt.savefig(self.output_temp + 'kpis_properties_' + str(counter) + '.jpeg', dpi=300)
 #                     plt.close()
 #     def do(self):
 #         self.alternate_kpis()
 #         self.plot_kpis_properties()
+#
+#
+# variables = ['shared_discount']
+# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
+#           topological_config.path_results,
+#           topological_config.path_results + "temp/",
+#           variables,
+#           topological_config.graph_topological_properties,
+#           topological_config.kpis,
+#           topological_config.graph_properties_against_inputs,
+#           topological_config.dictionary_variables).do()
 #
 #
 # variables = ['shared_discount']
@@ -392,18 +405,23 @@ plt.close()
 #
 # df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
 #
-# plt, ax1 = plt.subplots(figsize=(4, 3), dpi=200)
+# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
+# fig, ax1 = plt.subplots(figsize=(5, 4), dpi=300)
 # ax2 = ax1.twinx()
-# # ax1.plot(df["average_degree"], label="Average degree", color='blue', lw=.5, marker='o', linestyle='solid', markersize=1)
-# # ax2.plot(df["max_comp"], label="Greatest component", color='red', lw=.5, marker='o', linestyle='solid', markersize=1)
-# ax1.plot(df["average_degree"], label="Average degree", color='blue', lw=1)
-# ax2.plot(df["max_comp"], label="Greatest component", color='red', lw=1)
-# ax1.spines['left'].set_color('blue')
-# ax2.spines['right'].set_color('red')
-# ax1.tick_params(axis='y', colors='blue', which="both")
-# ax2.tick_params(axis='y', colors='red', which="both")
-# plt.legend(loc=(0.5, 0.2), fontsize=7)
-# plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\temp.png")
+# # ax1.plot(df["average_degree"], label="Average degree", color='g', lw=.5, marker='o', linestyle='solid', markersize=1)
+# # ax2.plot(df["max_comp"], label="Greatest component", color='b', lw=.5, marker='o', linestyle='solid', markersize=1)
+# lns1 = ax1.plot(df["average_degree"], label="Average degree", color='g', lw=1)
+# lns2 = ax2.plot(df["max_comp"], label="Greatest component", color='b', lw=1)
+# ax1.spines['left'].set_color('g')
+# ax2.spines['right'].set_color('b')
+# ax1.tick_params(axis='y', colors='g', which="both")
+# ax2.tick_params(axis='y', colors='b', which="both")
+# lns = lns1+lns2
+# labs = [l.get_label() for l in lns]
+# ax1.legend(lns, labs, loc=(0.5, 0.2), fontsize=10)
+# plt.xlim(left=-10, right=1000)
+# plt.ylim(bottom=0)
+# plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evo_rev.jpeg", dpi=300)
 
 # import os
 #
@@ -439,6 +457,7 @@ plt.close()
 # date = "18-01-23"
 # special_name = "_net_fixed"
 # sblts_exmas = "exmas"
+
 #
 # os.chdir(os.path.dirname(os.getcwd()))
 #
@@ -453,3 +472,99 @@ plt.close()
 #
 # ut.plot_demand(e, e2, dpi=300, origin_colour="green", destination_colour="orange")
 
+# visualize(e['pairs_matching'], config=json.load(open('Topology/data/configs/netwulf_config.json')))
+# vf.draw_bipartite_graph(e['bipartite_shareability'], 1000, topological_config, date=date, save=True,
+#                      name="full_bi_share", dpi=300, colour_specific_node=None, node_size=1,
+#                      default_edge_size=0.1, emphasize_coloured_node=5, alpha=0.5, plot=False)
+
+# vf.overwrite_netwulf(e['pairs_matching'], topological_config, None, alpha=None, netwulf_config=json.load(open('Topology/data/configs/netwulf_config.json')),
+#                      save_name="full_pairs_match", node_size=7)
+
+
+
+# x = [el["settings"]["shared_discount"] for el in e]
+
+# def foo(el):
+#     data = el["exmas"]
+#     discounted_distance = sum(data["requests"].loc[data["requests"]["kind"] > 1]["dist"])
+#     discount = el["settings"]["shared_discount"]
+#     veh_distance_on_reduction = (data["res"]["VehHourTrav_ns"] - data["res"]["VehHourTrav"])*6
+#     ns_dist = sum(data["requests"].loc[data["requests"]["kind"] == 1]["dist"])
+#     return (discounted_distance * (1 - discount) + ns_dist) / (veh_distance_on_reduction + ns_dist) - 1
+#
+# y = [foo(t) for t in e]
+# y_max = y.index(max(y))
+#
+# y2 = [len(t['exmas']['schedule']) for t in e]
+#
+# # fig, ax1 = plt.subplots()
+# # ax2 = ax1.twinx()
+# # ax1.plot(x, y1, 'g-')
+# # ax2.plot(x, y2, label='b-')
+# # ax1.set_xlabel('Sharing discount')
+# # plt.xlim(left=0, right=0.5)
+# # ax1.set_ylabel('Av. degree travellers', color='g')
+# # ax2.set_ylabel('Av. degree rides', color='b')
+# # plt.savefig("Topology/data/results/16-01-23/figs/degree_discount")
+# # plt.close()
+#
+# fig, ax = plt.subplots(figsize=(5, 4))
+# ax2 = ax.twinx()
+# ax.plot(x, y, 'g-')
+# ax2.plot(x, y2, label='b-')
+# ax.set_xlabel("Sharing discount")
+# plt.xlim(left=0, right=0.5)
+# ax.set_ylabel('Increase in profit', color='g')
+# ax2.set_ylabel('No. rides', color='b')
+# ax.axvline(x[y_max], ls=":", lw=1, color='g')
+# plt.xticks([0, x[y_max], 2*x[y_max], 0.5])
+# plt.savefig(topological_config.path_results + "profit_rev.jpeg", dpi=300, pad_inches=None, bbox_inches="tight")
+# plt.close()
+
+
+# import os
+# import pickle
+# import pandas as pd
+# import numpy as np
+# from Utils import utils_topology as utils
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+#
+# os.chdir(os.path.dirname(os.getcwd()))
+#
+# date = "25-11-22"
+# special_name = "_full_n"
+# sblts_exmas = "exmas"
+#
+# with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
+#     e = pickle.load(file)
+#
+# topological_config = utils.get_parameters('Topology/data/configs/topology_settings_panel.json')
+# topological_config.path_results = 'Topology/data/results/' + date + special_name + '/'
+#
+# dfs = [x[sblts_exmas].requests.merge(x['prob'].sampled_random_parameters, left_index=True, right_on='new_index', suffixes=('', '_y')) for x in e]
+# maxi_df = pd.concat(dfs)
+# maxi_df.reset_index(inplace=True, drop=True)
+# maxi_df['ut_gain'] = (maxi_df['u'] - maxi_df['u_sh'])/maxi_df['u']
+# maxi_df['ut_gain'] = maxi_df['ut_gain'].apply(lambda x: x if x > 0 else 0)
+# maxi_df['detour'] = (maxi_df['ttrav_sh'] - maxi_df['ttrav'])/maxi_df['ttrav']
+# maxi_df['c'] = maxi_df['class'].apply(lambda x: "C" + str(x))
+#
+# maxi_df['VoT'] = maxi_df['VoT'] * 3600
+# z = 0
+#
+# d = {'VoT': 'Value of time', 'WtS': 'Penalty for sharing'}
+# d2 = {'ut_gain': 'Utility gain', 'detour': 'Detour'}
+# for vot_wts in ['VoT', 'WtS']:
+#     for ut_det in ['ut_gain', 'detour']:
+#         fig, ax = plt.subplots()
+#         sns.color_palette("tab10")
+#         sns.scatterplot(s=1, data=maxi_df, x=vot_wts, y=ut_det, hue='c', hue_order=['C0', 'C1', 'C2', 'C3'])
+#         plt.ylim(bottom=0)
+#         plt.xlabel(d[vot_wts])
+#         plt.ylabel(d2[ut_det])
+#         if ut_det == 'ut_gain':
+#             ax.legend(title='Class')
+#         else:
+#             ax.get_legend().remove()
+#         plt.savefig(topological_config.path_results + 'figs/' + vot_wts + '_' + ut_det + '.png', dpi=500)

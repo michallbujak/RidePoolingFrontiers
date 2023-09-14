@@ -839,15 +839,16 @@ def draw_bipartite_graph(graph, max_weight, config=None, save=False, saving_numb
             nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=default_edge_size / 5, edge_color=colour_list)
 
     if save:
+        plt.axis('off')
         if date is None:
-            date = str(datetime.date.today().strftime("%d-%m-%y"))
+            name2 = config.path_results + "temp/graph_" + "_no_" + str(saving_number) + ".jpeg"
         else:
             date = str(date)
+            name2 = config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".jpeg"
         if name is None:
-            plt.savefig(config.path_results + "temp/graph_" + date + "_no_" + str(saving_number) + ".png",
-                        transparent=True, pad_inches=0)
+            plt.savefig(name2, transparent=True, pad_inches=0, dpi=dpi, bbox_inches="tight")
         else:
-            plt.savefig(config.path_results + "temp/" + name + ".png", transparent=True, pad_inches=0)
+            plt.savefig(config.path_results + "temp/" + name + ".jpeg", transparent=True, pad_inches=0, dpi=dpi, bbox_inches="tight")
     if plot:
         plt.show()
 

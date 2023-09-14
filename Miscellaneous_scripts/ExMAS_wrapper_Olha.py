@@ -11,7 +11,7 @@ from ExMAS.main_ORIGINAL import main as exmas_algo
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    config = utils.get_parameters('configs/config_olha.json')
+    config = utils.get_parameters('configs/test_config.json')
 
     """ Set up varying parameters (optional) """
     # config.variable = 'shared_discount'
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) > 0,
+                                                     filter_function=lambda x: len(x.requests) > 100 & len(x.requests) < 110,
                                                      config=config.initial_parameters)
 
     """ Run ExMAS """
@@ -38,9 +38,11 @@ if __name__ == "__main__":
     final_results = zip([x.sblts.requests for x in dotmaps_list_results],
                         [x.sblts.schedule for x in dotmaps_list_results],
                         [x.sblts.res for x in dotmaps_list_results],
+                        [x.sblts.rides for x in dotmaps_list_results],
                         settings_list)
     final_results = [{"requests": x[0],
                       "schedule": x[1],
                       "results": x[2],
-                      "settings": x[3]} for x in final_results]
-    # utils.save_with_pickle(dotmaps_list_results, 'final_res', config)
+                      "rides": x[3],
+                      "settings": x[4]} for x in final_results]
+    utils.save_with_pickle(final_results, 'final_res', config)

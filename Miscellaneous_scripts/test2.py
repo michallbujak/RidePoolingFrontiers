@@ -1,47 +1,89 @@
 import os
-
-import networkx as nx
-import collections
-import numpy as np
-import pickle
-import matplotlib.pyplot as plt
-import Utils.visualising_functions as vf
-import Utils.utils_topology as utils
-import ExMAS.utils as ut
 import pandas as pd
-import seaborn as sns
-import scienceplots
-from collections import Counter
-from netwulf import visualize
-import json
+import dotmap
+import logging
+import ExMAS
+from Utils import utils_topology as utils
 
 os.chdir(os.path.dirname(os.getcwd()))
 
-date = "19-01-23"
-special_name = "_full"
-sblts_exmas = "exmas"
 
-with open('Topology/data/results/' + date + special_name + '/rep_graphs_' + date + '.obj', 'rb') as file:
-    e = pickle.load(file)
+def create_input_dotmap(
+        requests: pd.DataFrame,
+        params: dotmap.DotMap,
+        logger: logging.Logger or None = None,
+        **kwargs
+) -> (dotmap.DotMap, dotmap.DotMap):
+    """
+    Function designed to translate a dataframe with origins, destinations and times
+    to the suitable ExMAS format
+    @param requests: dataframe with columns including origin, destination and
+    request time. If non-standard column names, refer to kwargs
+    @param params: configuration
+    @param logger: if you want to log the activities, pass logger
+    @param kwargs: special names for columns: origin_name, destination_name,
+     pickup_datetime_name
+    @return: inputs for the ExMAS main()
+    ---
+    Example:
+    params_nyc = ExMAS.utils.get_config(PATH)
 
-# with open('data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
-#     e = pickle.load(file)
+    requests_full = pd.read_csv(params_nyc.paths.nyc_requests)
+    requests_short = requests_full.loc[requests_full.index < 100]
 
-# with open('Topology/data/results/' + date + special_name + '/all_graphs_list_' + date + '.obj', 'rb') as file:
-#     e = pickle.load(file)
+    dotmap_data, params_nyc = create_input_dotmap(requests_short, params_nyc)
+    results = ExMAS.main(dotmap_data, params_nyc, False)
+    """
 
-# topological_config = utils.get_parameters('Topology/data/configs/topology_settings_panel.json')
-topological_config = utils.get_parameters('Topology/data/configs/topology_settings.json')
-# utils.create_results_directory(topological_config, date=date)
-topological_config.path_results = 'Topology/data/results/' + date + special_name + '/'
+    dataset_dotmap = dotmap.DotMap()
+    dataset_dotmap['passengers'] = pd.DataFrame(columns=['id', 'pos', 'status'])
+    dataset_dotmap.passengers = dataset_dotmap.passengers.set_index('id')
+    dataset_dotmap['requests'] = pd.DataFrame(
+        columns=['pax', 'origin', 'destination', 'treq', 'tdep', 'ttrav', 'tarr', 'tdrop'])\
+        .set_index('pax')
+    dataset_dotmap = ExMAS.utils.load_G(dataset_dotmap, params, stats=True)
+
+    pickup_time_name = kwargs.get('pickup_time_name', 'pickup_datetime')
+    requests[pickup_time_name] = pd.to_datetime(requests[pickup_time_name])
+
+    if 'origin' in requests.columns and 'destination' in requests.columns:
+        pass
+    else:
+        requests['origin'] = kwargs.get('origin_name', 'origin')
+        requests['destination'] = kwargs.get('destination_name', 'destination')
+
+    requests['status'] = 0
+    requests['requests'] = requests['origin']
+
+    dataset_dotmap.passengers = requests.copy()
+
+    requests['dist'] = requests.apply(lambda request:
+                                      dataset_dotmap.skim.loc[request.origin, request.destination],
+                                      axis=1)
+    requests['treq'] = (requests.pickup_datetime - requests.pickup_datetime.min())
+    requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
+    requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
+    requests = requests.sort_values('treq')
+    requests['pax_id'] = requests.index.copy()
+
+    dataset_dotmap.requests = requests
+    dataset_dotmap.passengers.pos = dataset_dotmap.requests.origin
+    params.nP = dataset_dotmap.requests.shape[0]
+
+    if logger is not None:
+        logger.info('Input data prepared')
+
+    return dataset_dotmap, params
 
 
+config = utils.get_parameters('Miscellaneous_scripts/configs/test_config.json')
+config.path_results = 'Miscellaneous_scripts/' + config.path_results
+utils.create_results_directory(config)
 
+params_nyc = ExMAS.utils.get_config(config.initial_parameters)
 
-# visualize(e['pairs_matching'], config=json.load(open('Topology/data/configs/netwulf_config.json')))
-# vf.draw_bipartite_graph(e['bipartite_shareability'], 1000, topological_config, date=date, save=True,
-#                      name="full_bi_share", dpi=300, colour_specific_node=None, node_size=1,
-#                      default_edge_size=0.1, emphasize_coloured_node=5, alpha=0.5, plot=False)
+requests_full = pd.read_csv(params_nyc.paths.nyc_requests)
+requests_short = requests_full.loc[requests_full.index < 100]
 
-vf.overwrite_netwulf(e['pairs_matching'], topological_config, None, alpha=None, netwulf_config=json.load(open('Topology/data/configs/netwulf_config.json')),
-                     save_name="full_pairs_match", node_size=7)
+dotmap_data, params_nyc = create_input_dotmap(requests_short, params_nyc)
+results = ExMAS.main(dotmap_data, params_nyc, False)

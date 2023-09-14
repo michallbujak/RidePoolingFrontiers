@@ -88,7 +88,7 @@ def load_data(config, other_var=None):
 
 
 def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_number=0, width_power=1,
-                         figsize=(5, 12), dpi=100, node_size=1, batch_size=147, plot=True, date=None,
+                         figsize=(5, 12), dpi=200, node_size=1, batch_size=147, plot=True, date=None,
                          default_edge_size=1, name=None, colour_specific_node=None, emphasize_coloured_node=5, alpha=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
@@ -252,8 +252,8 @@ def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, no
                              config=topological_config, save=save, saving_number=num, date=topological_config.date)
 
 
-def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
-    sblts_exmas = topological_config.sblts_exmas
+def kpis_gain(dotmap_list, config, max_ticks=5, bins=20, y_max=20, dpi=300):
+    sblts_exmas = config.sblts_exmas
     str_for_end = "_" + str(len(dotmap_list[0][sblts_exmas].requests))
     multiplier = 100
     res = []
@@ -268,7 +268,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(topological_config.path_results + "figs/relative_pass_utility" + str_for_end + ".png")
+    plt.savefig(config.path_results + "figs/relative_pass_utility" + str_for_end + ".png", dpi=dpi)
     plt.close()
 
     data = [multiplier * (x[sblts_exmas].res.PassHourTrav - x[sblts_exmas].res.PassHourTrav_ns) / x[
@@ -281,7 +281,7 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(topological_config.path_results + "figs/relative_pass_hours" + str_for_end + ".png")
+    plt.savefig(config.path_results + "figs/relative_pass_hours" + str_for_end + ".png", dpi=dpi)
     plt.close()
 
     data = [multiplier * (x[sblts_exmas].res.VehHourTrav_ns - x[sblts_exmas].res.VehHourTrav) / x[
@@ -294,17 +294,17 @@ def kpis_gain(dotmap_list, topological_config, max_ticks=5, bins=20, y_max=20):
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(topological_config.path_results + "figs/relative_veh_hours" + str_for_end + ".png")
+    plt.savefig(config.path_results + "figs/relative_veh_hours" + str_for_end + ".png", dpi=dpi)
     plt.close()
 
     pd.DataFrame({"var": [t[0] for t in res], "mean": [t[1] for t in res], "st_dev": [t[2] for t in res],
                   "P5": [t[3] for t in res], "P95": [t[4] for t in res]}) \
-        .to_csv(topological_config.path_results + "kpis_means" + str_for_end + ".txt",
+        .to_csv(config.path_results + "kpis_means" + str_for_end + ".txt",
                 sep=' ', index=False, header=False)
 
 
 def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
-                                   _class_names=("C1", "C2", "C3", "C4"), max_ticks=5):
+                                   _class_names=("C1", "C2", "C3", "C4"), max_ticks=5, dpi=300):
     sblts_exmas = topological_config.sblts_exmas
     if name is None:
         name = "per_class_prob_" + str(len(dotmap_list[0][sblts_exmas].requests))
@@ -339,7 +339,7 @@ def probability_of_pooling_classes(dotmap_list, topological_config, name=None,
     ax.set(ylabel='Probability of sharing', xlabel=None)
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(decimals=0))
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(topological_config.path_results + "figs/" + name + ".png")
+    plt.savefig(topological_config.path_results + "figs/" + name + ".png", dpi=dpi)
     plt.close()
 
 
@@ -515,10 +515,9 @@ def aggregated_analysis(dotmaps_list, config):
     return output_prob, output_times
 
 
-def add_profitability(dotmap_data, config, speed=6, sharing_discount=0.3):
-    speed = config.get('avg_speed', 6)
-    sharing_discount = config.get('shared_discount', 0.3)
-    sblts_exmas = config.sblts_exmas
+def add_profitability(dotmap_data, config, speed=6, sharing_discount=0.3, sblts_exmas='exmas'):
+    speed = config.get('avg_speed', speed)
+    sharing_discount = config.get('shared_discount', sharing_discount)
 
     data = dotmap_data[sblts_exmas]['schedule'].loc[dotmap_data[sblts_exmas]['schedule']["kind"] > 1].copy()
 
@@ -535,16 +534,16 @@ def add_profitability(dotmap_data, config, speed=6, sharing_discount=0.3):
     return dotmap_data
 
 
-def analyse_profitability(dotmaps_list, config, shared_all='all', speed=6, sharing_discount=0.3, bins=20, y_max=20,
-                          save_results=True):
+def analyse_profitability(dotmap_list, config, shared_all='all', speed=6, sharing_discount=0.3, bins=20, y_max=20,
+                          save_results=True, dpi=300):
     sblts_exmas = config.sblts_exmas
-    size = len(dotmaps_list[0][sblts_exmas].requests)
+    size = len(dotmap_list[0][sblts_exmas].requests)
     speed = config.get('avg_speed', speed)
     sharing_discount = config.get('shared_discount', sharing_discount)
 
     relative_perspective = []
 
-    for rep in dotmaps_list:
+    for rep in dotmap_list:
         discounted_distance = sum(rep[sblts_exmas].requests.loc[rep[sblts_exmas].requests["kind"] > 1]["dist"])
         veh_time_saved = rep[sblts_exmas].res["VehHourTrav_ns"] - rep[sblts_exmas].res["VehHourTrav"]
         veh_distance_on_reduction = discounted_distance - veh_time_saved * speed
@@ -573,7 +572,7 @@ def analyse_profitability(dotmaps_list, config, shared_all='all', speed=6, shari
         ax.axvline(1.097, ls=":", lw=3)
         ax.set(xlabel=None, ylabel=None, yticklabels=[])
         plt.ylim(0, y_max)
-        plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png")
+        plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png", dpi=dpi)
         plt.close()
     else:
         return relative_perspective
@@ -618,7 +617,7 @@ def individual_analysis(dotmap_list, config, no_elements=None, s=10):
         plt.close()
 
 
-def individual_rides_profitability(dotmap_list, config, s=20, dpi=200):
+def individual_rides_profitability(dotmap_list, config, s=20, dpi=300):
     sblts_exmas = 'exmas'
     size = len(dotmap_list[0][sblts_exmas].requests)
     for rep in dotmap_list:
@@ -631,7 +630,7 @@ def individual_rides_profitability(dotmap_list, config, s=20, dpi=200):
 
     ax = sns.scatterplot(x=dataset['Distance'], y=dataset['Profitability'], hue=dataset['Degree'], s=s,
                          palette=sns.color_palette("tab10", max(dataset['Degree']) - 1))
-    ax.set(xlabel=None, ylabel=None)
+    ax.set(xlabel='Distance', ylabel='Profitability')
     # ax.set(xlabel=None, ylabel=None, yticklabels=[])
     # plt.ylim(0.6, 2.2)
     plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., title='Degree')

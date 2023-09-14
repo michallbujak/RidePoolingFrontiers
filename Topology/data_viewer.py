@@ -66,13 +66,12 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 #                                                         list_types_of_graph=['bipartite_matching'],
 #                                                         logger_level='WARNING')[
 #                                    'bipartite_matching']
-#     t = 0
-    # utils.draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
-    #                                                     list_types_of_graph=['bipartite_matching'],
-    #                                                     logger_level='WARNING')[
-    #                                'bipartite_matching'],
-    #                            num, node_size=1, dpi=80, figsize=(10, 24), plot=False, width_power=1,
-    #                            config=topological_config, save=True, saving_number=num, date=date)
+#     utils.draw_bipartite_graph(utils.analyse_edge_count(obj, topological_config,
+#                                                         list_types_of_graph=['bipartite_matching'],
+#                                                         logger_level='WARNING')[
+#                                    'bipartite_matching'],
+#                                num, node_size=1, dpi=300, figsize=(5, 12), plot=False, width_power=1,
+#                                config=topological_config, save=True, saving_number=num, date=date)
 
 # fig, axes = plt.subplots(nrows=2, ncols=5, sharex='col', sharey='row')
 #
@@ -597,3 +596,53 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 # ax2.tick_params(axis='y', colors='red', which="both")
 # plt.legend(loc=(0.5, 0.2), fontsize=7)
 # plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\temp.png")
+
+
+#
+# import os
+# import pickle
+# import pandas as pd
+# import numpy as np
+# from Utils import utils_topology as utils
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+#
+# os.chdir(os.path.dirname(os.getcwd()))
+#
+# date = "25-11-22"
+# special_name = "_full_n"
+# sblts_exmas = "exmas"
+#
+# with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
+#     e = pickle.load(file)
+#
+# topological_config = utils.get_parameters('Topology/data/configs/topology_settings_panel.json')
+# topological_config.path_results = 'Topology/data/results/' + date + special_name + '/'
+#
+# dfs = [x[sblts_exmas].requests.merge(x['prob'].sampled_random_parameters, left_index=True, right_on='new_index', suffixes=('', '_y')) for x in e]
+# maxi_df = pd.concat(dfs)
+# maxi_df.reset_index(inplace=True, drop=True)
+# maxi_df['ut_gain'] = (maxi_df['u'] - maxi_df['u_sh'])/maxi_df['u']
+# maxi_df['ut_gain'] = maxi_df['ut_gain'].apply(lambda x: x if x > 0 else 0)
+# maxi_df['detour'] = (maxi_df['ttrav_sh'] - maxi_df['ttrav'])/maxi_df['ttrav']
+# maxi_df['c'] = maxi_df['class'].apply(lambda x: "C" + str(x))
+#
+# maxi_df['VoT'] = maxi_df['VoT'] * 3600
+# z = 0
+#
+# d = {'VoT': 'Value of time', 'WtS': 'Penalty for sharing'}
+# d2 = {'ut_gain': 'Utility gain', 'detour': 'Detour'}
+# for vot_wts in ['VoT', 'WtS']:
+#     for ut_det in ['ut_gain', 'detour']:
+#         fig, ax = plt.subplots()
+#         sns.color_palette("tab10")
+#         sns.scatterplot(s=1, data=maxi_df, x=vot_wts, y=ut_det, hue='c', hue_order=['C0', 'C1', 'C2', 'C3'])
+#         plt.ylim(bottom=0)
+#         plt.xlabel(d[vot_wts])
+#         plt.ylabel(d2[ut_det])
+#         if ut_det == 'ut_gain':
+#             ax.legend(title='Class')
+#         else:
+#             ax.get_legend().remove()
+#         plt.savefig(topological_config.path_results + 'figs/' + vot_wts + '_' + ut_det + '.png', dpi=500)
+#
