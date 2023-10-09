@@ -1,0 +1,39 @@
+{
+	"avg_speed": 6,
+	"shared_discount": 0.3,
+	"VoT": 0.0046,
+	"WtS": 1.14756,
+	"delay_value": 1,
+	"price": 1.5,
+	"matching_obj": "u_veh",
+	"pax_delay": 15,
+	"horizon": 1200,
+	"profitability": false,
+	"paths": {
+		"main": "ExMAS",
+		"data": "ExMAS\\data",
+		"params": "ExMAS\\data\\configs",
+		"G": "ExMAS\\data\\graphs\\Chicago.graphml",
+		"skim": "ExMAS\\data\\graphs\\Chicago.csv",
+		"requests": ""
+	},
+	"nP": 100,
+	"city": "Chicago, USA",
+	"simTime": 0.16666666666666667,
+	"dist_threshold": 100000,
+	"demand_structure": {
+		"origins_dispertion": 0,
+		"destinations_dispertion": 0,
+		"temporal_dispertion": 0.3,
+		"temporal_distribution": "uniform"
+	},
+	"max_degree": 8,
+	"t0": "00:00",
+	"date": "20230201",
+	"freq": "30min",
+	"speed": {},
+	"speeds": {
+		"ride": {}
+	},
+	"logger_level": "WARNING"
+}

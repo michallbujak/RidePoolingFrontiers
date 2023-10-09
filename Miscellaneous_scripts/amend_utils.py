@@ -1,18 +1,9 @@
 import pandas as pd
-import osmnx as ox
-import networkx as nx
-from dotmap import DotMap
-import numpy as np
-import datetime
-import matplotlib.pyplot as plt
-import pickle
-import dotmap
-from Utils import utils_topology as utils
-import os
-import ExMAS
-from tqdm import tqdm
 import logging
-import time
+import networkx as nx
+import dotmap
+import ExMAS
+import osmnx as ox
 
 
 def create_input_dotmap(
@@ -43,6 +34,7 @@ def create_input_dotmap(
     dotmap_data, params_nyc = create_input_dotmap(requests_short, params_nyc)
     results = ExMAS.main(dotmap_data, params_nyc, False)
     """
+
     dataset_dotmap = dotmap.DotMap()
     dataset_dotmap['passengers'] = pd.DataFrame(columns=['id', 'pos', 'status'])
     dataset_dotmap.passengers = dataset_dotmap.passengers.set_index('id')
@@ -50,12 +42,19 @@ def create_input_dotmap(
         columns=['pax', 'origin', 'destination', 'treq', 'tdep', 'ttrav', 'tarr', 'tdrop']) \
         .set_index('pax')
 
+    dataset_dotmap = ExMAS.utils.load_G(dataset_dotmap, params, stats=True)
+
     if data_provided is None:
-        dataset_dotmap = ExMAS.utils.load_G(dataset_dotmap, params, stats=True)
+        dataset_dotmap.G = ox.load_graphml(filepath=params.paths.G)
+        dataset_dotmap.nodes = pd.DataFrame.from_dict(dict(dataset_dotmap.G.nodes(data=True)), orient='index')
+        skim = pd.read_csv(params.paths.skim, index_col='Unnamed: 0')
+        skim.columns = [int(c) for c in skim.columns]
+        dataset_dotmap.skim = skim
     else:
         dataset_dotmap.G = data_provided["G"]
         dataset_dotmap.nodes = data_provided["nodes"]
         dataset_dotmap.skim = data_provided["skim"]
+
 
     pickup_time_name = kwargs.get('pickup_time_name', 'pickup_datetime')
     requests[pickup_time_name] = pd.to_datetime(requests[pickup_time_name])
@@ -90,74 +89,48 @@ def create_input_dotmap(
     return dataset_dotmap, params
 
 
-config = dotmap.DotMap()
-config.path_results = 'Miscellaneous_scripts/data/'
-utils.create_results_directory(config)
+def translate_to_osmnx(
+        raw_data: pd.DataFrame,
+        city_graph: nx.MultiDiGraph,
+        location_dictionary: dict or None = None,
+        **kwargs
+) -> (pd.DataFrame, dict):
+    """
+    Amend an input dataset: convert dataframe with nodes'
+    longitudes and latitudes to the osmnx ids
+    @param raw_data: dataframe with long, lat
+    @param city_graph: graph of the city
+    @param location_dictionary: dictionary with locations
+    @param kwargs: names of the columns with longs and lats
+    @return: .csv with origin and destinations in osmnx format
+    """
+    origin_long = kwargs.get("origin_long", "ORIGIN_BLOCK_LONGITUDE")
+    origin_lat = kwargs.get("origin_lat", "ORIGIN_BLOCK_LATITUDE")
+    destination_long = kwargs.get("destination_long", "DESTINATION_BLOCK_LONG")
+    destination_lat = kwargs.get("destination_lat", "DESTINATION_BLOCK_LAT")
 
-os.chdir(os.path.dirname(os.getcwd()))
+    df = raw_data.copy()
 
-params_chicago = ExMAS.utils.get_config("Miscellaneous_scripts/configs/chicago_init_config.json")
+    if location_dictionary is None:
+        location_dictionary = dict()
 
-dotmaps_list_results = []
+    locations_list = zip(list(df[origin_long]) + list(df[destination_long]),
+                         list(df[origin_lat]) + list(df[destination_lat]))
 
-params_chicago.paths.requests = "ExMAS/data/chicago_2023_amended_feb.csv"
-_requests = pd.read_csv(params_chicago.paths.requests)
+    for location in locations_list:
+        if location in location_dictionary.keys():
+            pass
+        else:
+            location_dictionary[location] = ox.nearest_nodes(
+                city_graph,
+                float(location[0]),
+                float(location[1])
+            )
 
-np.random.seed(123)
+    df["origin"] = df.apply(lambda x: location_dictionary[(x[origin_long], x[origin_lat])],
+                            axis=1)
 
-_requests["pickup_datetime"] = pd.to_datetime(_requests["pickup_datetime"])
+    df["destination"] = df.apply(lambda x: location_dictionary[(x[destination_long], x[destination_lat])],
+                                 axis=1)
 
-grouped_requests = _requests.groupby(pd.Grouper(key='pickup_datetime', freq='30min'))
-
-graph = ox.load_graphml(filepath=params_chicago.paths.G)
-nodes = pd.DataFrame.from_dict(dict(graph.nodes(data=True)), orient='index')
-skim = pd.read_csv(params_chicago.paths.skim, index_col='Unnamed: 0')
-skim.columns = [int(c) for c in skim.columns]
-graphs_data = {"G": graph, "skim": skim, "nodes": nodes}
-
-pbar = tqdm(total=len(grouped_requests.groups.keys()))
-
-for num, key in enumerate(grouped_requests.groups.keys()):
-    time1 = time.time()
-    requests_batch = grouped_requests.get_group(key)
-
-    requests_batch = requests_batch.sample(frac=0.3)
-
-    if num == 1030:
-        break
-
-    try:
-        dotmap_data, params_chicago = create_input_dotmap(
-            requests=requests_batch,
-            params=params_chicago,
-            data_provided=graphs_data
-        )
-
-        time2 = time.time()
-        print(f"Request size: {len(requests_batch)}, batch preparation time: {time2 - time1}")
-
-        results = ExMAS.main(dotmap_data, params_chicago, False)
-
-        time3 = time.time()
-        print(f"Calculation time: {time3 - time2}")
-
-        _results = results.copy()
-
-        dotmaps_list_results.append((_results.sblts.requests,
-                                     _results.sblts.schedule,
-                                     _results.sblts.res,
-                                     _results.sblts.rides))
-
-        print("finished")
-    except:
-        pass
-
-    pbar.update(1)
-
-final_results = [{"requests": x[0],
-                  "schedule": x[1],
-                  "results": x[2],
-                  "rides": x[3]} for x in dotmaps_list_results]
-
-with open("results_chicago.pickle", "wb") as f:
-    pickle.dump(final_results, f)
+    return df, location_dictionary

@@ -7,6 +7,8 @@ import networkx as nx
 import osmnx as ox
 import numpy as np
 import pickle
+import datetime as dt
+from tqdm import tqdm
 from Utils import utils_topology as utils
 
 
@@ -122,21 +124,6 @@ def translate_to_osmnx(
     df["destination"] = df.apply(lambda x: location_dictionary[(x[destination_long], x[destination_lat])],
                                  axis=1)
 
-    # df["origin"] = df.apply(lambda x:
-    #                         ox.nearest_nodes(
-    #                             city_graph,
-    #                             float(x[origin_long]),
-    #                             float(x[origin_lat])
-    #                         ),
-    #                         axis=1)
-    # df["destination"] = df.apply(lambda x:
-    #                              ox.nearest_nodes(
-    #                                  city_graph,
-    #                                  x[destination_long],
-    #                                  x[destination_lat]
-    #                              ),
-    #                              axis=1)
-
     return df, location_dictionary
 
 
@@ -157,6 +144,8 @@ def amend_washington_requests(raw_data, seed=123):
     df["pickup_datetime"] = df.apply(lambda x: x["ORIGINDATETIME_TR"][:-2] +
                                                temp_foo(), axis=1)
 
+    df = df.sort_values(by="pickup_datetime", ignore_index=True)
+
     return df
 
 
@@ -167,26 +156,121 @@ utils.create_results_directory(config)
 os.chdir(os.path.dirname(os.getcwd()))
 
 params_dc = ExMAS.utils.get_config("Miscellaneous_scripts/configs/washington_init_config.json")
-
-with open("ExMAS/data/washington_dc_requests/washington_osmnx_ids.pickle", "rb") as f:
-    location_dict = pickle.load(f)
-
-for num in range(2, 7):
-    params_dc.paths.requests = "ExMAS/data/OpenDataDC_Taxi_2022/taxi_20220" + str(num) + ".csv"
-
-    requests_full = pd.read_csv(params_dc.paths.requests)
-    requests_amended = amend_washington_requests(requests_full)
-    requests_amended, location_dict = translate_to_osmnx(
-        raw_data=requests_amended,
-        city_graph=ox.load_graphml(params_dc.paths.G),
-        location_dictionary=location_dict
-    )
-
-    requests_amended.to_csv('ExMAS/data/washington_dc_requests/taxi_20220' + str(num) + '.csv')
-
-    with open("ExMAS/data/washington_dc_requests/washington_osmnx_ids.pickle", "wb") as f:
-        pickle.dump(location_dict, f)
+params_chicago = ExMAS.utils.get_config("Miscellaneous_scripts/configs/washington_init_config.json")
 
 
-# dotmap_data, params_nyc = create_input_dotmap(requests_amended.loc[:100], params_dc)
-# results = ExMAS.main(dotmap_data, params_nyc, False)
+dotmaps_list_results = []
+
+params_chicago.paths.requests = "ExMAS/data/chicago_2023_10k.csv"
+requests = pd.read_csv(params_chicago.paths.requests)
+
+np.random.seed(123)
+
+requests["pickup_datetime"] = pd.to_datetime(requests["pickup_datetime"])
+
+grouped_requests = requests.groupby(pd.Grouper(key='pickup_datetime', freq='30min'))
+pbar = tqdm(total=len(grouped_requests.groups.keys()))
+
+for key in grouped_requests.groups.keys():
+    requests_batch = grouped_requests.get_group(key)
+
+    requests_batch = requests_batch.sample(frac=0.3)
+
+    try:
+        dotmap_data, params_chicago = create_input_dotmap(requests_batch, params_chicago)
+        results = ExMAS.main(dotmap_data, params_chicago, False)
+
+        _results = results.copy()
+
+        dotmaps_list_results.append((_results.sblts.requests,
+                                     _results.sblts.schedule,
+                                     _results.sblts.res,
+                                     _results.sblts.rides))
+    except:
+        pass
+
+    pbar.update(1)
+
+
+final_results = [{"requests": x[0],
+                  "schedule": x[1],
+                  "results": x[2],
+                  "rides": x[3]} for x in dotmaps_list_results]
+
+with open("results_washington.pickle", "wb") as f:
+    pickle.dump(final_results, f)
+
+# for num in range(7, 13):
+#     dotmaps_list_results = []
+#     _ss = str(num) if num >= 10 else "0" + str(num)
+#
+#     params_dc.paths.requests = "ExMAS/data/washington_dc_requests_2019/taxi_2019_" + _ss + ".csv"
+#     requests = pd.read_csv(params_dc.paths.requests)
+#
+#     np.random.seed(123)
+#
+#     requests["pickup_datetime"] = pd.to_datetime(requests["pickup_datetime"])
+#
+#     grouped_requests = requests.groupby(pd.Grouper(key='pickup_datetime', freq='30min'))
+#     pbar = tqdm(total=len(grouped_requests.groups.keys()))
+#
+#     for key in grouped_requests.groups.keys():
+#         requests_batch = grouped_requests.get_group(key)
+#
+#         requests_batch = requests_batch.sample(frac=0.3)
+#
+#         try:
+#             dotmap_data, params_dc = create_input_dotmap(requests_batch, params_dc)
+#             results = ExMAS.main(dotmap_data, params_dc, False)
+#
+#             _results = results.copy()
+#
+#             dotmaps_list_results.append((_results.sblts.requests,
+#                                          _results.sblts.schedule,
+#                                          _results.sblts.res,
+#                                          _results.sblts.rides))
+#         except:
+#             pass
+#
+#         pbar.update(1)
+#
+#
+#     final_results = [{"requests": x[0],
+#                       "schedule": x[1],
+#                       "results": x[2],
+#                       "rides": x[3]} for x in dotmaps_list_results]
+#
+#     with open("results_washington_" + str(num) + ".pickle", "wb") as f:
+#         pickle.dump(final_results, f)
+
+
+
+# download
+# params = DotMap()
+# params.city = "Chicago, USA"
+# params.dist_threshold = 10000
+# params.paths.G = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.graphml"
+# params.paths.skim = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.csv"
+#
+# dm = DotMap()
+#
+# def download_G(inData, _params, make_skims=True):
+#     # uses osmnx to download the graph
+#     inData.G = ox.graph_from_place(_params.city, network_type='drive')
+#     inData.nodes = pd.DataFrame.from_dict(dict(inData.G.nodes(data=True)), orient='index')
+#     if make_skims:
+#         inData.skim_generator = nx.all_pairs_dijkstra_path_length(inData.G,
+#                                                                   weight='length',
+#                                                                   cutoff=_params.dist_threshold)
+#         inData.skim_dict = dict(inData.skim_generator)  # filled dict is more usable
+#         inData.skim = pd.DataFrame(inData.skim_dict).fillna(_params.dist_threshold).T.astype(
+#             int)  # and dataframe is more intuitive
+#     return inData
+#
+# def save_G(inData, _params, path=None):
+#     # saves graph and skims to files
+#     ox.save_graphml(inData.G, filepath=_params.paths.G)
+#     inData.skim.to_csv(_params.paths.skim, chunksize=20000000)
+#
+# dm = download_G(dm, params)
+# save_G(dm, params)
