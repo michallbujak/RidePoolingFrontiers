@@ -96,7 +96,7 @@ utils.create_results_directory(config)
 
 os.chdir(os.path.dirname(os.getcwd()))
 
-params_chicago = ExMAS.utils.get_config("Miscellaneous_scripts/configs/chicago_init_config.json")
+params_chicago = ExMAS.utils.get_config("Miscellaneous_scripts/configs/chiFcago_init_config.json")
 
 dotmaps_list_results = []
 

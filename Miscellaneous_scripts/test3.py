@@ -1,10 +1,8 @@
 import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
+import ExMAS
+import osmnx as ox
 
-with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\results_chicago.pickle", "rb") as file:
-    x = pickle.load(file)
-
-plt.hist([len(t['requests']) for t in x])
-plt.show()
-plt.close()
+graph = ox.load_graphml(filepath=r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.graphml")
+z = 0
