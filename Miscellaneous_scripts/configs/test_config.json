@@ -1,4 +1,14 @@
 {
 	"initial_parameters": "Topology/data/configs/nyc_study_init_config.json",
-	"path_results": "data/"
+	"path_results": "data/",
+	"type_of_distribution": "manual",
+	"distribution_variables": ["VoT", "WtS"],
+	"panel_noise":{
+		"mean": 0,
+		"st_dev":1
+	},
+	"noise": {
+		"mean": 0.1,
+		"st_dev": 0.01
+	}
 }
