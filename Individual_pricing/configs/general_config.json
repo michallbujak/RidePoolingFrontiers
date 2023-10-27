@@ -1,0 +1,16 @@
+{
+	"initial_parameters": "configs/nyc_study_init_config.json",
+	"path_results": "data/",
+	"type_of_distribution": "manual",
+	"no_batches": 1,
+	"no_replications": 1,
+	"distribution_variables": ["VoT", "WtS"],
+	"panel_noise":{
+		"mean": 0,
+		"st_dev":1
+	},
+	"noise": {
+		"mean": 0.1,
+		"st_dev": 0.01
+	}
+}
