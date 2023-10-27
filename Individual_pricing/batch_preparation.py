@@ -119,7 +119,7 @@ def prepare_batches(
         databank_dotmap = load_G(databank_dotmap, params, stats=True)
     except FileNotFoundError:
         for _name in ["G", "skim", "nyc_requests"]:
-            params.paths[_name] = os.path.join(up(up(up(__file__))), params.paths[_name])
+            params.paths[_name] = os.path.join(up(up(__file__)), params.paths[_name])
 
         databank_dotmap = load_G(databank_dotmap, params, stats=True)
 

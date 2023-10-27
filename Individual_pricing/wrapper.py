@@ -1,13 +1,9 @@
 """ Run ExMAS in probabilistic settings"""
+import pickle
 
-import os
-import pandas as pd
-import numpy as np
-
-import Utils.utils_topology as utils
 from ExMAS.probabilistic_exmas import main as exmas_algo
-import utils.batch_preparation as bt_prep
-from utils.exmas_loop import exmas_loop_func
+import Individual_pricing.batch_preparation as bt_prep
+from Individual_pricing.exmas_loop import exmas_loop_func
 
 general_config = bt_prep.get_parameters(
     r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\configs\general_config.json"
@@ -33,3 +29,11 @@ databanks_list, settings_list = exmas_loop_func(
     logger=None,
     sampling_function_with_index=True
 )
+
+with open("example_data", "wb") as file:
+    pickle.dump((databanks_list, settings_list, params), file)
+
+with open("example_data", "rb") as file:
+    databanks_list, settings_list, params = pickle.load(file)
+
+x = 0
