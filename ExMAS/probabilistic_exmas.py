@@ -762,7 +762,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
             new_times = new_times[0]
             re.times = new_times
 
-            # detrmine utilities
+            # determine utilities
             dists = [dist_dict[_] for _ in re.indexes]  # distances
             ttrav_ns = [ttrav_dict[_] for _ in re.indexes]  # non shared travel times
             VoT = [VoT_dict[_] for _ in re.indexes]  # VoT of sharing travellers

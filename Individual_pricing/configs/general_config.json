@@ -7,10 +7,10 @@
 	"distribution_variables": ["VoT", "WtS"],
 	"panel_noise":{
 		"mean": 0,
-		"st_dev":1
+		"st_dev":0
 	},
 	"noise": {
-		"mean": 0.1,
-		"st_dev": 0.01
+		"mean": 0,
+		"st_dev": 0
 	}
 }

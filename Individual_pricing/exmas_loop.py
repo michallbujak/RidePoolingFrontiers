@@ -9,7 +9,8 @@ def exmas_loop_func(
         topo_params=DotMap({'variable': None}),
         replications=1,
         logger=None,
-        sampling_function_with_index=False
+        sampling_function_with_index=False,
+        **kwargs
 ):
     results = []
     settings = []
@@ -33,7 +34,10 @@ def exmas_loop_func(
         for j in range(replications):
             pbar.update(1)
             if topo_params.get("variable", None) is None:
-                temp = exmas_algorithm(list_databanks[i], params, False)
+                temp = exmas_algorithm(list_databanks[i],
+                                       params,
+                                       kwargs.get('manual_overwrite', False),
+                                       False)
                 results.append(temp.copy())
                 step += 1
                 settings.append({'Replication_ID': j, 'Batch': i})
@@ -42,7 +46,12 @@ def exmas_loop_func(
             else:
                 for k in range(len(topo_params['values'])):
                     params[topo_params['variable']] = topo_params['values'][k]
-                    temp = exmas_algorithm(list_databanks[i], params, False)
+                    temp = exmas_algorithm(
+                        list_databanks[i],
+                        params,
+                        kwargs.get('manual_overwrite', False),
+                        False
+                    )
                     results.append(temp.copy())
                     settings.append({
                         'Replication': j,
