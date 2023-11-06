@@ -68,7 +68,7 @@ np.warnings.filterwarnings('ignore')
 
 # columns of ride-candidates DataFrame
 RIDE_COLS = ['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'indexes_orig', 'indexes_dest', 'true_u_pax',
-             'true_u_paxes']
+             'true_u_paxes', 'delays']
 
 
 class SbltType(Enum):  # type of shared ride. first digit is the degree, second is type (FIFO/LIFO/other)
@@ -243,9 +243,10 @@ def single_rides(_inData, params):
     df['indexes'] = df['indexes'].apply(lambda x: [x])
     df['u_paxes'] = df['u'].apply(lambda x: [x])
     df['true_u_paxes'] = df['true_u'].apply(lambda x: [x])
+    df['delays'] = [[0] for j in range(len(df))]
 
-    df.columns = ['indexes', 'u_pax', 'u_veh', 'kind', 'times', 'true_u_pax', 'u_paxes', 'true_u_paxes']  # synthax for the output rides
-    df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'true_u_pax', 'true_u_paxes']]
+    df.columns = ['indexes', 'u_pax', 'u_veh', 'kind', 'times', 'true_u_pax', 'u_paxes', 'true_u_paxes', 'delays']  # synthax for the output rides
+    # df = df[['indexes', 'u_pax', 'u_veh', 'kind', 'u_paxes', 'times', 'true_u_pax', 'true_u_paxes', 'delays']]
     df['indexes_orig'] = df.indexes  # copy order of origins for single rides
     df['indexes_dest'] = df.indexes  # and dest
     df = df[RIDE_COLS]
@@ -560,6 +561,8 @@ def pairs(_inData, params, process=True, check=True, plot=False):
             df['times'] = df.apply(
                 lambda x: [x.treq_i + x.delay_i, x.t_oo + params.pax_delay, x.t_od, x.t_dd], axis=1)
 
+            df['delays'] = [[abs(a), abs(b)] for a, b in zip(df['delay_i'], df['delay_j'])]
+
             df = df[RIDE_COLS]
 
             _inData.exmas.rides = pd.concat([_inData.exmas.rides, df], sort=False)
@@ -652,7 +655,7 @@ def extend_degree(_inData, params, degree):
 
     df = pd.DataFrame(retR, columns=['indexes', 'indexes_orig', 'u_pax', 'u_veh', 'kind',
                                      'u_paxes', 'times', 'indexes_dest', 'true_u_pax',
-                                     'true_u_paxes'])  # data synthax for rides
+                                     'true_u_paxes', 'delays'])  # data synthax for rides
 
     df = df[RIDE_COLS]
     df = df.reset_index()
@@ -833,6 +836,7 @@ def extend(r, S, R, params, degree, dist_dict, ttrav_dict, treq_dict, VoT_dict, 
                     re.u_pax = sum(re.u_paxes)
                     re.true_u_pax = sum(re.true_u_paxes)
                     re.u_veh = sum(re.times[1:])
+                    re.delays = delays
                     if degree > 4:
                         re.kind = 100
                     else:
@@ -938,7 +942,7 @@ def match(im, r, params, plot=False, make_assertion=True, logger=None):
     :param params: parameter (including objective function)
     :param plot:
     :param make_assertion: test the results at the end
-    :return: rides, secelcted rides, reuests
+    :return: rides, selected rides, requests
     """
     request_indexes = dict()
     request_indexes_inv = dict()

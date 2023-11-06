@@ -2,6 +2,7 @@
 import pickle
 
 from ExMAS.probabilistic_exmas import main as exmas_algo
+from ExMAS.probabilistic_exmas import match
 import Individual_pricing.batch_preparation as bt_prep
 from Individual_pricing.exmas_loop import exmas_loop_func
 
@@ -46,9 +47,21 @@ travellers_traits = pricing_scheme.extract_travellers_data(
     params=params
 )
 
-data = pricing_scheme.calculate_max_discount(
+data = pricing_scheme.calculate_min_discount(
     databank=databanks_list[0],
     travellers_characteristics=travellers_traits
 )
 
-x = 0
+data = pricing_scheme.calculate_profitability(
+    databank=data,
+    params=params
+)
+
+x = match(
+    im=data["recalibrated_rides"],
+    r=data["exmas"]["requests"],
+    params=params
+)
+
+z = 0
+
