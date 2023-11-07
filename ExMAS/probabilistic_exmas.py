@@ -93,7 +93,7 @@ class SbltType(Enum):  # type of shared ride. first digit is the degree, second 
 ##############
 
 # ALGORITHM 3
-def main(_inData, params, manual_overwrite=False, plot=False):
+def main(_inData, params, default_mixed_normal=False, plot=False):
     """
     main call
     :param _inData: input (graph, requests, .. )
@@ -106,7 +106,7 @@ def main(_inData, params, manual_overwrite=False, plot=False):
     """
     _inData.logger = init_log(params)  # initialize console logger
 
-    if manual_overwrite:
+    if default_mixed_normal:
         s = 1
         from Utils.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
         params.sampling_function = gen_func((0.29, 0.57, 0.81, 1),
@@ -1063,13 +1063,13 @@ def evaluate_shareability(_inData, params, plot=False):
     ret['PassUtility'] = r.u_sh.sum()
     ret['PassUtility_ns'] = r.u.sum()
 
-    # ret['mean_ride_lambda'] = schedule.lambda_r.mean()
+    # results['mean_ride_lambda'] = schedule.lambda_r.mean()
     ret['mean_lambda'] = 1 - schedule[schedule.kind > 1].u_veh.sum() / schedule[
         schedule.kind > 1].PassHourTrav_ns.sum()
 
-    # ret['shared_fares'] = schedule[schedule.kind > 1].PassHourTrav_ns.sum() * sp.price * (
+    # results['shared_fares'] = schedule[schedule.kind > 1].PassHourTrav_ns.sum() * sp.price * (
     #       1 - sp.shared_discount)
-    # ret['full_fares'] = schedule[schedule.kind == 1].PassHourTrav_ns.sum() * sp.price
+    # results['full_fares'] = schedule[schedule.kind == 1].PassHourTrav_ns.sum() * sp.price
     ret['revenue_s'] = schedule.PassHourTrav_ns.sum() * params.price * (1 - params.shared_discount)
     ret['revenue_ns'] = schedule.PassHourTrav_ns.sum() * params.price
     ret['Fare_Discount'] = (ret['revenue_s'] - ret['revenue_ns']) / ret['revenue_ns']
@@ -1093,7 +1093,7 @@ def evaluate_shareability(_inData, params, plot=False):
     # df = pd.DataFrame(_inData.exmas.log.sizes).T[['potential', 'feasible']].reindex([1, 2, 3, 4])
     nR = r.shape[0]
 
-    # df['selected'] = [ret['SINGLE'], ret['PAIRS'], ret['TRIPLES'], ret['QUADRIPLES']]
+    # df['selected'] = [results['SINGLE'], results['PAIRS'], results['TRIPLES'], results['QUADRIPLES']]
     # df['theoretical'] = [nR, nR ** 2, nR ** 3, nR ** 4]
     # _inData.exmas.log.sizes = df.fillna(0).astype(int)
 
@@ -1113,7 +1113,7 @@ def evaluate_shareability(_inData, params, plot=False):
     else:
         ret['lambda_shared'] = 0
 
-    # ret['fleet_size_shared'] = max(fs)
+    # results['fleet_size_shared'] = max(fs)
     if plot:
         fig, ax = plt.subplots()
         ax.set_ylabel("number of rides")

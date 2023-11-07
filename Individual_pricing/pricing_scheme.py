@@ -25,8 +25,8 @@ def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
 
 
 def extract_travellers_data(
-        databank: DotMap,
-        params: DotMap
+        databank: DotMap or dict,
+        params: DotMap or dict
 ) -> dict:
     """
     Extract data for calculation of the maximal discount
@@ -108,14 +108,14 @@ def calculate_min_discount(
                                         [max(t, 0) for t in discount_row_func(x, travellers_characteristics)],
                                         axis=1)
 
-    databank["recalibrated_rides"] = rides
+    databank["exmas"]["recalibrated_rides"] = rides
 
     return databank
 
 
 def calculate_profitability(
         databank: DotMap or dict,
-        params: DotMap
+        params: DotMap or dict
 ):
     def _base_row_revenue(row):
         if len(row["indexes"]) == 1:
@@ -138,8 +138,9 @@ def calculate_profitability(
             for no, traveller in enumerate(row["indexes"]):
                 disc = row["min_discount"][no]
                 out += row["individual_distances"][no] * params["price"] * (1 - disc)
+            return out
 
-    rides = databank["recalibrated_rides"]
+    rides = databank["exmas"]["recalibrated_rides"]
     rides["cost"] = rides.apply(lambda x: _row_cost(x), axis=1)
 
     rides["revenue_base"] = rides.apply(lambda x: _base_row_revenue(x), axis=1)
@@ -148,10 +149,7 @@ def calculate_profitability(
     rides["revenue_max"] = rides.apply(lambda x: _max_row_revenue(x), axis=1)
     rides["profit_max"] = rides["revenue_max"] - rides["cost"]
 
+    rides["profit_base"] = rides["profit_base"].apply(lambda x: int(x))
+    rides["profit_max"] = rides["profit_max"].apply(lambda x: int(x))
+
     return databank
-
-
-
-
-
-

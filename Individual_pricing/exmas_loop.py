@@ -36,7 +36,7 @@ def exmas_loop_func(
             if topo_params.get("variable", None) is None:
                 temp = exmas_algorithm(list_databanks[i],
                                        params,
-                                       kwargs.get('manual_overwrite', False),
+                                       kwargs.get('default_mixed_normal', False),
                                        False)
                 results.append(temp.copy())
                 step += 1
@@ -49,7 +49,7 @@ def exmas_loop_func(
                     temp = exmas_algorithm(
                         list_databanks[i],
                         params,
-                        kwargs.get('manual_overwrite', False),
+                        kwargs.get('default_mixed_normal', False),
                         False
                     )
                     results.append(temp.copy())

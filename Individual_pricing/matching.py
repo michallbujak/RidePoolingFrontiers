@@ -3,64 +3,61 @@ from dotmap import DotMap
 
 from ExMAS.probabilistic_exmas import match
 
-def matching(
-    databank: DotMap,
-    params: DotMap,
+
+def matching_function(
+    databank: DotMap or dict,
+    params: DotMap or dict,
     objectives: list or None = None
 ):
-    if objectives is not None:
-        params.matching_obj = objectives
-    else:
-        params.matching_obj = [params.matching_obj]
+    if objectives is None:
+        objectives = [params.matching_obj]
 
-    rides = databank["exmas"]["rides"]
+    rides = databank["exmas"]["recalibrated_rides"]
     requests = databank["exmas"]["requests"]
 
-    for objective in params.matching_obj:
-        rides["selected_" + objective] = match(
+    schedules = {}
+
+    for objective in objectives:
+        params.matching_obj = objective
+        selected = match(
             im=rides,
             r=requests,
             params=params
         )
 
-    schedule = rides[selected].copy()
+        rides["selected_" + objective] = pd.Series(selected.copy())
 
-    req_ride_dict = dict()
-    for i, trips in schedule.iterrows():
-        for trip in trips.indexes:
-            req_ride_dict[trip] = i
-    requests['ride_id'] = pd.Series(req_ride_dict)
-    ttrav_sh, u_sh, kinds = dict(), dict(), dict()
-    for i, sh in schedule.iterrows():
-        for j, trip in enumerate(sh.indexes):
-            pos_o = sh.indexes_orig.index(trip) + 1
-            pos_d = sh.indexes_dest.index(trip) + 1 + len(sh.indexes)
-            ttrav_sh[trip] = sum(sh.times[pos_o:pos_d])
-            u_sh[trip] = sh.u_paxes[j]
-            kinds[trip] = sh.kind
+        schedules[objective] = rides.loc[[bool(t) for t in rides["selected_" + objective]]].copy()
 
-    requests['ttrav_sh'] = pd.Series(ttrav_sh)
-    requests['u_sh'] = pd.Series(u_sh)
-    requests['kind'] = pd.Series(kinds)
+        req_ride_dict = dict()
+        for i, trips in schedules[objective].iterrows():
+            for trip in trips.indexes:
+                req_ride_dict[trip] = i
+        requests['ride_id_' + objective] = pd.Series(req_ride_dict)
 
-    requests['position'] = requests.apply(
-        lambda x: schedule.loc[x.ride_id].indexes.index(x.name) if x.ride_id in schedule.index else -1, axis=1)
-    schedule['degree'] = schedule.apply(lambda x: len(x.indexes), axis=1)
+        ttrav_sh, u_sh, kinds = dict(), dict(), dict()
+        for i, sh in schedules[objective].iterrows():
+            for j, trip in enumerate(sh.indexes):
+                pos_o = sh['indexes_orig'].index(trip) + 1
+                pos_d = sh['indexes_dest'].index(trip) + 1 + len(sh['indexes'])
+                ttrav_sh[trip] = sum(sh['times'][pos_o:pos_d])
+                u_sh[trip] = sh['u_paxes'][j]
+                kinds[trip] = sh['kind']
 
-    if make_assertion:  # test consitency
-        assert opt_outs or len(
-            requests.ride_id) - requests.ride_id.count() == 0  # all trips are assigned
-        to_assert = requests[requests.ride_id >= 0]  # only non optouts
+        requests['ttrav_sh_' + objective] = pd.Series(ttrav_sh)
+        requests['u_sh_' + objective] = pd.Series(u_sh)
+        requests['kind_' + objective] = pd.Series(kinds)
 
-        assert (to_assert.u_sh <= to_assert.u + 0.5).all
-        assert (to_assert.ttrav <= (to_assert.ttrav_sh + 3)).all()
-        if multi_platform_matching:
-            for i in schedule.index.values:
-                # check if all schedules are for travellers from the same platform
-                assert _inData.requests.loc[schedule.loc[i].indexes].platform.nunique() == 1
+        requests['position_' + objective] = requests.apply(
+            lambda x: schedules[objective].loc[x.ride_id]['indexes'].index(x.name)
+            if x.ride_id in schedules[objective].index
+            else -1,
+            axis=1
+        )
+        schedules[objective]['degree'] = schedules[objective].apply(lambda x: len(x.indexes), axis=1)
 
-    # store the results back
-    _inData.exmas.rides = rides
-    _inData.exmas.schedule = schedule
-    _inData.exmas.requests = requests
-    return _inData
+    databank.exmas.recalibrated_rides = rides
+    databank.exmas.schedules = {objective: schedules[objective] for objective in objectives}
+    databank.exmas.requests = requests
+
+    return databank

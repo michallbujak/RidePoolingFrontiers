@@ -976,13 +976,13 @@ def evaluate_shareability(_inData, params, plot=False):
     ret['PassUtility'] = r.u_sh.sum()
     ret['PassUtility_ns'] = r.u.sum()
 
-    # ret['mean_ride_lambda'] = schedule.lambda_r.mean()
+    # results['mean_ride_lambda'] = schedule.lambda_r.mean()
     ret['mean_lambda'] = 1 - schedule[schedule.kind > 1].u_veh.sum() / schedule[
         schedule.kind > 1].PassHourTrav_ns.sum()
 
-    # ret['shared_fares'] = schedule[schedule.kind > 1].PassHourTrav_ns.sum() * sp.price * (
+    # results['shared_fares'] = schedule[schedule.kind > 1].PassHourTrav_ns.sum() * sp.price * (
     #       1 - sp.shared_discount)
-    # ret['full_fares'] = schedule[schedule.kind == 1].PassHourTrav_ns.sum() * sp.price
+    # results['full_fares'] = schedule[schedule.kind == 1].PassHourTrav_ns.sum() * sp.price
     ret['revenue_s'] = schedule.PassHourTrav_ns.sum() * params.price * (1 - params.shared_discount)
     ret['revenue_ns'] = schedule.PassHourTrav_ns.sum() * params.price
     ret['Fare_Discount'] = (ret['revenue_s'] - ret['revenue_ns']) / ret['revenue_ns']
@@ -1006,7 +1006,7 @@ def evaluate_shareability(_inData, params, plot=False):
     # df = pd.DataFrame(_inData.sblts.log.sizes).T[['potential', 'feasible']].reindex([1, 2, 3, 4])
     nR = r.shape[0]
 
-    # df['selected'] = [ret['SINGLE'], ret['PAIRS'], ret['TRIPLES'], ret['QUADRIPLES']]
+    # df['selected'] = [results['SINGLE'], results['PAIRS'], results['TRIPLES'], results['QUADRIPLES']]
     # df['theoretical'] = [nR, nR ** 2, nR ** 3, nR ** 4]
     # _inData.sblts.log.sizes = df.fillna(0).astype(int)
 
@@ -1026,7 +1026,7 @@ def evaluate_shareability(_inData, params, plot=False):
     else:
         ret['lambda_shared'] = 0
 
-    # ret['fleet_size_shared'] = max(fs)
+    # results['fleet_size_shared'] = max(fs)
     if plot:
         fig, ax = plt.subplots()
         ax.set_ylabel("number of rides")
