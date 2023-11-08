@@ -1,7 +1,7 @@
 """ Script for analysis of the individual pricing """
 import pandas as pd
 from dotmap import DotMap
-import datetime
+from math import isnan
 
 
 def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
@@ -96,8 +96,7 @@ def calculate_min_discount(
         travellers_characteristics: dict
 ) -> pd.DataFrame:
     rides = databank['exmas']['rides'].copy()
-    rides["individual_times"] = rides.apply(lambda x:
-                                            extract_individual_travel_times(x),
+    rides["individual_times"] = rides.apply(extract_individual_travel_times,
                                             axis=1)
     distances_dict = {t[0]: t[1]["dist"] for t in
                       databank['exmas']['requests'].iterrows()}
@@ -120,12 +119,12 @@ def calculate_profitability(
     def _base_row_revenue(row):
         if len(row["indexes"]) == 1:
             return row["individual_distances"][0] * params["price"]
-        else:
-            disc = params.get("true_discount") if not None else params["shared_discount"]
-            out = sum(row["individual_distances"])
-            out *= params["price"]
-            out *= 1 - disc
-            return out
+
+        disc = params.get("true_discount") if not None else params["shared_discount"]
+        out = sum(row["individual_distances"])
+        out *= params["price"]
+        out *= 1 - disc
+        return out
 
     def _row_cost(row):
         return row["u_veh"] * params.get("operating_cost", 0.5)
@@ -133,12 +132,12 @@ def calculate_profitability(
     def _max_row_revenue(row):
         if len(row["indexes"]) == 1:
             return row["individual_distances"][0] * params["price"]
-        else:
-            out = 0
-            for no, traveller in enumerate(row["indexes"]):
-                disc = row["min_discount"][no]
-                out += row["individual_distances"][no] * params["price"] * (1 - disc)
-            return out
+
+        out = 0
+        for no, traveller in enumerate(row["indexes"]):
+            disc = row["min_discount"][no]
+            out += row["individual_distances"][no] * params["price"] * (1 - disc)
+        return out
 
     rides = databank["exmas"]["recalibrated_rides"]
     rides["cost"] = rides.apply(lambda x: _row_cost(x), axis=1)
@@ -149,7 +148,11 @@ def calculate_profitability(
     rides["revenue_max"] = rides.apply(lambda x: _max_row_revenue(x), axis=1)
     rides["profit_max"] = rides["revenue_max"] - rides["cost"]
 
-    rides["profit_base"] = rides["profit_base"].apply(lambda x: int(x))
-    rides["profit_max"] = rides["profit_max"].apply(lambda x: int(x))
+    rides["profitability_base"] = 1000*rides["revenue_base"] / rides["cost"]
+    rides["profitability_max"] = 1000*rides["revenue_max"] / rides["cost"]
+
+    for _n in ["profit_base", "profit_max",
+               "profitability_base", "profitability_max"]:
+        rides[_n] = rides[_n].apply(lambda x: 0 if isnan(x) else int(x))
 
     return databank
