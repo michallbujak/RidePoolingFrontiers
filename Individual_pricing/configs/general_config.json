@@ -1,7 +1,7 @@
 {
 	"initial_parameters": "configs/nyc_study_init_config.json",
 	"path_results": "data/",
-	"type_of_distribution": "manual",
+	"type_of_distribution": "multinormal",
 	"no_batches": 1,
 	"no_replications": 1,
 	"distribution_variables": ["VoT", "WtS"],

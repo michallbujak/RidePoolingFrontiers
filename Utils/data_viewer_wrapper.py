@@ -2,6 +2,7 @@ import visualising_functions as vis_eff
 import networkx as nx
 import matplotlib.pyplot as plt
 import netwulf as nw
+import pandas as pd
 
 date = "25-11-22"
 sblts_exmas = "exmas"

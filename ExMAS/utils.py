@@ -23,9 +23,11 @@ import numpy as np
 from osmnx.distance import nearest_nodes
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
+import bisect
+import scipy.stats as ss
 
-import ExMAS.utils
-
+# import ExMAS.utils
+#
 # DataFrame skeletons
 inData = DotMap()
 inData['passengers'] = pd.DataFrame(columns=['id', 'pos', 'status'])
@@ -450,7 +452,7 @@ def synthetic_demand_poly(_inData, _params=None):
     Centers = pd.DataFrame(data={'name': ['Dam Square', 'Station Zuid', 'Concertgebouw', 'Sloterdijk'],
                                  'x': [4.8909126, 4.871887, 4.8790061, 4.8351158],
                                  'y': [52.373095, 52.338948, 52.356275, 52.3888349]})
-    Centers['node'] = Centers.apply(lambda center: get_nearest_node(_inData.G, (center.y, center.x)), axis=1)
+    Centers['node'] = Centers.apply(lambda center: nearest_nodes(_inData.G, (center.y, center.x)), axis=1)
 
     # drop not considered centers
     Centers = Centers[Centers.index.isin(range(_params.nCenters))]
@@ -1065,7 +1067,7 @@ def create_input_indata(
     dataset_dotmap['requests'] = pd.DataFrame(
         columns=['pax', 'origin', 'destination', 'treq', 'tdep', 'ttrav', 'tarr', 'tdrop']).set_index(
         'pax')
-    dataset_dotmap = ExMAS.utils.load_G(dataset_dotmap, params, stats=True)
+    dataset_dotmap = load_G(dataset_dotmap, params, stats=True)
 
     pickup_time_name = kwargs.get('pickup_time_name', 'pickup_datetime')
     requests[pickup_time_name] = pd.to_datetime(requests[pickup_time_name])
@@ -1096,3 +1098,16 @@ def create_input_indata(
         logger.info('Input data prepared')
 
     return dataset_dotmap, params
+
+
+def mixed_discrete_norm_distribution(probs, arguments, with_index=True):
+    def internal_function(*X):
+        z = random.random()
+        index = bisect.bisect(probs, z)
+        if with_index:
+            return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, arguments[index][0], arguments[index][1])] + [
+                index]
+        else:
+            return [ss.norm.ppf(x, loc=mean, scale=std) for x, mean, std in zip(X, arguments[index][0], arguments[index][1])]
+
+    return internal_function

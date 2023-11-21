@@ -59,6 +59,8 @@ import platform
 
 import matplotlib.pyplot as plt
 
+from ExMAS.utils import mixed_discrete_norm_distribution
+
 pd.options.mode.chained_assignment = None
 np.warnings.filterwarnings('ignore')
 
@@ -106,14 +108,14 @@ def main(_inData, params, default_mixed_normal=False, plot=False):
     """
     _inData.logger = init_log(params)  # initialize console logger
 
-    if default_mixed_normal:
-        s = 1
-        from Utils.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
-        params.sampling_function = gen_func((0.29, 0.57, 0.81, 1),
-                                            ((16.98 / 3600, 1.22), (s * 1.68 / 3600, s * 0.122)),
-                                            ((14.02 / 3600, 1.135), (s * 1.402 / 3600, s * 0.1135)),
-                                            ((26.25 / 3600, 1.049), (s * 2.625 / 3600, s * 0.105)),
-                                            ((7.78 / 3600, 1.18), (s * 0.778 / 3600, s * 0.118)))
+    # if default_mixed_normal:
+    #     s = 1
+    #     from Utils.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
+    #     params.sampling_function = gen_func((0.29, 0.57, 0.81, 1),
+    #                                         ((16.98 / 3600, 1.22), (s * 1.68 / 3600, s * 0.122)),
+    #                                         ((14.02 / 3600, 1.135), (s * 1.402 / 3600, s * 0.1135)),
+    #                                         ((26.25 / 3600, 1.049), (s * 2.625 / 3600, s * 0.105)),
+    #                                         ((7.78 / 3600, 1.18), (s * 0.778 / 3600, s * 0.118)))
 
     _inData = sample_random_parameters(_inData, params)
     _inData = add_noise(_inData, params)
@@ -1265,12 +1267,14 @@ def add_noise(inData, params):
 def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: FunctionType = lambda *args: None):
     """
     Function designed to
-    @param sampling_function_with_index:
     @param sampling_func:
     @param inData:
     @param params:
     @return:
     """
+    if inData.prob.get("sampled_random_parameters") is not None:
+        return inData
+
     if params.get("sampling_function_with_index", "False") is False:
         params["sampling_function_with_index"] = False
 
@@ -1311,6 +1315,22 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
         inData.prob.sampled_random_parameters = pd.DataFrame([sampling_func(*sample_from_interval[j, :])
                                                               for j in range(len(sample_from_interval))],
                                                              columns=columns)
+
+    elif type_of_distribution == "multinormal":
+        gen_func = mixed_discrete_norm_distribution(
+            probs=params["multinormal_probs"],
+            arguments=params["multinormal_args"],
+            with_index=params["sampling_function_with_index"]
+        )
+        sample_from_interval = np.random.random([number_of_requests, len(zeros)])
+        if not params["sampling_function_with_index"]:
+            columns = params.distribution_variables
+        else:
+            columns = params.distribution_variables + ["class"]
+        inData.prob.sampled_random_parameters = pd.DataFrame([gen_func(*sample_from_interval[j, :])
+                                                              for j in range(len(sample_from_interval))],
+                                                             columns=columns)
+
     elif type_of_distribution == "normal":
         assert isinstance(params.distribution_details, dict), "Incorrect format of distribution details - " \
                                                               "should be dict"
@@ -1449,8 +1469,8 @@ def check_if_correct_attributes(params):
             assert isinstance(j, str), "Elements of list params.distribution_variables should be str"
     if params.get("type_of_distribution", None) is not None:
         params.type_of_distribution = params.type_of_distribution.lower()
-        assert params.type_of_distribution in ["discrete", "manual", "normal"], \
-            "Incorrect type_of_distribution. Admissible: 'discrete', 'manual', 'normal'"
+        assert params.type_of_distribution in ["discrete", "manual", "normal", "multinormal"], \
+            "Incorrect type_of_distribution. Admissible: 'discrete', 'manual', 'normal', 'multinormal'"
         if params.type_of_distribution == "discrete":
             assert "distribution_details" in params.keys(), \
                 "distribution_details must be provided for discrete distribution. Example:" \
