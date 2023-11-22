@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 
-df = pd.read_csv('data/rejony.att', skiprows=85, delimiter=";", index_col=0)
+df = pd.read_csv('data/rejony2.txt', skiprows=85, delimiter=";", index_col=0)
 df = df[[isinstance(t, str) for t in df["WOJEWODZTWO"]]]
 df["REGION_ID"] = list(df.index)
 df = df.rename(columns={"NAME": "NEIGHBOURS"})

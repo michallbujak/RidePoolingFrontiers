@@ -11,7 +11,7 @@ from Individual_pricing.evaluation import evaluate_pooling, \
 from Individual_pricing import pricing_scheme
 
 general_config = bt_prep.get_parameters(
-    r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Individual_pricing\configs\general_config.json"
+    r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\configs\general_config.json"
 )
 
 bt_prep.create_results_directory(general_config)
@@ -56,6 +56,8 @@ travellers_traits = [
         params=params
     ) for db in databanks_list
 ]
+
+databanks_list = [pricing_scheme.expand_rides(t) for t in databanks_list]
 
 databanks_list = [
     pricing_scheme.calculate_min_discount(

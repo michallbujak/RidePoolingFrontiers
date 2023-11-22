@@ -91,11 +91,10 @@ def discount_row_func(
     return out
 
 
-def calculate_min_discount(
-        databank: DotMap or dict,
-        travellers_characteristics: dict
+def expand_rides(
+        databank: DotMap or dict
 ) -> pd.DataFrame:
-    rides = databank['exmas']['rides'].copy()
+    rides = databank['exmas']['rides']
     rides["individual_times"] = rides.apply(extract_individual_travel_times,
                                             axis=1)
     distances_dict = {t[0]: t[1]["dist"] for t in
@@ -103,6 +102,13 @@ def calculate_min_discount(
     rides["individual_distances"] = rides.apply(lambda x:
                                                 [distances_dict[t] for t in x["indexes"]],
                                                 axis=1)
+    return databank
+
+def calculate_min_discount(
+    databank: DotMap or dict,
+    travellers_characteristics: dict
+) -> DotMap:
+    rides = databank['exmas']['rides']
     rides["min_discount"] = rides.apply(lambda x:
                                         [max(t, 0) for t in discount_row_func(x, travellers_characteristics)],
                                         axis=1)
@@ -156,3 +162,11 @@ def calculate_profitability(
         rides[_n] = rides[_n].apply(lambda x: 0 if isnan(x) else int(x))
 
     return databank
+
+
+def calculate_expected_profitability(
+        databank: DotMap or dict,
+        params: DotMap or dict
+):
+    pass
+
