@@ -3,6 +3,8 @@ import pandas as pd
 from dotmap import DotMap
 from math import isnan
 
+from Individual_pricing.product_distribution import ProductDistribution
+
 
 def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
     """

@@ -34,6 +34,7 @@ class ProductDistribution:
     def __init__(self):
         self.samples = []
         self.sample = None
+        self.subsample = None
         self.size = None
 
     def new_sample(self, distribution_type: str, **kwargs):
@@ -78,31 +79,41 @@ class ProductDistribution:
     def sample_value(self):
         return random.sample(self.sample)
 
-    def inverse_cdf(self, argument):
+    def inverse_cdf(self, argument: float):
         return self.sample[int(argument * self.size)]
 
+    def make_subsample(self, size: int):
+        half_jump = int(self.size/(2*size))
+        out = []
+        element_ind = half_jump
+        while element_ind <= self.size:
+            out += [self.sample[element_ind]]
+            element_ind += 2*half_jump
 
-Betas = ProductDistribution()
-Betas.new_sample(
-    distribution_type="multinormal",
-    probs=[0.2, 0.1, 0.7],
-    means=[1, 2, 3],
-    st_devs=[0.2, 0.3, 0.4],
-    size=1000,
-    seed=123
-)
+        self.subsample = out
 
-Betas.new_sample(
-    distribution_type="multinormal",
-    probs=[0.4, 0.6],
-    means=[1, 2],
-    st_devs=[0.1, 0.1],
-    size=1000,
-    seed=124
-)
 
-Betas.cumulative_sample()
+# Betas = ProductDistribution()
+# Betas.new_sample(
+#     distribution_type="multinormal",
+#     probs=[0.2, 0.1, 0.7],
+#     means=[1, 2, 3],
+#     st_devs=[0.2, 0.3, 0.4],
+#     size=1000,
+#     seed=123
+# )
+#
+# Betas.new_sample(
+#     distribution_type="multinormal",
+#     probs=[0.4, 0.6],
+#     means=[1, 2],
+#     st_devs=[0.1, 0.1],
+#     size=1000,
+#     seed=124
+# )
+#
+# Betas.cumulative_sample()
 z = 0
-import matplotlib.pyplot as plt
-plt.hist(Betas.sample)
-plt.show()
+# import matplotlib.pyplot as plt
+# plt.hist(Betas.sample)
+# plt.show()
