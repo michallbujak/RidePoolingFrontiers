@@ -82,27 +82,27 @@ class ProductDistribution:
         return self.sample[int(argument * self.size)]
 
 
-Betas = ProductDistribution()
-Betas.new_sample(
-    distribution_type="multinormal",
-    probs=[0.2, 0.1, 0.7],
-    means=[1, 2, 3],
-    st_devs=[0.2, 0.3, 0.4],
-    size=1000,
-    seed=123
-)
-
-Betas.new_sample(
-    distribution_type="multinormal",
-    probs=[0.4, 0.6],
-    means=[1, 2],
-    st_devs=[0.1, 0.1],
-    size=1000,
-    seed=124
-)
-
-Betas.cumulative_sample()
-z = 0
-import matplotlib.pyplot as plt
-plt.hist(Betas.sample)
-plt.show()
+# Betas = ProductDistribution()
+# Betas.new_sample(
+#     distribution_type="multinormal",
+#     probs=[0.2, 0.1, 0.7],
+#     means=[1, 2, 3],
+#     st_devs=[0.2, 0.3, 0.4],
+#     size=1000,
+#     seed=123
+# )
+#
+# Betas.new_sample(
+#     distribution_type="multinormal",
+#     probs=[0.4, 0.6],
+#     means=[1, 2],
+#     st_devs=[0.1, 0.1],
+#     size=1000,
+#     seed=124
+# )
+#
+# Betas.cumulative_sample()
+# z = 0
+# import matplotlib.pyplot as plt
+# plt.hist(Betas.sample)
+# plt.show()

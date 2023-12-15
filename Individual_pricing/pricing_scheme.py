@@ -71,6 +71,13 @@ def discount_row_func(
         row_rides: pd.Series,
         characteristics: dict
 ) -> list:
+    """
+    [row func] Calculate minimum discount per row of pd.Dataframe
+    from the databank exmas rides
+    @param row_rides: row
+    @param characteristics: individual traits
+    @return: updated row
+    """
     travellers = row_rides["indexes"]
     out = []
     for no, traveller in enumerate(travellers):
@@ -94,6 +101,11 @@ def discount_row_func(
 def expand_rides(
         databank: DotMap or dict
 ) -> pd.DataFrame:
+    """
+    Add individual times and individual distances for rides df
+    @param databank: the data bundle used in ExMAs
+    @return: updated databank
+    """
     rides = databank['exmas']['rides']
     rides["individual_times"] = rides.apply(extract_individual_travel_times,
                                             axis=1)
@@ -104,10 +116,17 @@ def expand_rides(
                                                 axis=1)
     return databank
 
+
 def calculate_min_discount(
-    databank: DotMap or dict,
-    travellers_characteristics: dict
+        databank: DotMap or dict,
+        travellers_characteristics: dict
 ) -> DotMap:
+    """
+    Calculate minimum discount
+    @param databank:
+    @param travellers_characteristics:
+    @return: updated databank
+    """
     rides = databank['exmas']['rides']
     rides["min_discount"] = rides.apply(lambda x:
                                         [max(t, 0) for t in discount_row_func(x, travellers_characteristics)],
@@ -121,7 +140,14 @@ def calculate_min_discount(
 def calculate_profitability(
         databank: DotMap or dict,
         params: DotMap or dict
-):
+) -> DotMap or dict:
+    """
+    Calculate profitability of individual rides
+    @param databank:
+    @param params:
+    @return: updated databank
+    """
+
     def _base_row_revenue(row):
         if len(row["indexes"]) == 1:
             return row["individual_distances"][0] * params["price"]
@@ -154,8 +180,8 @@ def calculate_profitability(
     rides["revenue_max"] = rides.apply(lambda x: _max_row_revenue(x), axis=1)
     rides["profit_max"] = rides["revenue_max"] - rides["cost"]
 
-    rides["profitability_base"] = 1000*rides["revenue_base"] / rides["cost"]
-    rides["profitability_max"] = 1000*rides["revenue_max"] / rides["cost"]
+    rides["profitability_base"] = 1000 * rides["revenue_base"] / rides["cost"]
+    rides["profitability_max"] = 1000 * rides["revenue_max"] / rides["cost"]
 
     for _n in ["profit_base", "profit_max",
                "profitability_base", "profitability_max"]:
@@ -164,9 +190,33 @@ def calculate_profitability(
     return databank
 
 
+def row_expected_profitability(
+        row_rides: pd.Series,
+        params: DotMap or dict
+) -> list:
+    travellers = row_rides["indexes"]
+    out = []
+    for no, traveller in enumerate(travellers):
+        return []
+
+
 def calculate_expected_profitability(
         databank: DotMap or dict,
         params: DotMap or dict
 ):
-    pass
+    from pricing_utils.product_distribution import ProductDistribution
 
+    beta_t = ProductDistribution()
+    beta_t.new_sample(
+        distribution_type="multinormal",
+        probs=[0.29, 0.28, 0.24, 0.19],
+        means=[t / 3600 for t in [16.98, 14.02, 26.25, 7.78]],
+        st_devs=[t / 3600 for t in [0.318, 0.201, 5.77, 1]],
+        size=100,
+        seed=123
+    )
+    beta_t.cumulative_sample()
+
+    params["probs"]["bt_sample"] = beta_t.sample
+
+    pass

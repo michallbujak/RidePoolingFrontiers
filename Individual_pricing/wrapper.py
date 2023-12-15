@@ -2,7 +2,7 @@
 import pickle
 
 from ExMAS.probabilistic_exmas import main as exmas_algo
-import Individual_pricing.batch_preparation as bt_prep
+import Individual_pricing.pricing_utils.batch_preparation as bt_prep
 from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
 from Individual_pricing.evaluation import evaluate_pooling, \
