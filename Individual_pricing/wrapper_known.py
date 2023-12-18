@@ -1,4 +1,4 @@
-""" Run ExMAS in probabilistic settings"""
+""" Run ExMAS in probabilistic/deterministic settings"""
 import pickle
 
 from ExMAS.probabilistic_exmas import main as exmas_algo
@@ -8,7 +8,7 @@ from Individual_pricing.matching import matching_function
 from Individual_pricing.evaluation import evaluate_pooling, \
     compare_objective_methods, aggregate_results
 
-from Individual_pricing import pricing_scheme
+from Individual_pricing import pricing_functions
 
 general_config = bt_prep.get_parameters(
     r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\configs\general_config.json"
@@ -47,8 +47,8 @@ params.sampling_function = None
 with open("example_data", "wb") as file:
     pickle.dump((databanks_list, settings_list, params), file)
 
-# with open("example_data", "rb") as file:
-#     databanks_list, settings_list, params = pickle.load(file)
+with open("example_data", "rb") as file:
+    databanks_list, settings_list, params = pickle.load(file)
 
 travellers_traits = [
     pricing_scheme.extract_travellers_data(

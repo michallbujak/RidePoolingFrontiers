@@ -200,23 +200,44 @@ def row_expected_profitability(
         return []
 
 
-def calculate_expected_profitability(
+def prepare_samples(
         databank: DotMap or dict,
-        params: DotMap or dict
-):
+        sample_size: int = 100
+) -> DotMap or dict:
     from pricing_utils.product_distribution import ProductDistribution
 
-    beta_t = ProductDistribution()
-    beta_t.new_sample(
+    beta = ProductDistribution()
+    beta.new_sample(
         distribution_type="multinormal",
         probs=[0.29, 0.28, 0.24, 0.19],
         means=[t / 3600 for t in [16.98, 14.02, 26.25, 7.78]],
         st_devs=[t / 3600 for t in [0.318, 0.201, 5.77, 1]],
-        size=100,
+        size=sample_size,
         seed=123
     )
-    beta_t.cumulative_sample()
+    beta.cumulative_sample()
+    databank["probs"]["bt_sample"] = beta.sample.copy()
 
-    params["probs"]["bt_sample"] = beta_t.sample
+    databank["probs"]["bs_samples"] = {}
+    for no_paxes, multiplier in zip([2, 3, 4, 5], [0.95, 1, 1.1, 1.2, 2]):
+        beta.remove_sample(0)
+        beta.new_sample(
+            distribution_type="multinormal",
+            probs=[0.29, 0.28, 0.24, 0.19],
+            means=[t * multiplier for t in [1.22, 1.135, 1.049, 1.18]],
+            st_devs=[t / 3600 for t in [0.318, 0.201, 5.77, 1]],
+            size=sample_size,
+            seed=123
+        )
+        databank["probs"]["bs_samples"][no_paxes] = beta.sample.copy()
 
-    pass
+    return databank
+
+
+def calculate_expected_profitability(
+        databank: DotMap or dict,
+        params: DotMap or dict,
+        final_sample_size: int = 40
+):
+    rides = databank["exmas"]["recalibrated_rides"]
+
