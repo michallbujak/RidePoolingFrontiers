@@ -59,16 +59,22 @@ class ProductDistribution:
         else:
             self.size *= kwargs.get("size")
 
+        self.cumulative_sample()
+
     def remove_sample(self, index: int):
         del self.samples[index]
+        self.cumulative_sample()
 
     def cumulative_sample(self):
-        assert len(self.samples) > 0, "Missing samples!"
+        if len(self.samples) == 0:
+            self.sample = None
+            self.size = 0
 
-        sampled = itertools.product(*self.samples)
-        sampled = sorted([np.prod(t) for t in sampled])
-
-        self.sample = sampled
+        else:
+            sampled = itertools.product(*self.samples)
+            sampled = sorted([np.prod(t) for t in sampled])
+            self.sample = sampled
+            self.size = len(self.sample)
 
     def cdf(self, argument):
         assert isinstance(self.size, int), "Incorrect size"

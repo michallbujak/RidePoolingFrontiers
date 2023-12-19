@@ -1,4 +1,6 @@
 """ Script for analysis of the individual pricing """
+import itertools
+
 import pandas as pd
 from dotmap import DotMap
 from math import isnan
@@ -215,10 +217,9 @@ def prepare_samples(
         size=sample_size,
         seed=123
     )
-    beta.cumulative_sample()
-    databank["probs"]["bt_sample"] = beta.sample.copy()
+    databank["prob"]["bt_sample"] = beta.sample.copy()
 
-    databank["probs"]["bs_samples"] = {}
+    databank["prob"]["bs_samples"] = {}
     for no_paxes, multiplier in zip([2, 3, 4, 5], [0.95, 1, 1.1, 1.2, 2]):
         beta.remove_sample(0)
         beta.new_sample(
@@ -229,15 +230,72 @@ def prepare_samples(
             size=sample_size,
             seed=123
         )
-        databank["probs"]["bs_samples"][no_paxes] = beta.sample.copy()
+        databank["prob"]["bs_samples"][no_paxes] = beta.sample.copy()
 
     return databank
 
 
+def _row_sample_acceptable_disc(
+        _rides_row: pd.Series,
+        _times_non_shared: dict,
+        _bs_samples: dict,
+        _bt_sample: list,
+        _interval: int,
+        _price: float
+) -> list:
+    """
+    Samples discounts for which clients accept rides
+    at different discount levels
+    @param _rides_row: the function works on rows of pd.Dataframe
+    @param _times_non_shared: dictionary with iniduvidal rides
+    obtained as dict(requests["ttrav"])
+    @param _bs_samples: sampled willingness to share across
+    the population
+    @param _bt_sample: sampled value of time across the population
+    @param _interval: once per how many items from the list
+    should be returned for the final sample
+    @param _price: price per metre
+    @return: acceptable
+    """
+    no_travellers = len(_rides_row["indexes"])
+    if no_travellers == 1:
+        return []
+
+    _bs = _bs_samples[no_travellers]
+    out = []
+    for no, trav in enumerate(_rides_row["indexes"]):
+        out1 = [t * _rides_row["individual_times"][no] for t in _bs]
+        out1 = [t - _times_non_shared[trav] for t in out1]
+        out1 = sorted(a * b for a, b in itertools.product(out1, _bt_sample))
+        out2 = []
+        j = int(_interval / 2)
+        while j < len(out1):
+            out2.append(out1[j] /
+                        (_price * _rides_row["individual_distances"][no]))
+            j += _interval
+        out.append(out2)
+
+    return out
+
+
 def calculate_expected_profitability(
         databank: DotMap or dict,
-        params: DotMap or dict,
-        final_sample_size: int = 40
+        final_sample_size: int = 10,
+        price: float = 0.015
 ):
-    rides = databank["exmas"]["recalibrated_rides"]
+    rides = databank["exmas"]["rides"]
+    times_non_shared = dict(databank['exmas']['requests']['ttrav'])
+    b_s = databank['prob']['bs_samples']
+    b_t = databank['prob']['bt_sample']
+    interval_size = int(len(b_s[2]) * len(b_t) / final_sample_size)
+    rides["accepted_discount"] = rides.apply(
+        _row_sample_acceptable_disc,
+        axis=1,
+        _times_non_shared=times_non_shared,
+        _bs_samples=b_s,
+        _bt_sample=b_t,
+        _interval=interval_size,
+        _price=price
+    )
 
+    x = 0

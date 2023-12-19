@@ -41,9 +41,16 @@ with open("example_data", "rb") as file:
 
 databanks_list = [expand_rides(t) for t in databanks_list]
 
-databanks_list = [prepare_samples(t) for t in databanks_list]
+databanks_list = [prepare_samples(t, 20) for t in databanks_list]
 
-databanks_list = [calculate_expected_profitability(t, params) for t in databanks_list]
+databanks_list = [
+    calculate_expected_profitability(
+        t,
+        final_sample_size=10,
+        price=params["price"]/1000
+    )
+    for t in databanks_list
+]
 
 x = 0
 
