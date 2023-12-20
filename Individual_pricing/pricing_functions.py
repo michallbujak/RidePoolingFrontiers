@@ -1,6 +1,6 @@
 """ Script for analysis of the individual pricing """
 import itertools
-from bisect import bisect
+from bisect import bisect_right
 
 import pandas as pd
 from dotmap import DotMap
@@ -284,12 +284,27 @@ def _row_maximise_profit(
         _sample_size: int = 10
 ):
     no_travellers = len(_rides_row["indexes"])
-    if no_travellers == 0:
-        return _rides_row["individual_distance"]
+    if no_travellers == 1:
+        return _rides_row["individual_distances"]
 
-    discounts = itertools.product(*_rides_row["accepted_discount"])
+    discounts = list(itertools.product(*_rides_row["accepted_discount"]))
+    best = [0, 0]
     for discount in discounts:
         eff_price = [1 - t for t in discount]
+        revenue = [a*b for a, b in
+                   zip(_rides_row["individual_distances"], eff_price)]
+        probability = 1
+        for num, ind_disc in enumerate(discount):
+            sample = _rides_row["accepted_discount"][num]
+            probability *= bisect_right(sample, ind_disc)
+            probability /= _sample_size
+
+        out = [sum(revenue)*probability, discount]
+        if out[0] > best[0]:
+            best = out.copy()
+
+    return best
+
 
 
 def calculate_expected_profitability(
@@ -312,11 +327,12 @@ def calculate_expected_profitability(
         _price=price
     )
 
-    def foo(_arg):
-        if len(_arg) == 0:
-            return []
-        return sorted([a for b in _arg for a in b])
+    # def foo(_arg):
+    #     if len(_arg) == 0:
+    #         return []
+    #     return sorted([a for b in _arg for a in b])
 
     # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
+    rides.apply(_row_maximise_profit, axis=1)
     x = 0
