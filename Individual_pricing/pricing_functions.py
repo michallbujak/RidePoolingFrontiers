@@ -1,5 +1,6 @@
 """ Script for analysis of the individual pricing """
 import itertools
+from bisect import bisect
 
 import pandas as pd
 from dotmap import DotMap
@@ -278,6 +279,19 @@ def _row_sample_acceptable_disc(
     return out
 
 
+def _row_maximise_profit(
+        _rides_row: pd.Series,
+        _sample_size: int = 10
+):
+    no_travellers = len(_rides_row["indexes"])
+    if no_travellers == 0:
+        return _rides_row["individual_distance"]
+
+    discounts = itertools.product(*_rides_row["accepted_discount"])
+    for discount in discounts:
+        eff_price = [1 - t for t in discount]
+
+
 def calculate_expected_profitability(
         databank: DotMap or dict,
         final_sample_size: int = 10,
@@ -297,5 +311,12 @@ def calculate_expected_profitability(
         _interval=interval_size,
         _price=price
     )
+
+    def foo(_arg):
+        if len(_arg) == 0:
+            return []
+        return sorted([a for b in _arg for a in b])
+
+    # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
     x = 0
