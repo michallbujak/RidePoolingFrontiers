@@ -28,10 +28,10 @@ if __name__ == "__main__":
     utils.create_results_directory(config)
 
     """ Prepare data """
-    dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
-                                                     filter_function=lambda x: (len(x.requests) < 150) &
-                                                                               (len(x.requests) > 140),
-                                                     config=config.initial_parameters)
+    # dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
+    #                                                  filter_function=lambda x: (len(x.requests) < 150) &
+    #                                                                            (len(x.requests) > 140),
+    #                                                  config=config.initial_parameters)
     # with open("data/exemplary_demand.obj", "wb") as file:
     #     pickle.dump(dotmaps_list, file)
     # with open("data/params_in_process.obj", "wb") as file:
@@ -51,7 +51,7 @@ if __name__ == "__main__":
                                                                                   (s * 1.68 / 3600, s * 0.122)),
                                                                                  ((14.02 / 3600, 1.135),
                                                                                   (s * 1.402 / 3600, s * 0.1135)),
-                                                                                 ((100 / 3600, 5),
+                                                                                 ((26.25 / 3600, 1.049),
                                                                                   (s * 2.625 / 3600, s * 0.105)),
                                                                                  ((7.78 / 3600, 1.18),
                                                                                   (s * 0.778 / 3600, s * 0.118)))

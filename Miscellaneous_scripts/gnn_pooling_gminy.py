@@ -20,15 +20,20 @@ adj_graph.add_nodes_from([
 
 dist_matrix = pd.read_csv('data/DIS2.csv', sep=';', index_col=0)
 dist_matrix.columns = [int(t) for t in dist_matrix.columns]
+# dist_matrix = dist_matrix.loc[df.index, df.index]
 
 
 for node, neighbours in df["NEIGHBOURS"].items():
     nodes_ns = []
     for neighbour in neighbours:
+        if neighbour not in adj_graph.nodes:
+            continue
         nodes_ns += [neighbour]
         adj_graph.add_edge(node, neighbour, weight=dist_matrix.loc[node, neighbour])
 
     if len(nodes_ns) == 0:
         print(0)
 
-x = 0
+
+nx.write_graphml(adj_graph, "regions_graph.graphml")
+df.to_csv("regions.csv")
