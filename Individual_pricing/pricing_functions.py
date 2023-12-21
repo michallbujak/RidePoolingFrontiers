@@ -344,7 +344,7 @@ def maximum_profit(
         cost_to_price_ratio: float = 0.3
 ) -> DotMap or dict:
     rides = databank["exmas"]["rides"]
-    rides["expected_profit"] = rides["max_expected_profit"][0]
+    rides["expected_profit"] = rides["max_expected_profit"].apply(lambda x: x[0])
     rides["expected_profit"] -= rides["u_veh"] * cost_to_price_ratio
 
     return databank
