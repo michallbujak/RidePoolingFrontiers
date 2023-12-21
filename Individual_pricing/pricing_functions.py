@@ -6,7 +6,7 @@ import pandas as pd
 from dotmap import DotMap
 from math import isnan
 
-from Individual_pricing.product_distribution import ProductDistribution
+from Individual_pricing.pricing_utils.product_distribution import ProductDistribution
 
 
 def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
@@ -264,7 +264,7 @@ def _row_sample_acceptable_disc(
     if no_travellers == 1:
         return []
 
-    _bs = _bs_samples[no_travellers]
+    _bs = _bs_samples[no_travellers if no_travellers <= 5 else 5]
     out = []
     for no, trav in enumerate(_rides_row["indexes"]):
         out1 = [t * _rides_row["individual_times"][no] for t in _bs]
@@ -293,7 +293,7 @@ def _row_maximise_profit(
     best = [0, 0]
     for discount in discounts:
         eff_price = [1 - t for t in discount]
-        revenue = [a*b for a, b in
+        revenue = [a * b for a, b in
                    zip(_rides_row["individual_distances"], eff_price)]
         probability = 1
         for num, ind_disc in enumerate(discount):
@@ -301,12 +301,11 @@ def _row_maximise_profit(
             probability *= bisect_right(sample, ind_disc)
             probability /= _sample_size
 
-        out = [sum(revenue)*probability, discount]
+        out = [sum(revenue) * probability, discount]
         if out[0] > best[0]:
             best = out.copy()
 
     return best
-
 
 
 def calculate_expected_profitability(
@@ -336,5 +335,5 @@ def calculate_expected_profitability(
 
     # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
-    rides.apply(_row_maximise_profit, axis=1)
-    x = 0
+    rides['max_expected_profit'] = rides.apply(_row_maximise_profit, axis=1)
+    return databank
