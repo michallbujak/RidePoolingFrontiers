@@ -52,5 +52,16 @@ databanks_list = [
     for t in databanks_list
 ]
 
-x = 0
+databanks_list = [maximum_profit(t) for t in databanks_list]
+
+databanks_list = [
+    matching_function(
+        databank=db,
+        params=params,
+        objectives=["expected_profit"]
+    ) for db in databanks_list
+]
+
+with open("results0.pickle", "wb") as f:
+    pickle.dump(databanks_list, f)
 

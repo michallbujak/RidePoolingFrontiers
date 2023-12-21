@@ -312,7 +312,7 @@ def calculate_expected_profitability(
         databank: DotMap or dict,
         final_sample_size: int = 10,
         price: float = 0.015
-):
+) -> DotMap or dict:
     rides = databank["exmas"]["rides"]
     times_non_shared = dict(databank['exmas']['requests']['ttrav'])
     b_s = databank['prob']['bs_samples']
@@ -336,4 +336,15 @@ def calculate_expected_profitability(
     # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
     rides['max_expected_profit'] = rides.apply(_row_maximise_profit, axis=1)
+    return databank
+
+
+def maximum_profit(
+        databank: DotMap or dict,
+        cost_to_price_ratio: float = 0.3
+) -> DotMap or dict:
+    rides = databank["exmas"]["rides"]
+    rides["expected_profit"] = rides["max_expected_profit"][0]
+    rides["expected_profit"] -= rides["u_veh"] * cost_to_price_ratio
+
     return databank

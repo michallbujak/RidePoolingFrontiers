@@ -8,7 +8,7 @@ from Individual_pricing.matching import matching_function
 from Individual_pricing.evaluation import evaluate_pooling, \
     compare_objective_methods, aggregate_results
 
-from Individual_pricing import pricing_functions
+from Individual_pricing.pricing_functions import *
 
 general_config = bt_prep.get_parameters(
     r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\configs\general_config.json"
@@ -51,23 +51,23 @@ with open("example_data", "rb") as file:
     databanks_list, settings_list, params = pickle.load(file)
 
 travellers_traits = [
-    pricing_scheme.extract_travellers_data(
+    extract_travellers_data(
         databank=db,
         params=params
     ) for db in databanks_list
 ]
 
-databanks_list = [pricing_scheme.expand_rides(t) for t in databanks_list]
+databanks_list = [expand_rides(t) for t in databanks_list]
 
 databanks_list = [
-    pricing_scheme.calculate_min_discount(
+    calculate_min_discount(
         databank=db,
         travellers_characteristics=tt
     ) for db, tt in zip(databanks_list, travellers_traits)
 ]
 
 databanks_list = [
-    pricing_scheme.calculate_profitability(
+    calculate_profitability(
         databank=db,
         params=params
     ) for db in databanks_list
