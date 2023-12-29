@@ -27,6 +27,7 @@ def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
     return 1 - u / (p * dd) + (b_t * b_s * (t + t_d * b_d)) / (p * dd)
 
 
+
 def extract_travellers_data(
         databank: DotMap or dict,
         params: DotMap or dict
@@ -291,7 +292,7 @@ def _row_maximise_profit(
     best = [0, 0]
     for discount in discounts:
         eff_price = [1 - t for t in discount]
-        revenue = [a*b for a, b in
+        revenue = [a * b for a, b in
                    zip(_rides_row["individual_distances"], eff_price)]
         probability = 1
         for num, ind_disc in enumerate(discount):
@@ -299,18 +300,35 @@ def _row_maximise_profit(
             probability *= bisect_right(sample, ind_disc)
             probability /= _sample_size
 
-        out = [sum(revenue)*probability, discount]
+        out = [sum(revenue) * probability, discount]
         if out[0] > best[0]:
             best = out.copy()
 
     return best
 
 
+# def _row_recalculate_utility(
+#         row_rides: pd.Series,
+#         times_non_shared: dict,
+#         price: float
+# ) -> list:
+#     if len(row_rides["indexes"]) == 1:
+#         return row_rides["u_pax"]
+#
+#     utilities = []
+#
+#     for num, traveller in enumerate(row_rides["indexes"]):
+#         discount = row_rides["best_profit"][1][num]
+#         distance = row_rides["individual_distances"][num]
+#         time_ns = times_non_shared[traveller]
+#         time_s = row_rides["individual_times"][num]
+
+
 
 def calculate_expected_profitability(
         databank: DotMap or dict,
         final_sample_size: int = 10,
-        price: float = 0.015
+        price: float = 0.0015
 ):
     rides = databank["exmas"]["rides"]
     times_non_shared = dict(databank['exmas']['requests']['ttrav'])
@@ -334,5 +352,10 @@ def calculate_expected_profitability(
 
     # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
-    rides.apply(_row_maximise_profit, axis=1)
-    x = 0
+    rides["best_profit"] = rides.apply(_row_maximise_profit, axis=1)
+    rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
+    rides["max_profit_int"] = rides["max_profit"].apply(lambda x: int(1000 * x))
+
+    databank["exmas"]["recalibrated_rides"] = rides.copy()
+
+    return databank

@@ -52,5 +52,12 @@ databanks_list = [
     for t in databanks_list
 ]
 
-x = 0
+databanks_list = [
+    matching_function(
+        databank=db,
+        params=params,
+        objectives=["max_profit_int"]
+    ) for db in databanks_list
+]
 
+x = 0

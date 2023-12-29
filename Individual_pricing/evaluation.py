@@ -4,7 +4,8 @@ from dotmap import DotMap
 
 
 def evaluate_pooling(
-        databank: DotMap or dict
+        databank: DotMap or dict,
+        deterministic: bool = True
 ) -> DotMap or dict:
     databank['exmas']['results'] = {}
 
@@ -44,15 +45,19 @@ def evaluate_pooling(
         _results['PLUS5'] = _schedule[(_schedule.kind == 100)].shape[0]
         _results['shared_ratio'] = 1 - _results['SINGLE'] / _results['nR']
 
-        if objective[-3:] == "max":
-            _schedule["profit"] = _schedule["profit_max"]
-            _schedule["profitability"] = _schedule["profitability_max"]
-        else:
-            _schedule["profit"] = _schedule["profit_base"]
-            _schedule["profitability"] = _schedule["profitability_base"]
+        if deterministic:
+            if objective[-3:] == "max":
+                _schedule["profit"] = _schedule["profit_max"]
+                _schedule["profitability"] = _schedule["profitability_max"]
+            else:
+                _schedule["profit"] = _schedule["profit_base"]
+                _schedule["profitability"] = _schedule["profitability_base"]
 
-        _results["Profit"] = _schedule["profit"].sum()
-        _results["Average_profitability"] = np.mean(_schedule["profitability"] / 1000)
+            _results["Profit"] = _schedule["profit"].sum()
+            _results["Average_profitability"] = np.mean(_schedule["profitability"] / 1000)
+
+        else:
+            pass
 
         # assign to the variable
         databank['exmas']['results'][objective] = _results.copy()
