@@ -60,4 +60,5 @@ databanks_list = [
     ) for db in databanks_list
 ]
 
-x = 0
+with open("results0.pickle", "wb") as f:
+    pickle.dump(databanks_list, f)

@@ -6,6 +6,8 @@ import pandas as pd
 from dotmap import DotMap
 from math import isnan
 
+from Individual_pricing.pricing_utils.product_distribution import ProductDistribution
+
 
 def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
     """
@@ -263,7 +265,7 @@ def _row_sample_acceptable_disc(
     if no_travellers == 1:
         return []
 
-    _bs = _bs_samples[no_travellers]
+    _bs = _bs_samples[no_travellers if no_travellers <= 5 else 5]
     out = []
     for no, trav in enumerate(_rides_row["indexes"]):
         out1 = [t * _rides_row["individual_times"][no] for t in _bs]
@@ -328,8 +330,9 @@ def _row_maximise_profit(
 def calculate_expected_profitability(
         databank: DotMap or dict,
         final_sample_size: int = 10,
-        price: float = 0.0015
-):
+        price: float = 0.0015,
+        cost_to_price_ratio: float = 0.3
+) -> DotMap or dict:
     rides = databank["exmas"]["rides"]
     times_non_shared = dict(databank['exmas']['requests']['ttrav'])
     b_s = databank['prob']['bs_samples']
@@ -353,9 +356,22 @@ def calculate_expected_profitability(
     # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
     rides["best_profit"] = rides.apply(_row_maximise_profit, axis=1)
-    rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
-    rides["max_profit_int"] = rides["max_profit"].apply(lambda x: int(1000 * x))
+    rides["max_revenue"] = rides["best_profit"].apply(lambda x: x[0] * price)
+    rides["max_revenue_int"] = rides["max_revenue"].apply(lambda x: int(1000 * x))
+    rides["max_profit"] -= rides["u_veh"] * cost_to_price_ratio * price
+    rides["max_profit_int"] -= rides["max_profit"].apply(lambda x: int(1000 * x))
 
     databank["exmas"]["recalibrated_rides"] = rides.copy()
 
     return databank
+
+
+# def maximum_profit(
+#         databank: DotMap or dict,
+#         cost_to_price_ratio: float = 0.3
+# ) -> DotMap or dict:
+#     rides = databank["exmas"]["rides"]
+#     rides["expected_profit"] = rides["max_expected_profit"].apply(lambda x: x[0])
+#     rides["expected_profit"] -= rides["u_veh"] * cost_to_price_ratio
+#
+#     return databank
