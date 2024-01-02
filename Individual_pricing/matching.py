@@ -7,7 +7,8 @@ from ExMAS.probabilistic_exmas import match
 def matching_function(
     databank: DotMap or dict,
     params: DotMap or dict,
-    objectives: list or None = None
+    objectives: list or None = None,
+    min_max: str = "min"
 ):
     if objectives is None:
         objectives = [params.matching_obj]
@@ -22,7 +23,8 @@ def matching_function(
         selected = match(
             im=rides,
             r=requests,
-            params=params
+            params=params,
+            min_max=min_max
         )
 
         rides["selected_" + objective] = pd.Series(selected.copy())

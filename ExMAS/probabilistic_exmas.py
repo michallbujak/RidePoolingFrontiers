@@ -939,7 +939,7 @@ def matching(_inData, params, plot=False, make_assertion=True):
     return _inData
 
 
-def match(im, r, params, plot=False, make_assertion=True, logger=None):
+def match(im, r, params, plot=False, min_max="min", make_assertion=True, logger=None):
     """
     main call of bipartite matching on a graph
     :param im: possible rides
@@ -999,7 +999,10 @@ def match(im, r, params, plot=False, make_assertion=True, logger=None):
     im = im.reset_index(drop=True)
 
     # optimization
-    prob = pulp.LpProblem("Matching problem", pulp.LpMinimize)  # problem
+    if min_max == "min":
+        prob = pulp.LpProblem("Matching problem", pulp.LpMinimize)  # problem
+    else:
+        prob = pulp.LpProblem("Matching problem", pulp.LpMaximize)
 
     variables = pulp.LpVariable.dicts("r", (i for i in im.index), cat='Binary')  # decision variables
 

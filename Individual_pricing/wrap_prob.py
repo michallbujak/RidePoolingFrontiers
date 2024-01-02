@@ -56,7 +56,8 @@ databanks_list = [
     matching_function(
         databank=db,
         params=params,
-        objectives=["max_profit_int"]
+        objectives=["max_profit_int"],
+        min_max="max"
     ) for db in databanks_list
 ]
 
