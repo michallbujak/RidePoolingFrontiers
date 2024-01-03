@@ -284,25 +284,28 @@ def _row_sample_acceptable_disc(
 
 def _row_maximise_profit(
         _rides_row: pd.Series,
+        _price: float = 0.0015,
+        _cost_to_price_ratio: float = 0.3,
         _sample_size: int = 10
 ):
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        return _rides_row["individual_distances"]
+        return _rides_row["veh_dist"]*_price*(1-_cost_to_price_ratio)
 
     discounts = list(itertools.product(*_rides_row["accepted_discount"]))
-    best = [0, 0]
+    best = [0, 0, 0]
     for discount in discounts:
-        eff_price = [1 - t for t in discount]
+        eff_price = [_price*(1 - t) for t in discount]
         revenue = [a * b for a, b in
                    zip(_rides_row["individual_distances"], eff_price)]
+        cost = _rides_row["veh_dist"]*_price*_cost_to_price_ratio
         probability = 1
         for num, ind_disc in enumerate(discount):
             sample = _rides_row["accepted_discount"][num]
             probability *= bisect_right(sample, ind_disc)
             probability /= _sample_size
 
-        out = [sum(revenue) * probability, discount]
+        out = [sum(revenue) * probability - cost, discount, cost]
         if out[0] > best[0]:
             best = out.copy()
 
@@ -331,7 +334,8 @@ def calculate_expected_profitability(
         databank: DotMap or dict,
         final_sample_size: int = 10,
         price: float = 0.0015,
-        cost_to_price_ratio: float = 0.3
+        cost_to_price_ratio: float = 0.3,
+        speed: float = 6
 ) -> DotMap or dict:
     rides = databank["exmas"]["rides"]
     times_non_shared = dict(databank['exmas']['requests']['ttrav'])
@@ -355,11 +359,14 @@ def calculate_expected_profitability(
 
     # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
 
-    rides["best_profit"] = rides.apply(_row_maximise_profit, axis=1)
-    rides["max_revenue"] = rides["best_profit"].apply(lambda x: x[0] * price)
-    rides["max_revenue_int"] = rides["max_revenue"].apply(lambda x: int(1000 * x))
-    rides["max_profit"] -= rides["u_veh"] * cost_to_price_ratio * price
-    rides["max_profit_int"] -= rides["max_profit"].apply(lambda x: int(1000 * x))
+    rides["veh_dist"] = rides["u_veh"]*speed
+    rides["best_profit"] = rides.apply(_row_maximise_profit,
+                                       axis=1,
+                                       _price=price,
+                                       _cost_to_price_ratio=cost_to_price_ratio,
+                                       _sample_size=final_sample_size)
+    rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
+    rides["max_profit_int"] = rides["best_profit"].apply(lambda x: int(1000 * x))
 
     databank["exmas"]["recalibrated_rides"] = rides.copy()
 

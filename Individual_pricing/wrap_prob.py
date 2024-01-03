@@ -36,18 +36,26 @@ from Individual_pricing.pricing_functions import *
 # with open("example_data", "wb") as file:
 #     pickle.dump((databanks_list, settings_list, params), file)
 
+# with open("example_data", "rb") as file:
+#     databanks_list, settings_list, params = pickle.load(file)
+#
+# databanks_list = [expand_rides(t) for t in databanks_list]
+#
+# databanks_list = [prepare_samples(t, 20) for t in databanks_list]
+#
+# with open("example_data", "wb") as file:
+#     pickle.dump((databanks_list, settings_list, params), file)
+
 with open("example_data", "rb") as file:
     databanks_list, settings_list, params = pickle.load(file)
-
-databanks_list = [expand_rides(t) for t in databanks_list]
-
-databanks_list = [prepare_samples(t, 20) for t in databanks_list]
 
 databanks_list = [
     calculate_expected_profitability(
         t,
         final_sample_size=10,
-        price=params["price"]/1000
+        price=params["price"]/1000,
+        cost_to_price_ratio=0.3,
+        speed=params["avg_speed"]
     )
     for t in databanks_list
 ]
