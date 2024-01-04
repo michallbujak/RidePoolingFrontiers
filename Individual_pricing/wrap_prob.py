@@ -32,12 +32,12 @@ from Individual_pricing.pricing_functions import *
 #     logger=None,
 #     sampling_function_with_index=False
 # )
+# #
+# # with open("example_data", "wb") as file:
+# #     pickle.dump((databanks_list, settings_list, params), file)
 #
-# with open("example_data", "wb") as file:
-#     pickle.dump((databanks_list, settings_list, params), file)
-
-# with open("example_data", "rb") as file:
-#     databanks_list, settings_list, params = pickle.load(file)
+# # with open("example_data", "rb") as file:
+# #     databanks_list, settings_list, params = pickle.load(file)
 #
 # databanks_list = [expand_rides(t) for t in databanks_list]
 #

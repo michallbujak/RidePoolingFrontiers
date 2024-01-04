@@ -5,6 +5,7 @@ from bisect import bisect_right
 import pandas as pd
 from dotmap import DotMap
 from math import isnan
+from tqdm import tqdm
 
 from Individual_pricing.pricing_utils.product_distribution import ProductDistribution
 
@@ -342,7 +343,10 @@ def calculate_expected_profitability(
     b_s = databank['prob']['bs_samples']
     b_t = databank['prob']['bt_sample']
     interval_size = int(len(b_s[2]) * len(b_t) / final_sample_size)
-    rides["accepted_discount"] = rides.apply(
+
+    tqdm.pandas()
+
+    rides["accepted_discount"] = rides.progress_apply(
         _row_sample_acceptable_disc,
         axis=1,
         _times_non_shared=times_non_shared,
@@ -352,19 +356,14 @@ def calculate_expected_profitability(
         _price=price
     )
 
-    # def foo(_arg):
-    #     if len(_arg) == 0:
-    #         return []
-    #     return sorted([a for b in _arg for a in b])
-
-    # rides["discount_threshold"] = rides["accepted_discount"].apply(foo)
-
     rides["veh_dist"] = rides["u_veh"]*speed
-    rides["best_profit"] = rides.apply(_row_maximise_profit,
+
+    rides["best_profit"] = rides.progress_apply(_row_maximise_profit,
                                        axis=1,
                                        _price=price,
                                        _cost_to_price_ratio=cost_to_price_ratio,
                                        _sample_size=final_sample_size)
+
     rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
     rides["max_profit_int"] = rides["best_profit"].apply(lambda x: int(1000 * x))
 
