@@ -11,7 +11,7 @@ def matching_function(
     min_max: str = "min"
 ):
     if objectives is None:
-        objectives = [params.matching_obj]
+        objectives = databank["exmas"]["objectives"].copy()
 
     rides = databank["exmas"]["recalibrated_rides"]
     requests = databank["exmas"]["requests"]

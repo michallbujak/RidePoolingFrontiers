@@ -7,67 +7,75 @@ from Individual_pricing.matching import matching_function
 from Individual_pricing.evaluation import *
 from Individual_pricing.pricing_functions import *
 
-# general_config = bt_prep.get_parameters(
-#     "configs/general_config.json"
-# )
-#
-# bt_prep.create_results_directory(general_config)
-#
-# databanks_list, params = bt_prep.prepare_batches(
-#     general_config=general_config,
-#     params=bt_prep.get_parameters(general_config.initial_parameters),
-#     filter_function=lambda x: (len(x.requests) < 150) &
-#                               (len(x.requests) > 140)
-# )
-#
-# params = bt_prep.update_probabilistic(general_config, params)
-# params.type_of_distribution = None
-#
-# databanks_list, settings_list = exmas_loop_func(
-#     exmas_algorithm=exmas_algo,
-#     params=params,
-#     list_databanks=databanks_list,
-#     topo_params=general_config,
-#     replications=general_config.no_replications,
-#     logger=None,
-#     sampling_function_with_index=False
-# )
-# #
-# # with open("example_data", "wb") as file:
-# #     pickle.dump((databanks_list, settings_list, params), file)
-#
-# # with open("example_data", "rb") as file:
-# #     databanks_list, settings_list, params = pickle.load(file)
-#
-# databanks_list = [expand_rides(t) for t in databanks_list]
-#
-# databanks_list = [prepare_samples(t, 20) for t in databanks_list]
+general_config = bt_prep.get_parameters(
+    "configs/general_config.json"
+)
+
+_batch_size = 150
+_sample_size = 10
+# _cr = 0.3
+
+bt_prep.create_results_directory(general_config)
+
+databanks_list, params = bt_prep.prepare_batches(
+    general_config=general_config,
+    params=bt_prep.get_parameters(general_config.initial_parameters),
+    filter_function=lambda x: len(x.requests) == _batch_size
+)
+
+params = bt_prep.update_probabilistic(general_config, params)
+params.type_of_distribution = None
+
+databanks_list, settings_list = exmas_loop_func(
+    exmas_algorithm=exmas_algo,
+    params=params,
+    list_databanks=databanks_list,
+    topo_params=general_config,
+    replications=general_config.no_replications,
+    logger=None,
+    sampling_function_with_index=False
+)
 #
 # with open("example_data", "wb") as file:
 #     pickle.dump((databanks_list, settings_list, params), file)
+#
+# with open("example_data", "rb") as file:
+#     databanks_list, settings_list, params = pickle.load(file)
 
-with open("example_data", "rb") as file:
-    databanks_list, settings_list, params = pickle.load(file)
+databanks_list = [expand_rides(t) for t in databanks_list]
+
+databanks_list = [prepare_samples(t, 20) for t in databanks_list]
+#
+# with open("example_data_"+str(_batch_size), "wb") as file:
+#     pickle.dump((databanks_list, settings_list, params), file)
+
+# with open("example_data_" + str(_batch_size), "rb") as file:
+#     databanks_list, settings_list, params = pickle.load(file)
 
 databanks_list = [
     calculate_expected_profitability(
         t,
-        final_sample_size=10,
+        final_sample_size=_sample_size,
         price=params["price"]/1000,
-        cost_to_price_ratio=0.3,
+        # cost_to_price_ratio=_cr,
         speed=params["avg_speed"]
     )
     for t in databanks_list
 ]
 
+# with open(str(_batch_size) + "_calculated", "wb") as file:
+#     pickle.dump((databanks_list, settings_list, params), file)
+
 databanks_list = [
     matching_function(
         databank=db,
         params=params,
-        objectives=["max_profit_int"],
+        objectives=None,
         min_max="max"
     ) for db in databanks_list
 ]
 
-with open("results0.pickle", "wb") as f:
+with open("results_" + str(_batch_size) + "_" + str(_sample_size) + "_v3.pickle", "wb") as f:
     pickle.dump(databanks_list, f)
+
+
