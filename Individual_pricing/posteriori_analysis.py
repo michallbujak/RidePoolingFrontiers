@@ -2,6 +2,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from collections import Counter
 
 _cr = 0.3
@@ -19,14 +20,15 @@ with open("results_" + str(_num) + "_" + str(_sample) + "_v3.pickle", "rb") as _
 
 rr = data["exmas"]["recalibrated_rides"]
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
+shared = rr.loc[[len(t) > 1 for t in rr['indexes']]].copy()
 
 for obj in data['exmas']['objectives']:
     obj_no_int = obj.replace('_int', '')
     print(f"RIDE-HAILING: {obj}:\n {sum(singles[obj_no_int])} ")
     print(f"RIDE-POOLING: {obj}:\n {sum(data['exmas']['schedules'][obj][obj_no_int])} \n")
 
-plot = False
-if plot:
+plot_rides = False
+if plot_rides:
     _d = {}
     for obj in data['exmas']['objectives']:
         _d[obj] = [len(t) for t in data['exmas']['schedules'][obj]["indexes"]]
@@ -66,4 +68,8 @@ if plot:
 
     plt.savefig('degrees.png', dpi=200)
 
+discounts = shared["best_profit"].apply(lambda x: x[1])
+discounts = [t for a in discounts for t in a]
+sns.kdeplot(discounts)
+plt.savefig("discount_distribution.png", dpi=200)
 x = 0
