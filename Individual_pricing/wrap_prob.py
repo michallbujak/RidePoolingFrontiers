@@ -35,6 +35,7 @@ databanks_list, settings_list = exmas_loop_func(
     logger=None,
     sampling_function_with_index=False
 )
+raise Exception('ee')
 #
 # with open("example_data", "wb") as file:
 #     pickle.dump((databanks_list, settings_list, params), file)
