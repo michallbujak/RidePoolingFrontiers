@@ -295,7 +295,7 @@ def _row_maximise_profit(
         #         _rides_row["veh_dist"] * _price,
         #         1,
         #         _rides_row["veh_dist"] * _price * _cost_to_price_ratio]
-        return [0.5*_rides_row["veh_dist"] * _price,
+        return [0.5 * _rides_row["veh_dist"] * _price,
                 0,
                 _rides_row["veh_dist"] * _price,
                 0.5,
@@ -316,7 +316,7 @@ def _row_maximise_profit(
             probability /= len(accepted_disc)
 
         # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]
-        out = [sum(revenue) * probability, discount, sum(revenue), probability, _rides_row["veh_dist"]*_price]
+        out = [sum(revenue) * probability, discount, sum(revenue), probability, _rides_row["veh_dist"] * _price]
         if out[0] > best[0]:
             best = out.copy()
 
@@ -382,7 +382,7 @@ def calculate_expected_profitability(
     for op_cost in op_costs:
         rides["cost_" + str(int(100 * op_cost))] = rides["veh_dist"] * price * op_cost
         rides["expected_cost_" + str(int(100 * op_cost))] = rides.apply(lambda x:
-                                                                        x["cost_" + str(int(100 * op_cost))]*
+                                                                        x["cost_" + str(int(100 * op_cost))] *
                                                                         x["best_profit"][3],
                                                                         axis=1)
         rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
@@ -400,12 +400,31 @@ def calculate_expected_profitability(
 
     return databank
 
-# def maximum_profit(
-#         databank: DotMap or dict,
-#         cost_to_price_ratio: float = 0.3
-# ) -> DotMap or dict:
-#     rides = databank["exmas"]["rides"]
-#     rides["expected_profit"] = rides["max_expected_profit"].apply(lambda x: x[0])
-#     rides["expected_profit"] -= rides["u_veh"] * cost_to_price_ratio
-#
-#     return databank
+
+def calculate_delta_utility(
+        discount: float,
+        price: float,
+        ns_trip_dist: float,
+        vot: float,
+        wts: float,
+        travel_time_ns: float,
+        travel_time_s: float
+):
+    out = discount * price * ns_trip_dist
+    out -= vot * wts * (travel_time_s - travel_time_ns)
+    return out
+
+
+def check_prob_if_accepted(
+        row_rides: pd.Series,
+        discount: float
+):
+    if len(row_rides["indexes"]) == 1:
+        return 0.5
+
+    out = 1
+    for pax_disc in row_rides["accepted_discount"]:
+        out *= bisect_right(pax_disc, discount)
+        out /= len(pax_disc)
+
+    return out
