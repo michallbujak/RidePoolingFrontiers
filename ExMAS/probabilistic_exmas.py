@@ -47,6 +47,7 @@ import sys
 from itertools import product
 import logging
 from types import FunctionType
+import warnings
 
 from dotmap import DotMap
 from enum import Enum
@@ -65,7 +66,7 @@ pd.options.mode.chained_assignment = None
 try:
     np.warnings.filterwarnings('ignore')
 except AttributeError:
-    pass
+    warnings.filterwarnings('ignore')
 
 ##########
 # CONSTS #
@@ -1021,7 +1022,12 @@ def match(im, r, params, plot=False, min_max="min", make_assertion=True, logger=
         j += 1
         prob += pulp.lpSum([imr[i] * variables[i] for i in variables if imr[i] > 0]) == 1, 'c' + str(j)
 
-    solver = pulp.get_solver(solver_for_pulp())
+    # solver = pulp.get_solver(solver_for_pulp())
+    try:
+        solver = pulp.get_solver(solver_for_pulp())
+    except AttributeError:
+        solver = pulp.getSolver(solver_for_pulp())
+
     solver.msg = False
     prob.solve(solver)  # main optimization call
     # prob.solve()  # main optimization call
@@ -1193,10 +1199,18 @@ def fleet_size(requests):
     requests = requests.sort_values('start')
     pickups = requests.set_index('start')
     pickups['starts'] = 1
-    ret = pickups.resample('60s').sum().cumsum()[['starts']]
+    try:
+        ret = pickups.resample('60s').sum().cumsum()[['starts']]
+    except TypeError:
+        temp_stamps = list(pickups.resample('60s'))
+        ret = pd.DataFrame({'starts': np.cumsum([len(t[1]) for t in temp_stamps])}, index=[t[0] for t in temp_stamps])
     dropoffs = requests.set_index('end')
     dropoffs['ends'] = 1
-    d = dropoffs.resample('60s').sum().ends.cumsum()
+    try:
+        d = dropoffs.resample('60s').sum().ends.cumsum()
+    except TypeError:
+        temp_stamps = list(dropoffs.resample('60s'))
+        d = pd.DataFrame({'ends': np.cumsum([len(t[1]) for t in temp_stamps])}, index=[t[0] for t in temp_stamps])
     ret = ret.join(d, how='outer')
     ret.starts = ret.starts.fillna(ret.starts.max())
     ret.ends = ret.ends.fillna(0)

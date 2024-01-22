@@ -19,8 +19,10 @@ import pandas as pd
 import osmnx as ox
 import networkx as nx
 import numpy as np
-# from osmnx.distance import get_nearest_node
-from osmnx.distance import nearest_nodes
+try:
+    from osmnx.distance import get_nearest_node
+except:
+    from osmnx.distance import nearest_nodes as get_nearest_node
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
 import bisect
@@ -301,8 +303,10 @@ def networkstats(inData):
     center_x = pd.DataFrame((inData.G.nodes(data='x')))[1].mean()
     center_y = pd.DataFrame((inData.G.nodes(data='y')))[1].mean()
 
-    # nearest = get_nearest_node(inData.G, (center_y, center_x))
-    nearest = nearest_nodes(inData.G, center_x, center_y)
+    try:
+        nearest = get_nearest_node(inData.G, (center_y, center_x))
+    except TypeError:
+        nearest = get_nearest_node(inData.G, center_x, center_y)
     ret = DotMap({'center': nearest, 'radius': inData.skim[nearest].quantile(0.75)})
     return ret
 
@@ -452,7 +456,10 @@ def synthetic_demand_poly(_inData, _params=None):
     Centers = pd.DataFrame(data={'name': ['Dam Square', 'Station Zuid', 'Concertgebouw', 'Sloterdijk'],
                                  'x': [4.8909126, 4.871887, 4.8790061, 4.8351158],
                                  'y': [52.373095, 52.338948, 52.356275, 52.3888349]})
-    Centers['node'] = Centers.apply(lambda center: nearest_nodes(_inData.G, (center.y, center.x)), axis=1)
+    try:
+        Centers['node'] = Centers.apply(lambda center: get_nearest_node(_inData.G, (center.y, center.x)), axis=1)
+    except TypeError:
+        Centers['node'] = Centers.apply(lambda center: get_nearest_node(_inData.G, center.x, center.y), axis=1)
 
     # drop not considered centers
     Centers = Centers[Centers.index.isin(range(_params.nCenters))]

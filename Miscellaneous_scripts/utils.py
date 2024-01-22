@@ -6,6 +6,7 @@ from ExMAS.utils import inData as inData
 import os
 import ExMAS
 import math
+import logging
 import random
 import glob
 import re

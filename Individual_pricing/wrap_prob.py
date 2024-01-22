@@ -12,7 +12,7 @@ general_config = bt_prep.get_parameters(
 )
 
 _batch_size = 150
-_sample_size = 10
+_sample_size = 100
 # _cr = 0.3
 
 bt_prep.create_results_directory(general_config)
@@ -35,12 +35,12 @@ databanks_list, settings_list = exmas_loop_func(
     logger=None,
     sampling_function_with_index=False
 )
-raise Exception('ee')
-#
+
+
 # with open("example_data", "wb") as file:
 #     pickle.dump((databanks_list, settings_list, params), file)
 #
-# with open("example_data", "rb") as file:
+# with open("example_data_150", "rb") as file:
 #     databanks_list, settings_list, params = pickle.load(file)
 
 databanks_list = [expand_rides(t) for t in databanks_list]

@@ -7,7 +7,7 @@ from collections import Counter
 
 _cr = 0.3
 _num = 150
-_sample = 10
+_sample = 25
 
 # with open("example_data_"+str(_num), "rb") as file:
 #     databanks_list, settings_list, params = pickle.load(file)
