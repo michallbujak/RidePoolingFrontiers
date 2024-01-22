@@ -2,8 +2,11 @@ import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import seaborn as sns
 from collections import Counter
+
+from pricing_functions import *
 
 _cr = 0.3
 _num = 150
@@ -68,7 +71,7 @@ if plot:
 
     plt.savefig('degrees.png', dpi=200)
 
-plot_discounts = True
+plot_discounts = False
 if plot_discounts:
     discounts = shared["best_profit"].apply(lambda x: x[1])
     discounts = [a for b in discounts for a in b]
@@ -97,3 +100,49 @@ if plot_discounts:
     ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
     plt.tight_layout()
     plt.savefig('discount_density.png', dpi=200)
+
+    d_list = [discounts, discounts_revenue, discounts_profit20, discounts_profit40, discounts_profit60]
+
+    print(pd.DataFrame({'mean': [np.mean(t) for t in d_list]},
+                       index=["discount", "discounts_revenue", "discounts_profit20", "discounts_profit40", "discounts_profit60"]))
+
+
+prob_distribution = True
+if prob_distribution:
+    data = shared
+    data["d_avg_prob"] = data.apply(check_prob_if_accepted, axis=1, discount=0.203369)
+    objectives = ["selected",
+                  "selected_expected_revenue",
+                  "selected_expected_profit_int_20",
+                  "selected_expected_profit_int_40",
+                  "selected_expected_profit_int_60"]
+    names = ["Flat",
+             "Revenue",
+             "Profit 20",
+             "Profit 40",
+             "Profit 60"]
+    selected = {
+        objective: (data.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
+    }
+
+    fig, ax = plt.subplots()
+
+    for num, (sel, name) in enumerate(selected.values()):
+        if num == 0:
+            dat = sel["d_avg_prob"]
+        else:
+            dat = sel["best_profit"].apply(lambda x: x[3])
+        # sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
+        #              cumulative=True, label=name, kde=True, alpha=0.2,
+        #              stat="density", element="step")
+                     # log_scale=True, element="step", fill=False,
+                     # cumulative=True, stat="density", label=name)
+        # sns.ecdfplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name)
+        sns.kdeplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name, bw_adjust=2)
+    ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    ax.set_xlim(0, 1)
+    plt.xlabel("Acceptance probability")
+    plt.tight_layout()
+    plt.savefig("probability_shared.png", dpi=200)
+
+    x = 0
