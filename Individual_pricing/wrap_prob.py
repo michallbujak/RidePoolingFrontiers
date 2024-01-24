@@ -64,8 +64,8 @@ databanks_list = [
     for t in databanks_list
 ]
 
-# with open(str(_batch_size) + "_calculated", "wb") as file:
-#     pickle.dump((databanks_list, settings_list, params), file)
+with open(str(_batch_size) + "_calculated_150", "wb") as file:
+    pickle.dump((databanks_list, settings_list, params), file)
 
 databanks_list = [
     matching_function(

@@ -940,7 +940,7 @@ def matching(_inData, params, plot=False, make_assertion=True):
     return _inData
 
 
-def match(im, r, params, plot=False, min_max="min", make_assertion=True, logger=None):
+def match(im, r, params={"matching_obj": "u_veh"}, plot=False, min_max="min", make_assertion=True, logger=None):
     """
     main call of bipartite matching on a graph
     :param im: possible rides
@@ -962,18 +962,18 @@ def match(im, r, params, plot=False, min_max="min", make_assertion=True, logger=
         im_indexes[index] = i
         im_indexes_inv[i] = index
 
-    im['lambda_r'] = im.apply(
-        lambda x: params.shared_discount if x.kind == 1 else 1 - x.u_veh / sum([r.loc[_].ttrav for _ in x.indexes]),
-        axis=1)
+    # im['lambda_r'] = im.apply(
+    #     lambda x: params.shared_discount if x.kind == 1 else 1 - x.u_veh / sum([r.loc[_].ttrav for _ in x.indexes]),
+    #     axis=1)
 
     im['PassHourTrav_ns'] = im.apply(lambda x: sum([r.loc[_].ttrav for _ in x.indexes]), axis=1)
 
     r = r.reset_index()
 
-    if params.profitability:
-        im = im[im.lambda_r >= params.shared_discount]
-        logger.info('Out of {} trips  {} are directly profitable.'.format(r.shape[0],
-                                                                          im.shape[0])) if logger is not None else None
+    # if params.profitability:
+    #     im = im[im.lambda_r >= params.shared_discount]
+    #     logger.info('Out of {} trips  {} are directly profitable.'.format(r.shape[0],
+    #                                                                       im.shape[0])) if logger is not None else None
 
     nR = r.shape[0]
 
@@ -985,7 +985,7 @@ def match(im, r, params, plot=False, min_max="min", make_assertion=True, logger=
 
     logger.info('Matching {} trips to {} rides in order to minimize {}'.format(nR,
                                                                                im.shape[0],
-                                                                               params.matching_obj)) if logger is not None else None
+                                                                               params["matching_obj"])) if logger is not None else None
     im['row'] = im.apply(add_binary_row, axis=1)  # row to be used as constrain in optimization
     m = np.vstack(im['row'].values).T  # creates a numpy array for the constrains
 
@@ -1007,11 +1007,9 @@ def match(im, r, params, plot=False, min_max="min", make_assertion=True, logger=
 
     variables = pulp.LpVariable.dicts("r", (i for i in im.index), cat='Binary')  # decision variables
 
-    cost_col = params.matching_obj
+    cost_col = params["matching_obj"]
     if cost_col == 'degree':
         costs = im.indexes.apply(lambda x: -(10 ** len(x)))
-    elif cost_col == 'u_pax':
-        costs = im[cost_col]  # set the costs
     else:
         costs = im[cost_col]  # set the costs
 

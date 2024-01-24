@@ -6,7 +6,7 @@ from ExMAS.probabilistic_exmas import match
 
 def matching_function(
     databank: DotMap or dict,
-    params: DotMap or dict,
+    params: DotMap or dict = {},
     objectives: list or None = None,
     min_max: str = "min"
 ):
@@ -19,7 +19,7 @@ def matching_function(
     schedules = {}
 
     for objective in objectives:
-        params.matching_obj = objective
+        params["matching_obj"] = objective
         selected = match(
             im=rides,
             r=requests,

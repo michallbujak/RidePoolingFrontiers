@@ -12,14 +12,14 @@ _cr = 0.3
 _num = 150
 _sample = 25
 
-# with open("example_data_"+str(_num), "rb") as file:
-#     databanks_list, settings_list, params = pickle.load(file)
+plot_degrees = False
+plot_discounts = False
+prob_distribution = False
+res_analysis = True
 
-# with open("results_" + str(_num) + "_" + str(_sample) + "_0" + str(int(10 * _cr)) + "_v2.pickle", "rb") as _file:
-#     data = pickle.load(_file)[0]
 
-with open("results_" + str(_num) + "_" + str(_sample) + "_v3.pickle", "rb") as _file:
-    data = pickle.load(_file)[0]
+with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
+    data = pickle.load(_file)
 
 rr = data["exmas"]["recalibrated_rides"]
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
@@ -30,8 +30,7 @@ for obj in data['exmas']['objectives']:
     print(f"RIDE-HAILING: {obj}:\n {sum(singles[obj_no_int])} ")
     print(f"RIDE-POOLING: {obj}:\n {sum(data['exmas']['schedules'][obj][obj_no_int])} \n")
 
-plot = False
-if plot:
+if plot_degrees:
     _d = {}
     for obj in data['exmas']['objectives']:
         _d[obj] = [len(t) for t in data['exmas']['schedules'][obj]["indexes"]]
@@ -69,9 +68,8 @@ if plot:
     ax.legend(title='Degree', loc='upper left', ncols=3)
     ax.set_ylim(0, 80)
 
-    plt.savefig('degrees.png', dpi=200)
+    plt.savefig('degrees_' + str(_sample) + '.png', dpi=200)
 
-plot_discounts = False
 if plot_discounts:
     discounts = shared["best_profit"].apply(lambda x: x[1])
     discounts = [a for b in discounts for a in b]
@@ -99,7 +97,7 @@ if plot_discounts:
 
     ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
     plt.tight_layout()
-    plt.savefig('discount_density.png', dpi=200)
+    plt.savefig('discount_density_' + str(_sample) + '.png', dpi=200)
 
     d_list = [discounts, discounts_revenue, discounts_profit20, discounts_profit40, discounts_profit60]
 
@@ -107,42 +105,65 @@ if plot_discounts:
                        index=["discount", "discounts_revenue", "discounts_profit20", "discounts_profit40", "discounts_profit60"]))
 
 
-prob_distribution = True
-if prob_distribution:
+if prob_distribution or res_analysis:
     data = shared
-    data["d_avg_prob"] = data.apply(check_prob_if_accepted, axis=1, discount=0.203369)
-    objectives = ["selected",
+    data["prob"] = data["best_profit"].apply(lambda x: x[3])
+    # data["d_avg_prob"] = data.apply(check_prob_if_accepted, axis=1, discount=0.203369)
+    objectives = ["selected_02_revenue",
+                  "selected_03_revenue",
                   "selected_expected_revenue",
                   "selected_expected_profit_int_20",
                   "selected_expected_profit_int_40",
                   "selected_expected_profit_int_60"]
-    names = ["Flat",
-             "Revenue",
-             "Profit 20",
-             "Profit 40",
-             "Profit 60"]
+    names = ["Flat disc. 0.2 Revenue",
+             "Flat disc. 0.3 Revenue",
+             "Pers. Revenue",
+             "Pers. Profit OC 0.2",
+             "Pers. Profit OC 0.4",
+             "Pers. Profit OC 0.6"]
     selected = {
         objective: (data.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
     }
 
+if prob_distribution:
     fig, ax = plt.subplots()
 
     for num, (sel, name) in enumerate(selected.values()):
         if num == 0:
-            dat = sel["d_avg_prob"]
+            dat = sel["02_accepted"]
+        elif num == 1:
+            dat = sel["03_accepted"]
         else:
-            dat = sel["best_profit"].apply(lambda x: x[3])
-        # sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
-        #              cumulative=True, label=name, kde=True, alpha=0.2,
-        #              stat="density", element="step")
+            dat = sel["prob"]
+        sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
+                     cumulative=False, label=name, kde=False, alpha=0.1,
+                     stat="frequency", element="step")
                      # log_scale=True, element="step", fill=False,
                      # cumulative=True, stat="density", label=name)
         # sns.ecdfplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name)
-        sns.kdeplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name, bw_adjust=2)
+        # sns.kdeplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name, bw_adjust=1)
     ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
     ax.set_xlim(0, 1)
     plt.xlabel("Acceptance probability")
     plt.tight_layout()
-    plt.savefig("probability_shared.png", dpi=200)
+    # plt.savefig("probability_shared_" + str(_sample) + ".png", dpi=200)
+    plt.savefig("probability_shared_" + str(_sample) + "_hist.png", dpi=200)
 
-    x = 0
+    fig, ax = plt.subplots()
+
+    for obj, lab in [("02_accepted", "Flat disc. 0.2"),
+                     ("03_accepted", "Flat disc. 0.3"),
+                     ("prob", "Personalised")]:
+        # sns.histplot(data[obj], cumulative=False, label=lab, kde=False, alpha=0.1,
+        #              stat="frequency", element="step")
+        sns.kdeplot(data[obj], label=lab, bw_adjust=1)
+    ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    ax.set_xlim(0, 1)
+    plt.xlabel("Acceptance probability")
+    plt.tight_layout()
+    plt.savefig("probability_shared_all_" + str(_sample) + "_hist.png", dpi=200)
+
+
+if res_analysis:
+    results = {}
+    vehicle_mileage = 0
