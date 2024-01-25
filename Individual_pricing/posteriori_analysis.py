@@ -106,8 +106,8 @@ if plot_discounts:
 
 
 if prob_distribution or res_analysis:
-    data = shared
-    data["prob"] = data["best_profit"].apply(lambda x: x[3])
+    dat = shared
+    dat["prob"] = dat["best_profit"].apply(lambda x: x[3])
     # data["d_avg_prob"] = data.apply(check_prob_if_accepted, axis=1, discount=0.203369)
     objectives = ["selected_02_revenue",
                   "selected_03_revenue",
@@ -122,7 +122,7 @@ if prob_distribution or res_analysis:
              "Pers. Profit OC 0.4",
              "Pers. Profit OC 0.6"]
     selected = {
-        objective: (data.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
+        objective: (dat.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
     }
 
 if prob_distribution:
@@ -165,5 +165,20 @@ if prob_distribution:
 
 
 if res_analysis:
+    schedules = data['exmas']['schedules']
+    measures = ['u_veh', 'revenue', 'expected_revenue', 'expected_profit_20',
+                'expected_profit_30', 'expected_profit_40', 'expected_profit_50',
+                'expected_profit_60']
     results = {}
-    vehicle_mileage = 0
+    for meas in measures:
+        results[meas] = [sum(t[meas]) for t in schedules.values()]
+
+    results["dist_saved"] = [6*sum(t['ttrav_ns'] - t['ttrav']) for t in schedules.values()]
+    results["dist_veh"] = [6*t for t in results["u_veh"]]
+    del results["u_veh"]
+    results = pd.DataFrame(results)
+    results.index = schedules.keys()
+    results = results.round()
+    results = results.drop(columns=["expected_profit_30", "expected_profit_50"])
+    results = results.drop(labels=["expected_profit_int_30", "expected_profit_int_50"])
+    print(results.to_latex())
