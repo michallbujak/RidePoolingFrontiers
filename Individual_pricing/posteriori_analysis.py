@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import seaborn as sns
 from collections import Counter
+import matplotlib.pylab as pylab
 
 from pricing_functions import *
 
@@ -12,9 +13,10 @@ _cr = 0.3
 _num = 150
 _sample = 25
 
+performance = False
 plot_degrees = False
-plot_discounts = True
-prob_distribution = False
+plot_discounts = False
+prob_distribution = True
 res_analysis = False
 
 
@@ -25,10 +27,11 @@ rr = data["exmas"]["recalibrated_rides"]
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
 shared = rr.loc[[len(t) > 1 for t in rr['indexes']]].copy()
 
-for obj in data['exmas']['objectives']:
-    obj_no_int = obj.replace('_int', '')
-    print(f"RIDE-HAILING: {obj}:\n {sum(singles[obj_no_int])} ")
-    print(f"RIDE-POOLING: {obj}:\n {sum(data['exmas']['schedules'][obj][obj_no_int])} \n")
+if performance:
+    for obj in data['exmas']['objectives']:
+        obj_no_int = obj.replace('_int', '')
+        print(f"RIDE-HAILING: {obj}:\n {sum(singles[obj_no_int])} ")
+        print(f"RIDE-POOLING: {obj}:\n {sum(data['exmas']['schedules'][obj][obj_no_int])} \n")
 
 if plot_degrees:
     _d = {}
@@ -122,8 +125,9 @@ if plot_discounts:
 
 
 if prob_distribution or res_analysis:
-    dat = shared
-    dat["prob"] = dat["best_profit"].apply(lambda x: x[3])
+    shared["prob"] = shared["best_profit"].apply(lambda x: x[3])
+    rr = data["exmas"]["recalibrated_rides"]
+    rr["prob"] = rr["best_profit"].apply(lambda x: x[3])
     # data["d_avg_prob"] = data.apply(check_prob_if_accepted, axis=1, discount=0.203369)
     objectives = ["selected_02_revenue",
                   "selected_03_revenue",
@@ -138,10 +142,18 @@ if prob_distribution or res_analysis:
              "Pers. Profit OC 0.4",
              "Pers. Profit OC 0.6"]
     selected = {
-        objective: (dat.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
+        objective: (shared.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
     }
 
 if prob_distribution:
+    params = {'legend.fontsize': 'x-large',
+              'figure.figsize': (8, 5),
+              'axes.labelsize': 'x-large',
+              'axes.titlesize': 'x-large',
+              'xtick.labelsize': 'x-large',
+              'ytick.labelsize': 'x-large'}
+    pylab.rcParams.update(params)
+
     fig, ax = plt.subplots()
 
     for num, (sel, name) in enumerate(selected.values()):
@@ -151,33 +163,39 @@ if prob_distribution:
             dat = sel["03_accepted"]
         else:
             dat = sel["prob"]
-        sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
-                     cumulative=False, label=name, kde=False, alpha=0.1,
-                     stat="frequency", element="step")
+        # sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
+        #              cumulative=False, label=name, kde=False, alpha=0.1,
+        #              stat="frequency", element="step")
                      # log_scale=True, element="step", fill=False,
                      # cumulative=True, stat="density", label=name)
         # sns.ecdfplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name)
-        # sns.kdeplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name, bw_adjust=1)
-    ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+        sns.kdeplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name, bw_adjust=1)
+    # ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    ax.legend(loc='upper left')
     ax.set_xlim(0, 1)
-    plt.xlabel("Acceptance probability")
+    # plt.xlabel("Acceptance probability")
+    plt.xlabel(None)
     plt.tight_layout()
     # plt.savefig("probability_shared_" + str(_sample) + ".png", dpi=200)
-    plt.savefig("probability_shared_" + str(_sample) + "_hist.png", dpi=200)
+    plt.savefig("probability_shared_" + str(_sample) + "_sel.png", dpi=200)
 
     fig, ax = plt.subplots()
 
     for obj, lab in [("02_accepted", "Flat disc. 0.2"),
                      ("03_accepted", "Flat disc. 0.3"),
                      ("prob", "Personalised")]:
+        r_s = rr.loc[[len(t) != 1 for t in rr["indexes"]]]
         # sns.histplot(data[obj], cumulative=False, label=lab, kde=False, alpha=0.1,
         #              stat="frequency", element="step")
-        sns.kdeplot(data[obj], label=lab, bw_adjust=1)
-    ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+        sns.kdeplot(r_s[obj], label=lab, bw_adjust=1)
+    # ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    ax.legend(loc='upper left')
+    # plt.ylabel("Density", fontsize=13)
     ax.set_xlim(0, 1)
-    plt.xlabel("Acceptance probability")
+    plt.xlabel(None)
+    # plt.xlabel("Acceptance probability")
     plt.tight_layout()
-    plt.savefig("probability_shared_all_" + str(_sample) + "_hist.png", dpi=200)
+    plt.savefig("probability_shared_" + str(_sample) + "_all.png", dpi=200)
 
 
 if res_analysis:
