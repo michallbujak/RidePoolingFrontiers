@@ -15,8 +15,8 @@ _sample = 25
 
 performance = False
 plot_degrees = False
-plot_discounts = False
-prob_distribution = True
+plot_discounts = True
+prob_distribution = False
 res_analysis = False
 
 
@@ -181,8 +181,8 @@ if prob_distribution:
 
     fig, ax = plt.subplots()
 
-    for obj, lab in [("02_accepted", "Flat disc. 0.2"),
-                     ("03_accepted", "Flat disc. 0.3"),
+    for obj, lab in [("02_accepted", "Flat discount 0.2"),
+                     ("03_accepted", "Flat discount 0.3"),
                      ("prob", "Personalised")]:
         r_s = rr.loc[[len(t) != 1 for t in rr["indexes"]]]
         # sns.histplot(data[obj], cumulative=False, label=lab, kde=False, alpha=0.1,
