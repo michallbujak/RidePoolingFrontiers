@@ -13,9 +13,9 @@ _num = 150
 _sample = 25
 
 plot_degrees = False
-plot_discounts = False
+plot_discounts = True
 prob_distribution = False
-res_analysis = True
+res_analysis = False
 
 
 with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
@@ -88,16 +88,32 @@ if plot_discounts:
     discounts_no_select = [a for b in discounts_no_select for a in b]
 
     fig, ax = plt.subplots()
-    sns.kdeplot(discounts, color='green', ax=ax, label="All")
+    sns.kdeplot(discounts, color='green', ax=ax, label="All rides")
     sns.kdeplot(discounts_revenue, color='lightcoral', ax=ax, label="Revenue")
-    sns.kdeplot(discounts_profit20, color='indianred', ax=ax, label="Profit 20")
-    sns.kdeplot(discounts_profit40, color='brown', ax=ax, label="Profit 40")
-    sns.kdeplot(discounts_profit60, color='darkred', ax=ax, label="Profit 60")
+    sns.kdeplot(discounts_profit20, color='indianred', ax=ax, label="Profit OC 0.2")
+    sns.kdeplot(discounts_profit40, color='brown', ax=ax, label="Profit OC 0.4")
+    sns.kdeplot(discounts_profit60, color='darkred', ax=ax, label="Profit OC 0.6")
     sns.kdeplot(discounts_no_select, color='blue', ax=ax, label="Not selected")
+
+
+    def upper_rugplot(data, height=.02, _ax=None, **kwargs):
+        from matplotlib.collections import LineCollection
+        _ax = _ax or plt.gca()
+        kwargs.setdefault("linewidth", 0.1)
+        kwargs.setdefault("color", "green")
+        segs = np.stack((np.c_[data, data],
+                         np.c_[np.ones_like(data), np.ones_like(data) - height]),
+                        axis=-1)
+        lc = LineCollection(segs, transform=_ax.get_xaxis_transform(), **kwargs)
+        _ax.add_collection(lc)
+
+    upper_rugplot(discounts, _ax=ax)
+    sns.rugplot(discounts_revenue, color='lightcoral')
+    # sns.kdeplot(discounts_no_select, color='blue', ax=ax, label="Not selected")
 
     ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
     plt.tight_layout()
-    plt.savefig('discount_density_' + str(_sample) + '.png', dpi=200)
+    plt.savefig('discount_density_' + str(_sample) + '_rug.png', dpi=200)
 
     d_list = [discounts, discounts_revenue, discounts_profit20, discounts_profit40, discounts_profit60]
 
