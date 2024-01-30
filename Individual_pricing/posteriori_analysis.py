@@ -14,8 +14,8 @@ _num = 150
 _sample = 25
 
 performance = False
-plot_degrees = False
-plot_discounts = True
+plot_degrees = True
+plot_discounts = False
 prob_distribution = False
 res_analysis = False
 
@@ -67,9 +67,10 @@ if plot_degrees:
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Number of rides')
     # ax.set_title('Penguin attributes by species')
-    ax.set_xticks(x + width, ['Revenue', 'Profit 20', 'Profit 40', 'Profit 60'])
+    ax.set_xticks(x + width, ['0 (Revenue)', '0.2', '0.4', '0.6'])
     ax.legend(title='Degree', loc='upper left', ncols=3)
     ax.set_ylim(0, 80)
+    ax.set_xlabel("Expected profit with operating cost of")
 
     plt.savefig('degrees_' + str(_sample) + '.png', dpi=200)
 
