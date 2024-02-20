@@ -75,13 +75,13 @@ def config_initialisation(path, date, sblts_exmas="exmas"):
 def load_data(config, other_var=None):
     if other_var is not None:
         config.path_results = other_var
-    with open(config.path_results + '/rep_graphs_' + config.date + '.obj', 'rb') as file:
+    with open(config.path_results + 'rep_graphs_' + config.date + '.obj', 'rb') as file:
         rep_graphs = pickle.load(file)
 
-    with open(config.path_results + '/dotmap_list_' + config.date + '.obj', 'rb') as file:
+    with open(config.path_results + 'dotmap_list_' + config.date + '.obj', 'rb') as file:
         dotmap_list = pickle.load(file)
 
-    with open(config.path_results + '/all_graphs_list_' + config.date + '.obj', 'rb') as file:
+    with open(config.path_results + 'all_graphs_list_' + config.date + '.obj', 'rb') as file:
         all_graphs_list = pickle.load(file)
 
     return rep_graphs, dotmap_list, all_graphs_list

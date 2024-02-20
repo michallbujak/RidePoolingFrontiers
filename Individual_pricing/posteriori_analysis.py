@@ -14,10 +14,10 @@ _num = 150
 _sample = 25
 
 performance = False
-plot_degrees = True
+plot_degrees = False
 plot_discounts = False
 prob_distribution = False
-res_analysis = False
+res_analysis = True
 
 
 with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
@@ -201,16 +201,31 @@ if prob_distribution:
 
 if res_analysis:
     schedules = data['exmas']['schedules']
-    measures = ['u_veh', 'revenue', 'expected_revenue', 'expected_profit_20',
+
+    for name, schedule in schedules.items():
+        if name[:2] == "ex":
+            schedule["prob"] = schedule["best_profit"].apply(lambda x: x[3])
+        else:
+            col = name[:2] + "_accepted"
+            schedule["prob"] = schedule[col]
+
+        schedule["dist_saved"] = schedule['ttrav_ns'] - schedule['ttrav']
+        schedule["e_dist_saved"] = schedule.apply(lambda x: x["prob"]*x["dist_saved"], axis=1)
+
+    # measures = ['u_veh', 'revenue', 'expected_revenue', 'expected_profit_20',
+    #             'expected_profit_30', 'expected_profit_40', 'expected_profit_50',
+    #             'expected_profit_60', 'dist_saved', 'e_dist_saved']
+    measures = ['expected_revenue', 'expected_profit_20',
                 'expected_profit_30', 'expected_profit_40', 'expected_profit_50',
-                'expected_profit_60']
+                'expected_profit_60', 'e_dist_saved']
+
     results = {}
     for meas in measures:
         results[meas] = [sum(t[meas]) for t in schedules.values()]
 
-    results["dist_saved"] = [6*sum(t['ttrav_ns'] - t['ttrav']) for t in schedules.values()]
-    results["dist_veh"] = [6*t for t in results["u_veh"]]
-    del results["u_veh"]
+    # results["dist_saved"] = [6*sum(t['ttrav_ns'] - t['ttrav']) for t in schedules.values()]
+    # results["dist_veh"] = [6*t for t in results["u_veh"]]
+    # del results["u_veh"]
     results = pd.DataFrame(results)
     results.index = schedules.keys()
     results = results.round()

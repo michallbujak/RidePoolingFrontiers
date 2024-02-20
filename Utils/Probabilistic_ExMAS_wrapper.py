@@ -21,14 +21,14 @@ os.chdir(os.path.dirname(os.getcwd()))
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('Topology/data/configs/topology_settings_no_random.json')
+    topological_config = utils.get_parameters('Topology/data/configs/topology_settings_rev.json')
 
     """ Set up varying parameters (optional) """
     # topological_config.variable = 'shared_discount'
     # topological_config.values = [0.22, 0.24]
 
     """ Run parameters """
-    topological_config.replications = 1
+    topological_config.replications = 100
     topological_config.no_batches = 1
 
     """ Prepare folder """
@@ -46,6 +46,16 @@ if __name__ == "__main__":
 
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
+    # params.multinormal_probs = (0.29, 0.57, 0.81, 1)
+    params.multinormal_probs = (0.25, 0.5, 0.75, 1)
+    params.multinormal_args = (
+        ((16.98 / 3600, 1.22), (1.68 / 3600, 0.122)),
+        ((14.02 / 3600, 1.135), (1.402 / 3600, 0.1135)),
+        ((100 / 3600, 5), (2.625 / 3600, 0.105)),
+        ((7.78 / 3600, 1.18), (0.778 / 3600, 0.118))
+    )
+    params.type_of_distribution = "multinormal"
+    params.sampling_function_with_index = True
     # s = 1
     # params.sampling_function = utils.mixed_discrete_norm_distribution_with_index((0.29, 0.57, 0.81, 1),
     #                                                                              ((16.98 / 3600, 1.22),

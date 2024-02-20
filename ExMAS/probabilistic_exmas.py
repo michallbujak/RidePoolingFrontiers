@@ -99,10 +99,10 @@ class SbltType(Enum):  # type of shared ride. first digit is the degree, second 
 ##############
 
 # ALGORITHM 3
-def main(_inData, params, default_mixed_normal=False, plot=False):
+def main(input_data, params, default_mixed_normal=False, plot=False):
     """
     main call
-    :param _inData: input (graph, requests, .. )
+    :param input_data: input (graph, requests, .. )
     :param params: parameters
     :param plot: flag to plot charts for consecutive steps
     :return: inData.exmas.schedule - selecgted shared rides
@@ -110,6 +110,7 @@ def main(_inData, params, default_mixed_normal=False, plot=False):
     inData.exmas.res -  KPIs
     @param _seed:
     """
+    _inData = input_data.copy()
     _inData.logger = init_log(params)  # initialize console logger
 
     # if default_mixed_normal:
