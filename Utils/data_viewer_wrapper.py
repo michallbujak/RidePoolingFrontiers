@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import netwulf as nw
 import pandas as pd
 
-date = "20-02-24"
+date = "21-02-24"
 sblts_exmas = "exmas"
 special_name = ""  # "_full_n"
 

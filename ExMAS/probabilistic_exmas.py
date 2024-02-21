@@ -99,7 +99,7 @@ class SbltType(Enum):  # type of shared ride. first digit is the degree, second 
 ##############
 
 # ALGORITHM 3
-def main(input_data, params, default_mixed_normal=False, plot=False):
+def main(input_data, params, plot=False):
     """
     main call
     :param input_data: input (graph, requests, .. )
@@ -112,15 +112,6 @@ def main(input_data, params, default_mixed_normal=False, plot=False):
     """
     _inData = input_data.copy()
     _inData.logger = init_log(params)  # initialize console logger
-
-    # if default_mixed_normal:
-    #     s = 1
-    #     from Utils.utils_topology import mixed_discrete_norm_distribution_with_index as gen_func
-    #     params.sampling_function = gen_func((0.29, 0.57, 0.81, 1),
-    #                                         ((16.98 / 3600, 1.22), (s * 1.68 / 3600, s * 0.122)),
-    #                                         ((14.02 / 3600, 1.135), (s * 1.402 / 3600, s * 0.1135)),
-    #                                         ((26.25 / 3600, 1.049), (s * 2.625 / 3600, s * 0.105)),
-    #                                         ((7.78 / 3600, 1.18), (s * 0.778 / 3600, s * 0.118)))
 
     _inData = sample_random_parameters(_inData, params)
     _inData = add_noise(_inData, params)

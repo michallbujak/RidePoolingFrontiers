@@ -457,7 +457,7 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
             cmap = c_map
         for data, line_type, label, color in zip(datasets, _line_styles, labels, cmap):
             lw = 2 if label == "All" else 1
-            plt.hist(data, density=True, histtype='step', label=label, cumulative=True, bins=len(data),
+            plt.hist(data, density=True, histtype='step', label=label, cumulative=True, #bins=len(data),
                      ls=line_type, lw=lw, color=color)
         # plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
         # ax.axvline(x=maximal_percentile, color='black', ls=':', label='95%', lw=1)
@@ -608,7 +608,12 @@ def individual_analysis(dotmap_list, config, no_elements=None, s=10):
             # for handle in lgnd.legendHandles:
             #     handle.set_sizes([6.0])
             handles, labels = plt.gca().get_legend_handles_labels()
-            order = [1, 0, 2, 3]
+            if len(labels) == 4:
+                order = [1, 0, 2, 3]
+            elif len(labels) == 3:
+                order = [0, 1, 2]
+            else:
+                raise ValueError("Cannot handle not 3 or 4 labels atm")
             plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
         else:
             ax.get_legend().remove()
