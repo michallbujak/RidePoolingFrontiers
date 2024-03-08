@@ -680,17 +680,15 @@ def create_results_directory(config, date=None, supress=False):
     try:
         os.mkdir(config.path_results)
     except OSError as error:
-        if supress:
-            pass
-        print(error)
-        print('overwriting current files in the folder')
+        if not supress:
+            print(error)
+            print('overwriting current files in the folder')
     try:
         os.mkdir(os.path.join(config.path_results, 'temp'))
     except OSError as error:
-        if supress:
-            pass
-        print(error)
-        print('temp folder already exists')
+        if not supress:
+            print(error)
+            print('temp folder already exists')
     config.path_results += '/'
     return config
 
