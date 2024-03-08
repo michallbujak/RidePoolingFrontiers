@@ -671,7 +671,7 @@ def analyse_edge_count(list_dotmaps, config, list_types_of_graph=None, logger_le
         return graph_list
 
 
-def create_results_directory(config, date=None):
+def create_results_directory(config, date=None, supress=False):
     if date is None:
         the_day = str(datetime.date.today().strftime("%d-%m-%y"))
     else:
@@ -680,11 +680,15 @@ def create_results_directory(config, date=None):
     try:
         os.mkdir(config.path_results)
     except OSError as error:
+        if supress:
+            pass
         print(error)
         print('overwriting current files in the folder')
     try:
         os.mkdir(os.path.join(config.path_results, 'temp'))
     except OSError as error:
+        if supress:
+            pass
         print(error)
         print('temp folder already exists')
     config.path_results += '/'

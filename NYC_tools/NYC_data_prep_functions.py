@@ -118,14 +118,14 @@ def nyc_pick_batch(batches, trips, inData, _params, batch_no):
 
 
 def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.requests) > 0,
-                    output_params=True):
+                    output_params=True, progress_bar=True, logger_level=None):
     copy_wd = os.getcwd()
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     x = os.getcwd()
     y = os.path.join(os.getcwd(), "data")
     sys.path.append(os.path.join(os.getcwd(), "data"))
     params = get_config(config)
-    logger = embed_logger(params.get("logger_level", None))
+    logger = embed_logger(logger_level)
     inData = initialise_indata_dotmap()
     inData = ExMAS.utils.load_G(inData, params, stats=True)
 
@@ -133,7 +133,8 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
 
     logger.info("Preparing NYC batches \n")
     inDatas = []
-    pbar = tqdm(total=number_of_batches)
+    if progress_bar:
+        pbar = tqdm(total=number_of_batches)
     counter = 0
     batch_no = 0
     while counter < number_of_batches and batch_no < 8736:
@@ -141,7 +142,8 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
             temp = nyc_pick_batch(batches, trips, inData, params, batch_no)
             if filter_function(temp):
                 inDatas.append(temp)
-                pbar.update(1)
+                if progress_bar:
+                    pbar.update(1)
                 counter += 1
             else:
                 logger.debug('Batch no: ', counter, ' skipped due to filter')
@@ -151,7 +153,8 @@ def prepare_batches(number_of_batches, config, filter_function=lambda x: len(x.r
             logger.info('Impossible to attach batch number: ', batch_no)
             batch_no += 1
             pass
-    pbar.close()
+    if progress_bar:
+        pbar.close()
 
     os.chdir(copy_wd)
     logger.info("Batches READY! \n")
@@ -250,19 +253,22 @@ def embed_logger(log):
 
 
 def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'variable': None}),
-                        replications=1, logger_level=None, sampling_function_with_index=False):
+                        replications=1, logger_level=None, sampling_function_with_index=False,
+                        progress_bar=True):
     logger = embed_logger(logger_level)
     results = []
     settings = []
     params.logger_level = "CRITICAL"
     logger.info(" Calculating ExMAS values \n ")
     params.sampling_function_with_index = sampling_function_with_index
-    pbar = tqdm(total=len(indatas) * replications)
+    if progress_bar:
+        pbar = tqdm(total=len(indatas) * replications)
     for i in range(len(indatas)):
         logger.info(" Batch no. " + str(i))
         step = 0
         for j in range(replications):
-            pbar.update(1)
+            if progress_bar:
+                pbar.update(1)
             if topo_params.get("variable", None) is None:
                 temp = exmas_algorithm(indatas[i], params, False)
                 results.append(temp.copy())
@@ -286,7 +292,8 @@ def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'v
                     logger.debug('Impossible to attach batch number: ' + str(i))
                     pass
 
-    pbar.close()
+    if progress_bar:
+        pbar.close()
     logger.info("Number of calculated results for batches is: ", str(len(results)))
     logger.info("ExMAS calculated \n")
     return results, settings

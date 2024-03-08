@@ -1,9 +1,36 @@
-import pickle
-import matplotlib.pyplot as plt
 import pandas as pd
-import ExMAS
-import osmnx as ox
+import multiprocessing as mp
+import datetime
+from netwulf import visualize
+import pickle
 import networkx as nx
+import json
+import os
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-graph = nx.read_graphml(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\gminy.graphml")
-z = 0
+sys.path.append(os.path.abspath(os.getcwd()))
+sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
+
+with open("../sensitivity_classes.pickle", "rb") as file:
+    data = pickle.load(file)
+
+o = []
+for key in data.keys():
+    prob_data = data[key][0]
+    _o = []
+    for num in range(len(prob_data)):
+        tmp_data = prob_data[num]['exmas']['res']
+        _o.append(tmp_data["VehHourTrav_ns"] - tmp_data["VehHourTrav"])
+
+    o.append((np.mean(_o), np.std(_o)))
+
+plt.errorbar(np.arange(0, 0.42, 0.03), [t[0] for t in o], [t[1] for t in o],
+             ecolor="lightblue", elinewidth=1, capsize=4, linestyle='None', marker='o',
+             markerfacecolor="black", markeredgecolor="black")
+plt.show()
+
+
+

@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import numpy as np
+from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.getcwd()))
 sys.path.append(os.path.abspath(os.path.dirname(os.getcwd())))
@@ -47,7 +48,8 @@ if __name__ == "__main__":
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
     # params.multinormal_probs = (0.29, 0.57, 0.81, 1)
-    params.multinormal_probs = (0.25, 0.5, 0.75, 1)
+    # params.multinormal_probs = (0.25, 0.5, 0.75, 1)
+    params.multinormal_probs = (0.19, 0.43, 0.71, 1)
     params.multinormal_args = (
         ((16.98 / 3600, 1.22), (0.31765 / 3600, 0.0815)),
         ((14.02 / 3600, 1.135), (0.2058 / 3600, 0.07056)),
