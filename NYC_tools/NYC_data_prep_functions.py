@@ -267,8 +267,6 @@ def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'v
         logger.info(" Batch no. " + str(i))
         step = 0
         for j in range(replications):
-            if progress_bar:
-                pbar.update(1)
             if topo_params.get("variable", None) is None:
                 temp = exmas_algorithm(indatas[i], params, False)
                 results.append(temp.copy())
@@ -291,6 +289,8 @@ def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'v
                     # except:
                     logger.debug('Impossible to attach batch number: ' + str(i))
                     pass
+            if progress_bar:
+                pbar.update(1)
 
     if progress_bar:
         pbar.close()

@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) > 100 & len(x.requests) < 110,
+                                                     filter_function=lambda x: len(x.requests) == 147,
                                                      config=config.initial_parameters)
 
     """ Run ExMAS """
@@ -35,14 +35,15 @@ if __name__ == "__main__":
                                                                           replications=config.replications,
                                                                           logger_level='INFO')
 
-    final_results = zip([x.sblts.requests for x in dotmaps_list_results],
-                        [x.sblts.schedule for x in dotmaps_list_results],
-                        [x.sblts.res for x in dotmaps_list_results],
-                        [x.sblts.rides for x in dotmaps_list_results],
-                        settings_list)
-    final_results = [{"requests": x[0],
-                      "schedule": x[1],
-                      "results": x[2],
-                      "rides": x[3],
-                      "settings": x[4]} for x in final_results]
-    utils.save_with_pickle(final_results, 'final_res', config)
+    # final_results = zip([x.sblts.requests for x in dotmaps_list_results],
+    #                     [x.sblts.schedule for x in dotmaps_list_results],
+    #                     [x.sblts.res for x in dotmaps_list_results],
+    #                     [x.sblts.rides for x in dotmaps_list_results],
+    #                     settings_list)
+    # final_results = [{"requests": x[0],
+    #                   "schedule": x[1],
+    #                   "results": x[2],
+    #                   "rides": x[3],
+    #                   "settings": x[4]} for x in final_results]
+    # utils.save_with_pickle(final_results, 'final_res', config)
+    utils.save_with_pickle(dotmaps_list_results, "147_homo", config)

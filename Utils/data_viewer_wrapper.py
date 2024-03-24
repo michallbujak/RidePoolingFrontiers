@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import netwulf as nw
 import pandas as pd
 
-date = "23-02-24"
+date = "25-11-22"
 sblts_exmas = "exmas"
-special_name = ""  # "_full_n"
+special_name = "_full_n"  # "_full_n"
 
 import os
 
@@ -22,11 +22,11 @@ if __name__ == '__main__':
     rep_graphs, dotmap_list, all_graphs_list = vis_eff.load_data(config)
 
     # vis_eff.graph_visualisation_with_netwulf(all_graphs_list, rep_graphs)
-    vis_eff.kpis_gain(dotmap_list, config, bins=20, y_max=15)
+    # vis_eff.kpis_gain(dotmap_list, config, bins=20, y_max=15)
     # vis_eff.probability_of_pooling_classes(dotmap_list, config)
     # vis_eff.classes_analysis(dotmap_list, config)
     # vis_eff.aggregated_analysis(dotmap_list, config)
-    vis_eff.analyse_profitability(dotmap_list, config, shared_all='all', bins=20, y_max=15, save_results=True)
+    # vis_eff.analyse_profitability(dotmap_list, config, shared_all='all', bins=20, y_max=15, save_results=True)
     # vis_eff.individual_analysis(dotmap_list, config, s=1)
     # vis_eff.individual_rides_profitability(dotmap_list, config, s=3)
     #
@@ -38,4 +38,5 @@ if __name__ == '__main__':
     # vis_eff.draw_bipartite_graph(all_graphs_list[0]['bipartite_matching'],
     #                              config=config, dpi=200,
     #                              name='bipartite_matching_147')
-    e = 0
+    satisfaction = vis_eff.calculate_acceptance_probability(dotmap_list)
+    print(satisfaction)

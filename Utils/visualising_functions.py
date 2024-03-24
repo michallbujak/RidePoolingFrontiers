@@ -22,11 +22,13 @@ import tkinter as tk
 import multiprocessing as mp
 import matplotlib as mpl
 from matplotlib.lines import Line2D
-
 import scienceplots
+
+from Individual_pricing.pricing_functions import extract_individual_travel_times
 
 plt.style.use(['science', 'no-latex'])
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 def get_parameters(path, time_correction=False):
     with open(path) as json_file:
@@ -89,7 +91,8 @@ def load_data(config, other_var=None):
 
 def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_number=0, width_power=1,
                          figsize=(5, 12), dpi=200, node_size=1, batch_size=147, plot=True, date=None,
-                         default_edge_size=1, name=None, colour_specific_node=None, emphasize_coloured_node=5, alpha=None):
+                         default_edge_size=1, name=None, colour_specific_node=None, emphasize_coloured_node=5,
+                         alpha=None):
     # G1 = nx.convert_node_labels_to_integers(graph)
     G1 = graph
     x = G1.nodes._nodes
@@ -125,7 +128,8 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
 
     p, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size, node_shape=".", linewidths=node_size/10)
+    nx.draw_networkx_nodes(G1, pos=new_pos, node_color=colour_list, node_size=node_size, node_shape=".",
+                           linewidths=node_size / 10)
 
     if nx.is_weighted(G1):
         for weight in range(1, max_weight + 1):
@@ -140,7 +144,7 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
                 for item in edge_list:
                     if item[0] == colour_specific_node:
                         colour_list.append("red")
-                        widths.append(base_width*emphasize_coloured_node)
+                        widths.append(base_width * emphasize_coloured_node)
                     else:
                         colour_list.append("black")
                         widths.append(base_width)
@@ -162,7 +166,8 @@ def draw_bipartite_graph(graph, max_weight=1, config=None, save=True, saving_num
                 else:
                     colour_list.append("black")
                     widths.append(base_width)
-            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=widths, edge_color=colour_list, ax=ax, alpha=alpha)
+            nx.draw_networkx_edges(G1, new_pos, edgelist=G1.edges, width=widths, edge_color=colour_list, ax=ax,
+                                   alpha=alpha)
 
     if save:
         ax.axis("off")
@@ -394,7 +399,7 @@ def fix_hist_step_vertical_line_at_end(ax):
 
 def create_latex_output_df(df, column_format=None):
     if column_format is None:
-        column_format = df.shape[1]*"c|" + "c"
+        column_format = df.shape[1] * "c|" + "c"
     latex_df = df.to_latex(float_format="%.2f", column_format=column_format)
     latex_df = latex_df.replace("\\midrule", "\\hline")
     for rule in ["\\toprule", "\\bottomrule"]:
@@ -457,7 +462,7 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
             cmap = c_map
         for data, line_type, label, color in zip(datasets, _line_styles, labels, cmap):
             lw = 2 if label == "All" else 1
-            plt.hist(data, density=True, histtype='step', label=label, cumulative=True, #bins=len(data),
+            plt.hist(data, density=True, histtype='step', label=label, cumulative=True,  # bins=len(data),
                      ls=line_type, lw=lw, color=color)
         # plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
         # ax.axvline(x=maximal_percentile, color='black', ls=':', label='95%', lw=1)
@@ -471,8 +476,9 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
             # plt.legend([plt.Line2D(0, 0) for j in ax.get_legend_handles_labels()],loc="lower right")
             custom_lines = [Line2D([0], [0], color=color, lw=1, ls=_ls) for color, _ls in zip(cmap, _line_styles)]
 
-            plt.legend(custom_lines, labels,  loc="lower right", fontsize=15)
-        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png", dpi=dpi)
+            plt.legend(custom_lines, labels, loc="lower right", fontsize=15)
+        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png",
+                    dpi=dpi)
         plt.close()
 
         means = [np.mean(t) for t in datasets]
@@ -563,10 +569,11 @@ def analyse_profitability(dotmap_list, config, shared_all='all', speed=6, sharin
         relative_perspective.append(profit_relation)
 
     if save_results:
-        pd.DataFrame({"var": "Profitability", "mean": np.mean(relative_perspective), "st_dev": np.std(relative_perspective),
-                      "P5": np.nanpercentile(relative_perspective, 5), "P95": np.nanpercentile(relative_perspective, 95)},
-                     index=[0]).to_csv(config.path_results + "profitability_mean_" + str(size) + ".txt",
-                                       sep=' ', index=False, header=False)
+        pd.DataFrame(
+            {"var": "Profitability", "mean": np.mean(relative_perspective), "st_dev": np.std(relative_perspective),
+             "P5": np.nanpercentile(relative_perspective, 5), "P95": np.nanpercentile(relative_perspective, 95)},
+            index=[0]).to_csv(config.path_results + "profitability_mean_" + str(size) + ".txt",
+                              sep=' ', index=False, header=False)
 
         ax = sns.histplot(relative_perspective, bins=bins)
         ax.axvline(1.097, ls=":", lw=3)
@@ -631,7 +638,7 @@ def individual_rides_profitability(dotmap_list, config, s=20, dpi=300):
     dataset = pd.concat([t[sblts_exmas]['schedule'].loc[t[sblts_exmas]['schedule']["kind"] > 1] for t in dotmap_list])
     dataset.reset_index(drop=True, inplace=True)
     dataset.rename(columns={'degree': 'Degree'}, inplace=True)
-    dataset["Distance"] = dataset['dist']/1000
+    dataset["Distance"] = dataset['dist'] / 1000
 
     ax = sns.scatterplot(x=dataset['Distance'], y=dataset['Profitability'], hue=dataset['Degree'], s=s,
                          palette=sns.color_palette("tab10", max(dataset['Degree']) - 1))
@@ -763,13 +770,15 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
         else:
             if graph_all:
                 if legend_box:
-                    legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Supercritical', 'Subcritical', 'Critical'],
+                    legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left",
+                                        labels=['Supercritical', 'Subcritical', 'Critical'],
                                         title='Demand', borderaxespad=0)
                 else:
                     legend = plt.legend(loc="upper right", labels=['Supercritical', 'Subcritical', 'Critical'])
             else:
                 if legend_box:
-                    legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left", labels=['Critical mean', 'Subcritical', 'Supercritical'],
+                    legend = plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left",
+                                        labels=['Critical mean', 'Subcritical', 'Supercritical'],
                                         title='Demand', borderaxespad=0)
                 else:
                     legend = plt.legend(loc="upper right", labels=['Critical mean', 'Subcritical', 'Supercritical'])
@@ -802,9 +811,12 @@ def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", 
         ax = nx.draw_networkx_nodes(g1, pos=layout, node_color="black", node_size=20)
         edges1 = set(g1.edges)
         edges2 = set(g2.edges)
-        nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.intersection(edges2), width=thicker_common*edge_width, edge_color="red", alpha=alpha_common)
-        nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.difference(edges2), width=edge_width, edge_color="blue", alpha=alpha_diff)
-        nx.draw_networkx_edges(g2, pos=layout, edgelist=edges2.difference(edges1), width=edge_width, edge_color="green", alpha=alpha_diff)
+        nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.intersection(edges2), width=thicker_common * edge_width,
+                               edge_color="red", alpha=alpha_common)
+        nx.draw_networkx_edges(g1, pos=layout, edgelist=edges1.difference(edges2), width=edge_width, edge_color="blue",
+                               alpha=alpha_diff)
+        nx.draw_networkx_edges(g2, pos=layout, edgelist=edges2.difference(edges1), width=edge_width, edge_color="green",
+                               alpha=alpha_diff)
         plt.box(False)
         plt.tick_params(axis='both', which='both', bottom=False, top=False, right=False, left=False, labelbottom=False)
         plt.savefig(config.path_results + "figs/mixed_" + spec_name + "_graph.png", transparent=True, pad_inches=0)
@@ -839,12 +851,119 @@ def overwrite_netwulf(G, config, emph_node, **kwargs):
     if emph_node is None:
         colours = ["black" for t in colours]
 
-    nx.draw_networkx_nodes(G, pos=layout, node_color=["red" if node["id"]==emph_node else "black" for node in stylized_network["nodes"]], node_size=kwargs.get('node_size', 10), ax=ax)
+    nx.draw_networkx_nodes(G, pos=layout, node_color=["red" if node["id"] == emph_node else "black" for node in
+                                                      stylized_network["nodes"]], node_size=kwargs.get('node_size', 10),
+                           ax=ax)
     nx.draw_networkx_edges(G, pos=layout, width=widths,
                            edge_color=colours,
                            alpha=kwargs.get("alpha", None), ax=ax)
     plt.box(False)
     ax.axis("off")
     # plt.tick_params(axis='both', which='both', bottom=False, top=False, right=False, left=False, labelbottom=False)
-    plt.savefig(config.path_results + "figs/" + kwargs.get("save_name", "HAHA") + ".jpeg", transparent=True, pad_inches=0, dpi=kwargs.get("dpi", 300))
+    plt.savefig(config.path_results + "figs/" + kwargs.get("save_name", "HAHA") + ".jpeg", transparent=True,
+                pad_inches=0, dpi=kwargs.get("dpi", 300))
     plt.close()
+
+
+def exmas_formula_ns_explicit(
+        _price,
+        _distance,
+        _vot,
+        _travel_time
+):
+    return _price * _distance / 1000 + _vot * _travel_time
+
+
+def exmas_formula_s_explicit(
+        _price,
+        _discount,
+        _distance,
+        _vot,
+        _wts,
+        _total_time
+):
+    return _price * (1 - _discount) * _distance / 1000 + _vot * _wts * _total_time
+
+
+def calculate_acceptance_probability(
+        dotmap_list: list[DotMap],
+        vot: float = 0.0046,
+        wts: float = 1.14756,
+        price: float = 1.5,
+        discount: float = 0.3,
+        avg_speed: float = 6
+):
+    def acceptance_row(
+            schedule_row: pd.Series,
+            req_dist: dict
+    ):
+        out = []
+        acc = 1
+        if len(schedule_row["indexes"]) == 1:
+            return [1], acc
+
+        for no, traveller in enumerate(schedule_row["indexes"]):
+            ns_utility = exmas_formula_ns_explicit(
+                _price=price,
+                _distance=req_dist[traveller],
+                _vot=vot,
+                _travel_time=req_dist[traveller] / avg_speed
+            )
+            s_utility = exmas_formula_s_explicit(
+                _price=price,
+                _discount=discount,
+                _distance=req_dist[traveller],
+                _vot=vot,
+                _wts=wts,
+                _total_time=schedule_row["individual_times"][no]
+            )
+            if ns_utility < s_utility:
+                out.append(0)
+                acc = 0
+            else:
+                out.append(1)
+
+        return out, acc
+
+    satisfaction = {
+        "people_sharing": 0,
+        "people_satisfied": 0,
+        "people_realised": 0,
+        "shared_rides": 0,
+        "rides_realised": 0,
+        "2": 0,
+        "2_realised": 0,
+        "3": 0,
+        "3_realised": 0,
+        "4": 0,
+        "4_realised": 0,
+    }
+
+    for replication in dotmap_list:
+        schedule = replication["exmas"]["schedule"]
+        schedule["individual_times"] = schedule.apply(extract_individual_travel_times, axis=1)
+        requests = replication["exmas"]["requests"]
+        requested_distances = requests["dist"].to_dict()
+        o = schedule.apply(acceptance_row, req_dist=requested_distances, axis=1)
+        schedule["accepted"] = [t[0] for t in o]
+        schedule["realised"] = [t[1] for t in o]
+
+        shared = schedule.loc[[len(t) > 1 for t in schedule["indexes"]]]
+        acceptance = [a for b in shared["accepted"] for a in b]
+        satisfaction['people_sharing'] += len(acceptance)
+        satisfaction['people_satisfied'] += sum(acceptance)
+        satisfaction['people_realised'] += sum(
+            shared.apply(lambda x: len(x["accepted"]) * x["realised"], axis=1)
+        )
+        satisfaction["shared_rides"] += len(shared)
+        satisfaction["rides_realised"] += len(shared.loc[shared["realised"] == 1])
+
+        for no in [2, 3, 4]:
+            if no in [2, 3]:
+                shared_tmp = schedule.loc[[len(t) == no for t in schedule["indexes"]]]
+            else:
+                shared_tmp = schedule.loc[[len(t) >= no for t in schedule["indexes"]]]
+            satisfaction[str(no)] += len(shared_tmp)
+            satisfaction[str(no) + "_realised"] += len(shared_tmp.loc[shared_tmp["realised"] == 1])
+
+    return satisfaction
