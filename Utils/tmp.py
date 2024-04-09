@@ -58,6 +58,7 @@ def acceptance_row(
             _wts=vot_wts.loc[traveller, "wts"],
             _total_time=schedule_row["individual_times"][no]
         )
+        s_utility += np.random.normal() + np.random.normal(0, 0.1)
         if ns_utility < s_utility:
             out.append(0)
             acc = 0

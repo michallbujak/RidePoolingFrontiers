@@ -678,7 +678,7 @@ def load_requests(path):
     return requests
 
 
-def plot_demand(inData, params, t0=None, vehicles=False, s=40, **kwargs):
+def plot_demand(inData, t0=None, vehicles=False, s=40, **kwargs):
     if t0 is None:
         t0 = inData.requests.treq.mean()
 
@@ -703,7 +703,7 @@ def plot_demand(inData, params, t0=None, vehicles=False, s=40, **kwargs):
     #            s=10 * s, marker='+')
     # plt.title(
     #     'Demand in {} with origins marked in green, destinations in orange'.format(params.city))
-    plt.savefig('BBBBB.jpeg', dpi=kwargs.get("dpi", 300))
+    plt.savefig('AAAAA.jpeg', dpi=kwargs.get("dpi", 300))
     # plt.show()
 
 
@@ -935,9 +935,8 @@ def plot_map_rides(inData, ride_indexes, light=True, m_size=30, lw=3, fontsize =
         lc = LineCollection(lines, colors=color, linewidths=lw, alpha=alpha, zorder=3)
         ax.add_collection(lc)
 
-    s = inData[sblts].rides
+    s = inData[sblts]['rides']
     r = inData[sblts].requests
-    G = inData.G
     ts = [make_schedule(s.iloc[ride_index], r) for ride_index in ride_indexes]
     # t1 = make_schedule(s.iloc[1], r)
     # t2 = make_schedule(s[s.kind == 20].iloc[1], r)
@@ -1029,7 +1028,7 @@ def plot_map_rides(inData, ride_indexes, light=True, m_size=30, lw=3, fontsize =
     fig.add_subplot(ax)
 
     # plt.show()
-    plt.savefig('map_rotated_new.png', dpi = 300)
+    plt.savefig('AAAA.jpeg', dpi=400)
 
 
 def create_input_indata(

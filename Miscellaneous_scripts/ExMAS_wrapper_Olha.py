@@ -46,4 +46,4 @@ if __name__ == "__main__":
     #                   "rides": x[3],
     #                   "settings": x[4]} for x in final_results]
     # utils.save_with_pickle(final_results, 'final_res', config)
-    utils.save_with_pickle(dotmaps_list_results, "147_homo", config)
+    utils.save_with_pickle(dotmaps_list_results, "147_old", config)

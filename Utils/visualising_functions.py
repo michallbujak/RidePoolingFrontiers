@@ -14,7 +14,6 @@ import networkx as nx
 import datetime
 import json
 from dotmap import DotMap
-from netwulf import visualize
 import netwulf as nw
 import matplotlib.ticker as mtick
 import os
@@ -236,7 +235,10 @@ def graph_visualisation_with_netwulf(all_graphs=None, rep_graphs=None, graph_lis
         else:
             raise Warning("incorrect graph_list")
 
-        visualize(graph, config=json.load(open('Topology/data/configs/netwulf_config.json')))
+        stylized_network, config = nw.visualize(graph,
+                                                config=json.load(open('Topology/data/configs/netwulf_config.json')))
+        fig, ax = nw.draw_netwulf(stylized_network)
+        plt.savefig(g + ".jpeg", dpi=400)
 
 
 def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, node_size=1, dpi=80,
@@ -257,7 +259,7 @@ def visualise_graph_evolution(dotmap_list, topological_config, num_list=None, no
                              config=topological_config, save=save, saving_number=num, date=topological_config.date)
 
 
-def kpis_gain(dotmap_list, config, max_ticks=5, bins=20, y_max=20, dpi=300):
+def kpis_gain(dotmap_list, config, max_ticks=5, bins=20, y_max=20, dpi=300, pic_format="jpeg"):
     sblts_exmas = config.sblts_exmas
     str_for_end = "_" + str(len(dotmap_list[0][sblts_exmas].requests))
     multiplier = 100
@@ -268,12 +270,12 @@ def kpis_gain(dotmap_list, config, max_ticks=5, bins=20, y_max=20, dpi=300):
     res.append(["relative_pass_utility", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
-    ax.axvline(4.5, ls=":", lw=3)
+    ax.axvline(4.5, ls=":", lw=1)
     ax.set(xlabel=None, ylabel=None, yticklabels=[])
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(config.path_results + "figs/relative_pass_utility" + str_for_end + ".png", dpi=dpi)
+    plt.savefig(config.path_results + "figs/relative_pass_utility" + str_for_end + "." + pic_format, dpi=dpi)
     plt.close()
 
     data = [multiplier * (x[sblts_exmas].res.PassHourTrav - x[sblts_exmas].res.PassHourTrav_ns) / x[
@@ -281,12 +283,12 @@ def kpis_gain(dotmap_list, config, max_ticks=5, bins=20, y_max=20, dpi=300):
     res.append(["relative_pass_hours", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
-    ax.axvline(9.8, ls=":", lw=3)
+    ax.axvline(9.8, ls=":", lw=1)
     ax.set(xlabel=None, ylabel=None, yticklabels=[])
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(config.path_results + "figs/relative_pass_hours" + str_for_end + ".png", dpi=dpi)
+    plt.savefig(config.path_results + "figs/relative_pass_hours" + str_for_end + "." + pic_format, dpi=dpi)
     plt.close()
 
     data = [multiplier * (x[sblts_exmas].res.VehHourTrav_ns - x[sblts_exmas].res.VehHourTrav) / x[
@@ -294,12 +296,12 @@ def kpis_gain(dotmap_list, config, max_ticks=5, bins=20, y_max=20, dpi=300):
     res.append(["relative_veh_hours", np.mean(data), np.std(data),
                 np.nanpercentile(data, 5), np.nanpercentile(data, 95)])
     ax = sns.histplot(data, bins=bins)
-    ax.axvline(30, ls=":", lw=3)
+    ax.axvline(30, ls=":", lw=1)
     ax.set(xlabel=None, ylabel=None)
     plt.ylim(0, y_max)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     plt.locator_params(axis='x', nbins=max_ticks)
-    plt.savefig(config.path_results + "figs/relative_veh_hours" + str_for_end + ".png", dpi=dpi)
+    plt.savefig(config.path_results + "figs/relative_veh_hours" + str_for_end + "." + pic_format, dpi=dpi)
     plt.close()
 
     pd.DataFrame({"var": [t[0] for t in res], "mean": [t[1] for t in res], "st_dev": [t[2] for t in res],
@@ -407,7 +409,8 @@ def create_latex_output_df(df, column_format=None):
     return latex_df
 
 
-def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6), dpi=200, c_map=None):
+def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6), dpi=200, c_map=None,
+                     pic_format="jpeg"):
     # Requests
     results_req = [amend_dotmap(indata, config)[0] for indata in dotmap_list]
     results_req = [relative_travel_times_utility(df) for df in results_req]
@@ -462,8 +465,17 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
             cmap = c_map
         for data, line_type, label, color in zip(datasets, _line_styles, labels, cmap):
             lw = 2 if label == "All" else 1
-            plt.hist(data, density=True, histtype='step', label=label, cumulative=True,  # bins=len(data),
-                     ls=line_type, lw=lw, color=color)
+            # plt.hist(data, density=True, histtype='step', label=label, cumulative=True,  # bins=len(data),
+            #          ls=line_type, lw=lw, color=color)
+            # sns.kdeplot(data, cumulative=True, ls=line_type, lw=lw, color=color, label=label)
+            x = np.sort(data)
+            y = np.arange(len(x))/float(len(x))
+            plt.plot(x, y, ls=line_type, lw=lw, color=color, label=label)
+            if var == "Relative_utility_gain":
+                plt.xlim(0, 0.7)
+            else:
+                plt.xlim(0, 1)
+            plt.ylim(0, 1.1)
         # plt.hist(datasets, density=True, histtype='step', label=labels, cumulative=True, bins=_bins)
         # ax.axvline(x=maximal_percentile, color='black', ls=':', label='95%', lw=1)
         fix_hist_step_vertical_line_at_end(ax)
@@ -477,8 +489,8 @@ def classes_analysis(dotmap_list, config, percentile=95, _bins=50, figsize=(4, 6
             custom_lines = [Line2D([0], [0], color=color, lw=1, ls=_ls) for color, _ls in zip(cmap, _line_styles)]
 
             plt.legend(custom_lines, labels, loc="lower right", fontsize=15)
-        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + ".png",
-                    dpi=dpi)
+        plt.savefig(config.path_results + "figs/" + "cdf_class_" + var + "_" + sharing + "_" + str(size) + "." +
+                    pic_format, dpi=dpi)
         plt.close()
 
         means = [np.mean(t) for t in datasets]
@@ -541,7 +553,7 @@ def add_profitability(dotmap_data, config, speed=6, sharing_discount=0.3, sblts_
 
 
 def analyse_profitability(dotmap_list, config, shared_all='all', speed=6, sharing_discount=0.3, bins=20, y_max=20,
-                          save_results=True, dpi=300):
+                          save_results=True, dpi=300, pic_format="jpeg"):
     sblts_exmas = config.sblts_exmas
     size = len(dotmap_list[0][sblts_exmas].requests)
     speed = config.get('avg_speed', speed)
@@ -576,16 +588,16 @@ def analyse_profitability(dotmap_list, config, shared_all='all', speed=6, sharin
                               sep=' ', index=False, header=False)
 
         ax = sns.histplot(relative_perspective, bins=bins)
-        ax.axvline(1.097, ls=":", lw=3)
+        ax.axvline(1.097, ls=":", lw=1)
         ax.set(xlabel=None, ylabel=None, yticklabels=[])
         plt.ylim(0, y_max)
-        plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + ".png", dpi=dpi)
+        plt.savefig(config.path_results + "figs/" + "profitability_sharing_" + str(size) + "." + pic_format, dpi=dpi)
         plt.close()
     else:
         return relative_perspective
 
 
-def individual_analysis(dotmap_list, config, no_elements=None, s=10):
+def individual_analysis(dotmap_list, config, no_elements=None, s=10, pic_format="jpeg", dpi=300):
     sblts_exmas = 'exmas'
     size = len(dotmap_list[0][sblts_exmas].requests)
     if no_elements is None:
@@ -625,11 +637,11 @@ def individual_analysis(dotmap_list, config, no_elements=None, s=10):
         else:
             ax.get_legend().remove()
         ax.set_ylim(bottom=0)
-        plt.savefig(config.path_results + "figs/" + x_var + '_' + y_var + "_" + str(size) + ".png")
+        plt.savefig(config.path_results + "figs/" + x_var + '_' + y_var + "_" + str(size) + "." + pic_format, dpi=dpi)
         plt.close()
 
 
-def individual_rides_profitability(dotmap_list, config, s=20, dpi=300):
+def individual_rides_profitability(dotmap_list, config, s=20, dpi=300, pic_format='jpeg'):
     sblts_exmas = 'exmas'
     size = len(dotmap_list[0][sblts_exmas].requests)
     for rep in dotmap_list:
@@ -646,11 +658,13 @@ def individual_rides_profitability(dotmap_list, config, s=20, dpi=300):
     # ax.set(xlabel=None, ylabel=None, yticklabels=[])
     # plt.ylim(0.6, 2.2)
     plt.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., title='Degree')
-    plt.savefig(config.path_results + "figs/" + 'individual_rides_profitability_' + str(size) + ".png", dpi=dpi)
+    plt.savefig(config.path_results + "figs/" + 'individual_rides_profitability_' + str(size) + "." + pic_format,
+                dpi=dpi)
     plt.close()
 
 
-def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, graph_type='kde', legend_box=True):
+def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, graph_type='kde', legend_box=True,
+                       dpi=300, pic_format="jpeg"):
     sblts_exmas = config.sblts_exmas
     if type(var) == str:
         assert var in ['profit', 'veh', 'utility', 'pass'], "wrong var"
@@ -784,7 +798,7 @@ def mixed_datasets_kpi(var, config, date, name0, name1, name2, graph_all=True, g
                     legend = plt.legend(loc="upper right", labels=['Critical mean', 'Subcritical', 'Supercritical'])
 
         plt.tight_layout()
-        plt.savefig(config.path_results0 + "figs/mixed_" + var + ".png", dpi=200)
+        plt.savefig(config.path_results0 + "figs/mixed_" + var + "." + pic_format, dpi=dpi)
         plt.close()
 
 
@@ -831,7 +845,10 @@ def visualize_two_shareability_graphs(g1, g2, config, spec_name="shareability", 
         G.add_weighted_edges_from([(x, y, 2) for x, y in edges0])
         G.add_weighted_edges_from([(x, y, 1) for x, y in edges_o1])
         G.add_weighted_edges_from([(x, y, 1) for x, y in edges_o2])
-        visualize(G)
+        stylized_network, config = nw.visualize(G,
+                                                config=json.load(open('Topology/data/configs/netwulf_config.json')))
+        fig, ax = nw.draw_netwulf(stylized_network)
+        plt.savefig(spec_name + "_2.jpeg", dpi=400)
 
 
 def overwrite_netwulf(G, config, emph_node, **kwargs):
