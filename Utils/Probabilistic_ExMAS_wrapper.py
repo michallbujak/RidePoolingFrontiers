@@ -43,12 +43,12 @@ if __name__ == "__main__":
                                                                                (len(x.requests) > 140),
                                                      config=topological_config.initial_parameters)
 
-    # ExMAS.utils.plot_demand(dotmaps_list[0], params)
+    # ExMAS.utils.plot_demand(dotmaps_list[0], exmas_params)
 
     """ Run ExMAS """
     params = utils.update_probabilistic(topological_config, params)
-    # params.multinormal_probs = (0.29, 0.57, 0.81, 1)
-    # params.multinormal_probs = (0.25, 0.5, 0.75, 1)
+    # exmas_params.multinormal_probs = (0.29, 0.57, 0.81, 1)
+    # exmas_params.multinormal_probs = (0.25, 0.5, 0.75, 1)
     params.multinormal_probs = (0.19, 0.43, 0.71, 1)
     params.multinormal_args = (
         ((16.98 / 3600, 1.22), (0.31765 / 3600, 0.0815)),
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     params.sampling_function_with_index = True
     # s = 1
     #
-    # params.sampling_function = utils.mixed_discrete_norm_distribution_with_index((0.29, 0.57, 0.81, 1),
+    # exmas_params.sampling_function = utils.mixed_discrete_norm_distribution_with_index((0.29, 0.57, 0.81, 1),
     #                                                                              ((16.98 / 3600, 1.22),
     #                                                                               (0.31765 / 3600, 0.0815)),
     #                                                                              ((14.02 / 3600, 1.135),
@@ -70,12 +70,12 @@ if __name__ == "__main__":
     #                                                                              ((7.78 / 3600, 1.18),
     #                                                                               (1 / 3600, 0.07626)))
 
-    # utils.display_text(params, is_dotmap=True)
+    # utils.display_text(exmas_params, is_dotmap=True)
 
 
 
-    # dotmaps_list_results = nyc_tools.testing_exmas_multicore(exmas_algo, params, dotmaps_list,
-    #                                                          topo_params=topological_config,
+    # dotmaps_list_results = nyc_tools.testing_exmas_multicore(exmas_algo, exmas_params, dotmaps_list,
+    #                                                          general_configuration=topological_config,
     #                                                          replications=topological_config.replications,
     #                                                          logger_level='INFO',
     #                                                          sampling_function_with_index=True)

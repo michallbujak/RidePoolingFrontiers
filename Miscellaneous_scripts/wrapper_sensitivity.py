@@ -43,14 +43,14 @@ if __name__ == "__main__":
                                                          config=topological_config.initial_parameters)
 
         # for prob in np.arange(0, 0.42, 0.03):
-        #     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
+        #     dotmaps_list, exmas_params = nyc_tools.prepare_batches(topological_config.no_batches,
         #                                                      filter_function=lambda x: len(x.requests) == 147,
         #                                                      config=topological_config.initial_parameters)
 
         """ Run ExMAS """
         params = utils.update_probabilistic(topological_config, params)
         params.multinormal_probs = (0.29, 0.57, 0.81, 1)
-        # params.multinormal_probs = (0.37-(prob/3), 0.37+0.36-(2*prob/3), 0.37+0.36+(prob/3), 1)
+        # exmas_params.multinormal_probs = (0.37-(prob/3), 0.37+0.36-(2*prob/3), 0.37+0.36+(prob/3), 1)
         params.multinormal_args = (
             ((16.98 / 3600, 1.22), (0.31765 / 3600, 0.0815)),
             ((14.02 / 3600, 1.135), (0.2058 / 3600, 0.07056)),

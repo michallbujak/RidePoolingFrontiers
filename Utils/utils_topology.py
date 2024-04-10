@@ -44,7 +44,7 @@ def init_log(logger_level, logger=None):
     elif logger_level == 'INFO':
         level = logging.INFO
     else:
-        raise Exception("Not accepted logger level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
+        raise Exception("Not accepted logger log_level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
     if logger is None:
         logging.basicConfig(stream=sys.stdout, format='%(asctime)s-%(levelname)s-%(message)s',
                             datefmt='%H:%M:%S', level=level)

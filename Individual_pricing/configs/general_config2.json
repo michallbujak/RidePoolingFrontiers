@@ -1,0 +1,5 @@
+{
+	"initial_parameters": "Individual_pricing/configs/nyc_study_init_config.json",
+	"path_results": "Individual_pricing/data/",
+	"partial_results": "Individual_pricing/data/partial_results/"
+}

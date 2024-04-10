@@ -1,6 +1,7 @@
 {
-	"initial_parameters": "configs/nyc_study_init_config.json",
-	"path_results": "data/",
+	"initial_parameters": "Individual_pricing/configs/nyc_study_init_config.json",
+	"path_results": "Individual_pricing/data/",
+	"partial_results": "Individual_pricing/data/partial_results/",
 	"type_of_distribution": "multinormal",
 	"no_batches": 1,
 	"no_replications": 1,

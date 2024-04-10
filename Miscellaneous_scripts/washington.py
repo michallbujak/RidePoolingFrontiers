@@ -246,11 +246,11 @@ with open("results_washington.pickle", "wb") as f:
 
 
 # download
-# params = DotMap()
-# params.city = "Chicago, USA"
-# params.dist_threshold = 10000
-# params.paths.G = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.graphml"
-# params.paths.skim = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.csv"
+# exmas_params = DotMap()
+# exmas_params.city = "Chicago, USA"
+# exmas_params.dist_threshold = 10000
+# exmas_params.paths.G = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.graphml"
+# exmas_params.paths.skim = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.csv"
 #
 # dm = DotMap()
 #
@@ -272,5 +272,5 @@ with open("results_washington.pickle", "wb") as f:
 #     ox.save_graphml(inData.G, filepath=_params.paths.G)
 #     inData.skim.to_csv(_params.paths.skim, chunksize=20000000)
 #
-# dm = download_G(dm, params)
-# save_G(dm, params)
+# dm = download_G(dm, exmas_params)
+# save_G(dm, exmas_params)

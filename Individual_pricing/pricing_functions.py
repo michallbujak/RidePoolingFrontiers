@@ -12,7 +12,7 @@ from Individual_pricing.pricing_utils.product_distribution import ProductDistrib
 
 def calculate_discount(u, p, d, b_t, b_s, t, t_d, b_d, shared) -> float:
     """
-    Calculate discount to reach a certain level of shared utility
+    Calculate discount to reach a certain log_level of shared utility
     @param u: utility of a non-shared ride
     @param p: price
     @param d: distance
@@ -210,6 +210,13 @@ def prepare_samples(
         databank: DotMap or dict,
         sample_size: int = 100
 ) -> DotMap or dict:
+    """
+    Prepare samples of behavioural characteristics
+    @param databank: list of outputs of the original ExMAS's format
+    @param sample_size: size of sampled behavioural characteristics
+    the longer, the improved accuracy of the approximation
+    @return: list of dictionaries following the original ExMAS's format
+    """
     from pricing_utils.product_distribution import ProductDistribution
 
     beta = ProductDistribution()
@@ -251,7 +258,7 @@ def _row_sample_acceptable_disc(
     Samples discounts for which clients accept rides
     at different discount levels
     @param _rides_row: the function works on rows of pd.Dataframe
-    @param _times_non_shared: dictionary with iniduvidal rides
+    @param _times_non_shared: dictionary with individual rides
     obtained as dict(requests["ttrav"])
     @param _bs_samples: sampled willingness to share across
     the population
@@ -284,21 +291,15 @@ def _row_sample_acceptable_disc(
 
 def _row_maximise_profit(
         _rides_row: pd.Series,
-        _price: float = 0.0015
-        # _cost_to_price_ratio: float = 0.3
-        # _sample_size: int = 10
+        _price: float = 0.0015,
+        _probability_single: float = 1
 ):
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        # return [_rides_row["veh_dist"] * _price * (1 - _cost_to_price_ratio),
-        #         0,
-        #         _rides_row["veh_dist"] * _price,
-        #         1,
-        #         _rides_row["veh_dist"] * _price * _cost_to_price_ratio]
-        return [0.5 * _rides_row["veh_dist"] * _price,
+        return [_probability_single * _rides_row["veh_dist"] * _price,
                 0,
                 _rides_row["veh_dist"] * _price,
-                0.5,
+                _probability_single,
                 _rides_row["veh_dist"] * _price]
 
     discounts = list(itertools.product(*_rides_row["accepted_discount"]))
@@ -307,12 +308,10 @@ def _row_maximise_profit(
         eff_price = [_price * (1 - t) for t in discount]
         revenue = [a * b for a, b in
                    zip(_rides_row["individual_distances"], eff_price)]
-        # cost = _rides_row["veh_dist"] * _price * _cost_to_price_ratio
         probability = 1
         for num, indiv_disc in enumerate(discount):
             accepted_disc = _rides_row["accepted_discount"][num]
             probability *= bisect_right(accepted_disc, indiv_disc)
-            # probability /= _sample_size
             probability /= len(accepted_disc)
 
         # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]

@@ -539,8 +539,8 @@ def make_shareability_graph(_inData, params):
     _inData.sblts.R[2] = R2
     # New part for weighting a graph:
     df = R2.copy()
-    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.starting_probs.mu_prob, params.st_dev_prob)
-    #                                            *norm.cdf(x[1], params.starting_probs.mu_prob, params.st_dev_prob))
+    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], exmas_params.starting_probs.mu_prob, exmas_params.st_dev_prob)
+    #                                            *norm.cdf(x[1], exmas_params.starting_probs.mu_prob, exmas_params.st_dev_prob))
     # df['weight'] = df['true_u_pax']
     df['weight'] = df['u_paxes']
 

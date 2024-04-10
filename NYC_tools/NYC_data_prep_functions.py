@@ -71,7 +71,7 @@ def load_nyc_csv(_inData, _params):
     requests['treq'] = (trips.pickup_datetime - trips.pickup_datetime.min())
     requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
     # requests.ttrav = pd.to_timedelta(requests.ttrav)
-    # if params.get('avg_speed',False):
+    # if exmas_params.get('avg_speed',False):
     #    requests.ttrav = (pd.to_timedelta(requests.ttrav) / _params.avg_speed).dt.floor('1s')
     requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
     requests = requests.sort_values('treq')
@@ -229,7 +229,7 @@ def init_log(logger_level, logger=None):
     elif logger_level == 'INFO':
         level = logging.INFO
     else:
-        raise Exception("Not accepted logger level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
+        raise Exception("Not accepted logger log_level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
     if logger is None:
         logging.basicConfig(stream=sys.stdout, format='%(asctime)s-%(levelname)s-%(message)s',
                             datefmt='%H:%M:%S', level=level)
@@ -249,7 +249,7 @@ def embed_logger(log):
     elif log in ["DEBUG", "WARNING", "CRITICAL", "INFO"]:
         return init_log(log)
     else:
-        raise Exception("Not accepted logger level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
+        raise Exception("Not accepted logger log_level, please choose: 'DEBUG', 'WARNING', 'CRITICAL', 'INFO'")
 
 
 def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'variable': None}),
@@ -278,14 +278,14 @@ def testing_exmas_basic(exmas_algorithm, params, indatas, topo_params=DotMap({'v
                 for k in range(len(topo_params['values'])):
                     params[topo_params['variable']] = topo_params['values'][k]
                     # try:
-                        # temp = exmas_algorithm(indatas[i], params, None, False)
+                        # temp = exmas_algorithm(indatas[i], exmas_params, None, False)
                     temp = exmas_algorithm(indatas[i], params, False)
                     results.append(temp.copy())
                     settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k],
                                      'Start_time': indatas[i].requests.iloc[0,]['pickup_datetime'],
                                      'End_time': indatas[i].requests.iloc[-1,]['pickup_datetime'],
                                      'Demand_size': len(indatas[i].requests)})
-                        # settings.append({'Replication': j, 'Batch': i, topo_params.variable: topo_params['values'][k]})
+                        # settings.append({'Replication': j, 'Batch': i, general_configuration.variable: general_configuration['values'][k]})
                     # except:
                     logger.debug('Impossible to attach batch number: ' + str(i))
                     pass

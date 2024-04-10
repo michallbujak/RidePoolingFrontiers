@@ -93,7 +93,7 @@ def make_paths(params, relative = False):
     params.paths.main = "ExMAS"
 
     params.paths.data = os.path.join(params.paths.main, '../ExMAS/data')
-    params.paths.params = os.path.join(params.paths.data, 'configs')
+    params.paths.exmas_params = os.path.join(params.paths.data, 'configs')
     params.paths.albatross = os.path.join(params.paths.data, 'albatross')  # albatross data
     params.paths.G = os.path.join(params.paths.data, 'graphs',
                                   params.city.split(",")[0] + ".graphml")  # graphml of a current .city
@@ -107,7 +107,7 @@ def make_paths(params, relative = False):
 
 def get_config(path, root_path = None):
     # reads a .json file with MaaSSim configuration
-    # use as: params = get_config(config.json)
+    # use as: exmas_params = get_config(config.json)
     with open(path) as json_file:
         data = json.load(json_file)
         config = DotMap(data)
@@ -122,7 +122,7 @@ def get_config(path, root_path = None):
 
 def save_config(_params, path=None):
     if path is None:
-        path = os.path.join(_params.paths.params, _params.NAME + ".json")
+        path = os.path.join(_params.paths.exmas_params, _params.NAME + ".json")
     with open(path, "w") as write_file:
         json.dump(_params, write_file)
 
@@ -364,7 +364,7 @@ def load_nyc_csv(_inData, _params):
     requests['treq'] = (trips.pickup_datetime - trips.pickup_datetime.min())
     requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
     # requests.ttrav = pd.to_timedelta(requests.ttrav)
-    # if params.get('avg_speed',False):
+    # if exmas_params.get('avg_speed',False):
     #    requests.ttrav = (pd.to_timedelta(requests.ttrav) / _params.avg_speed).dt.floor('1s')
     requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
     requests = requests.sort_values('treq')
@@ -494,7 +494,7 @@ def synthetic_demand_poly(_inData, _params=None):
     origins_albatross = origins_albatross[
         origins_albatross['origin'].isin(inData.skim.index)]  # droping those origins not in skim
 
-    # Sample_origins = origins_albatross.sample(params.nP)
+    # Sample_origins = origins_albatross.sample(exmas_params.nP)
     # Sample_origins.to_csv('Sample_origins.csv')
     Sample_origins = pd.read_csv('ExMAS/spinoffs/potential/Sample_origins.csv', index_col=0).sample(_params.nP)
     # 1. create a passenger DataFrame
@@ -688,11 +688,11 @@ def mode_choices(_inData, sp):
     """
     Compete with Transit.
     Parameters needed:
-    params.shareability.PT_discount = 0.66
-    params.shareability.PT_beta = 1.3
-    params.shareability.PT_speed = 1/2
-    params.shareability.beta_prob = -0.5
-    params.shareability.probabilistic = False
+    exmas_params.shareability.PT_discount = 0.66
+    exmas_params.shareability.PT_beta = 1.3
+    exmas_params.shareability.PT_speed = 1/2
+    exmas_params.shareability.beta_prob = -0.5
+    exmas_params.shareability.probabilistic = False
     inData.requests['timePT']
     :param _inData:
     :param sp:

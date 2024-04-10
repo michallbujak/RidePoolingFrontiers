@@ -1,3 +1,5 @@
+import argparse
+
 import pickle
 
 from ExMAS.probabilistic_exmas import main as exmas_algo
@@ -7,76 +9,100 @@ from Individual_pricing.matching import matching_function
 from Individual_pricing.evaluation import *
 from Individual_pricing.pricing_functions import *
 
-general_config = bt_prep.get_parameters(
-    "configs/general_config.json"
-)
+parser = argparse.ArgumentParser()
+parser.add_argument("--directories-json", type=str, required=True)
+parser.add_argument("--batch-size", nargs='+', type=int, default=[148, 152])
+parser.add_argument("--sample-size", type=int, default=100)
+parser.add_argument("--behavioural-size", type=int, default=20)
+parser.add_argument("--save-partial", action="store_true")
+parser.add_argument("--load-partial", nargs='+', type=int, default=[0, 0, 0])
+parser.add_argument("--simulation-name", type=str or None, default=None)
+args = parser.parse_args()
+print(args)
 
-_batch_size = 150
-_sample_size = 100
-# _cr = 0.3
+assert sum(args.load_partial) <= 1, "Cannot load more than 1 intermediate step"
 
-bt_prep.create_results_directory(general_config)
+""" Import configuration & prepare results folder"""
+directories = bt_prep.get_parameters(args.directories_json)
+bt_prep.create_results_directory(directories, args.simulation_name)
 
-databanks_list, params = bt_prep.prepare_batches(
-    general_config=general_config,
-    params=bt_prep.get_parameters(general_config.initial_parameters),
-    filter_function=lambda x: len(x.requests) == _batch_size
-)
-
-params = bt_prep.update_probabilistic(general_config, params)
-params.type_of_distribution = None
-
-databanks_list, settings_list = exmas_loop_func(
-    exmas_algorithm=exmas_algo,
-    params=params,
-    list_databanks=databanks_list,
-    topo_params=general_config,
-    replications=general_config.no_replications,
-    logger=None,
-    sampling_function_with_index=False
-)
-
-
-# with open("example_data", "wb") as file:
-#     pickle.dump((databanks_list, settings_list, params), file)
-#
-# with open("example_data_150", "rb") as file:
-#     databanks_list, settings_list, params = pickle.load(file)
-
-databanks_list = [expand_rides(t) for t in databanks_list]
-
-databanks_list = [prepare_samples(t, 20) for t in databanks_list]
-#
-# with open("example_data_"+str(_batch_size), "wb") as file:
-#     pickle.dump((databanks_list, settings_list, params), file)
-
-# with open("example_data_" + str(_batch_size), "rb") as file:
-#     databanks_list, settings_list, params = pickle.load(file)
-
-databanks_list = [
-    calculate_expected_profitability(
-        t,
-        final_sample_size=_sample_size,
-        price=params["price"]/1000,
-        # cost_to_price_ratio=_cr,
-        speed=params["avg_speed"]
+if not sum(args.load_partial):
+    """ Prepare requests """
+    databanks_list, exmas_params = bt_prep.prepare_batches(
+        exmas_params=bt_prep.get_parameters(directories.initial_parameters),
+        filter_function=lambda x: (len(x.requests) >= args.batch_size[0]) &
+                                  (len(x.requests) <= args.batch_size[1])
     )
-    for t in databanks_list
-]
+    # exmas_params = bt_prep.update_probabilistic(directories, exmas_params)
 
-with open(str(_batch_size) + "_calculated_150", "wb") as file:
-    pickle.dump((databanks_list, settings_list, params), file)
+    """ Run the original ExMAS for an initial shareability graph """
+    exmas_params.type_of_distribution = None
+    databanks_list = exmas_loop_func(
+        exmas_algorithm=exmas_algo,
+        exmas_params=exmas_params,
+        list_databanks=databanks_list
+    )
+
+    if args.save_partial:
+        with open(directories.partial_results + "initial_exmas_" +
+                  str(args.batch_size) + ".pickle", "wb") as file:
+            pickle.dump((databanks_list, exmas_params), file)
+
+if args.load_partial[0]:
+    with open(directories.partial_results + "initial_exmas_" +
+              str(args.batch_size) + ".pickle", "rb") as file:
+        databanks_list, exmas_params = pickle.load(file)
+
+if not sum(args.load_partial[1:]):
+    """ Extend dataframe rides & prepare behavioural samples """
+    databanks_list = [expand_rides(t) for t in databanks_list]
+    databanks_list = [prepare_samples(t, args.behavioural_size) for t in databanks_list]
+
+    if args.save_partial:
+        with open(directories.partial_results + "expanded_rides_" +
+                  str(args.batch_size) + "_" + str(args.sample_size)
+                  + ".pickle", "wb") as file:
+            pickle.dump((databanks_list, exmas_params), file)
+
+if args.load_partial[1]:
+    with open(directories.partial_results + "expanded_rides_" +
+              str(args.batch_size) + "_" + str(args.sample_size)
+              + ".pickle", "rb") as file:
+        databanks_list, exmas_params = pickle.load(file)
+
+if not sum(args.load_partial[2:]):
+    """ Calculate new (probabilistic) measures """
+    databanks_list = [
+        calculate_expected_profitability(
+            t,
+            final_sample_size=args.sample_size,
+            price=exmas_params["price"] / 1000,
+            speed=exmas_params["avg_speed"]
+        )
+        for t in databanks_list
+    ]
+
+    if args.save_partial:
+        with open(directories.partial_results + "calculated_rides_" +
+                  str(args.batch_size) + "_" + str(args.sample_size)
+                  + ".pickle", "wb") as file:
+            pickle.dump((databanks_list, exmas_params), file)
+
+if args.load_partial[2]:
+    with open(directories.partial_results + "calculated_rides_" +
+              str(args.batch_size) + "_" + str(args.sample_size)
+              + ".pickle", "rb") as file:
+        databanks_list, exmas_params = pickle.load(file)
 
 databanks_list = [
     matching_function(
         databank=db,
-        params=params,
+        params=exmas_params,
         objectives=None,
         min_max="max"
     ) for db in databanks_list
 ]
 
-with open("results_" + str(_batch_size) + "_" + str(_sample_size) + "_v3.pickle", "wb") as f:
+with open(directories.path_results + "results_" + str(args.batch_size) +
+          "_" + str(args.sample_size) + ".pickle", "wb") as f:
     pickle.dump(databanks_list, f)
-
-

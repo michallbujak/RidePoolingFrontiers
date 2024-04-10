@@ -1,5 +1,5 @@
 """
-# ExMAS
+# Revised ExMAS algorithm
 > Exact Matching of Attractive Shared rides (ExMAS) for system-wide strategic evaluations
 ---
 
@@ -32,15 +32,19 @@ https://doi.org/10.1016/j.trb.2020.06.006
 [Quickstart tutorial](https://github.com/RafalKucharskiPK/ExMAS/blob/master/notebooks/ExMAS.ipynb)
 
 ----
+Original version:
 Rafał Kucharski, TU Delft, 2020 r.m.kucharski (at) tudelft.nl
+
+Probabilistic version (current/below):
+Michał Bujak, JU Kraków, 2024 michal.bujak (at) doctoral.uj.edu.pl
 """
 
 __author__ = "Rafal Kucharski"
 __copyright__ = "Copyright 2020, TU Delft"
-__credits__ = ["Oded Cats, Arjan de Ruijter, Subodh Dubey, Nejc Gerzinic, Michal Bujak"]
+__credits__ = ["Oded Cats, Arjan de Ruijter, Subodh Dubey, Nejc Gerzinic"]
 __version__ = "1.0.1"
-__maintainer__ = "Rafal Kucharski"
-__email__ = "rafalkucharski.box _at_ gmail . com"
+__maintainer__ = "Michal Bujak"
+__email__ = "michal.bujak _at_ doctoral.uj.edu.pl"
 
 import ast
 import sys
@@ -63,6 +67,7 @@ import matplotlib.pyplot as plt
 from ExMAS.utils import mixed_discrete_norm_distribution
 
 pd.options.mode.chained_assignment = None
+
 try:
     np.warnings.filterwarnings('ignore')
 except AttributeError:
@@ -103,7 +108,7 @@ def main(input_data, params, plot=False):
     """
     main call
     :param input_data: input (graph, requests, .. )
-    :param params: parameters
+    :param exmas_params: parameters
     :param plot: flag to plot charts for consecutive steps
     :return: inData.exmas.schedule - selecgted shared rides
     inData.exmas.rides - all ride candidates
@@ -111,6 +116,9 @@ def main(input_data, params, plot=False):
     @param _seed:
     """
     _inData = input_data.copy()
+    if type(_inData) == dict:
+        _inData = DotMap(_inData)
+
     _inData.logger = init_log(params)  # initialize console logger
 
     _inData = sample_random_parameters(_inData, params)
@@ -206,7 +214,7 @@ def single_rides(_inData, params):
     req['delta'] = f_delta()  # assign maximal delay in seconds
     req['true_u'] = params.price * req.dist / 1000 + req.VoT * req.ttrav
     if params.get("noise", None) is not None:
-        assert isinstance(params.noise, dict), "Incorrect type of params.noise in json (expected dict)"
+        assert isinstance(params.noise, dict), "Incorrect type of exmas_params.noise in json (expected dict)"
         req['u'] = req["true_u"] + np.random.normal(size=len(req), loc=params.noise.get("mean", 0),
                                                     scale=params.noise.get("st_dev", 0))
     else:
@@ -596,8 +604,8 @@ def make_shareability_graph(_inData, params):
     _inData.exmas.R[2] = R2
     # New part for weighting a graph:
     df = R2.copy()
-    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], params.starting_probs.mu_prob, params.st_dev_prob)
-    #                                            *norm.cdf(x[1], params.starting_probs.mu_prob, params.st_dev_prob))
+    # df['weight'] = df['u_paxes'].apply(lambda x: norm.cdf(x[0], exmas_params.starting_probs.mu_prob, exmas_params.st_dev_prob)
+    #                                            *norm.cdf(x[1], exmas_params.starting_probs.mu_prob, exmas_params.st_dev_prob))
     # df['weight'] = df['true_u_pax']
     df['weight'] = df['u_paxes']
 
@@ -955,15 +963,15 @@ def match(im, r, params={"matching_obj": "u_veh"}, plot=False, min_max="min", ma
         im_indexes_inv[i] = index
 
     # im['lambda_r'] = im.apply(
-    #     lambda x: params.shared_discount if x.kind == 1 else 1 - x.u_veh / sum([r.loc[_].ttrav for _ in x.indexes]),
+    #     lambda x: exmas_params.shared_discount if x.kind == 1 else 1 - x.u_veh / sum([r.loc[_].ttrav for _ in x.indexes]),
     #     axis=1)
 
     im['PassHourTrav_ns'] = im.apply(lambda x: sum([r.loc[_].ttrav for _ in x.indexes]), axis=1)
 
     r = r.reset_index()
 
-    # if params.profitability:
-    #     im = im[im.lambda_r >= params.shared_discount]
+    # if exmas_params.profitability:
+    #     im = im[im.lambda_r >= exmas_params.shared_discount]
     #     logger.info('Out of {} trips  {} are directly profitable.'.format(r.shape[0],
     #                                                                       im.shape[0])) if logger is not None else None
 
@@ -1285,8 +1293,8 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
     if inData.prob.get("sampled_random_parameters") is not None:
         return inData
 
-    if params.get("sampling_function_with_index", "False") is False:
-        params["sampling_function_with_index"] = False
+    # if params.get("sampling_function_with_index", False) is False:
+    #     params["sampling_function_with_index"] = False
 
     if params.get("distribution_variables", None) is None:
         inData.prob.sampled_random_parameters = pd.DataFrame()
@@ -1318,7 +1326,7 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
 
     elif type_of_distribution == "manual" and sampling_func(*zeros) is not None:
         sample_from_interval = np.random.random([number_of_requests, len(zeros)])
-        if not params["sampling_function_with_index"]:
+        if not params.get("sampling_function_with_index", False):
             columns = params.distribution_variables
         else:
             columns = params.distribution_variables + ["class"]
@@ -1330,10 +1338,10 @@ def sample_random_parameters(inData: DotMap, params: DotMap, sampling_func: Func
         gen_func = mixed_discrete_norm_distribution(
             probs=params["multinormal_probs"],
             arguments=params["multinormal_args"],
-            with_index=params["sampling_function_with_index"]
+            with_index=params.get("sampling_function_with_index", False)
         )
         sample_from_interval = np.random.random([number_of_requests, len(zeros)])
-        if not params["sampling_function_with_index"]:
+        if not params.get("sampling_function_with_index", False):
             columns = params.distribution_variables
         else:
             columns = params.distribution_variables + ["class"]
@@ -1476,7 +1484,7 @@ def check_if_correct_attributes(params):
     if params.get("distribution_variables", None) is not None:
         assert isinstance(params.distribution_variables, list), "distribution_variables should be a list"
         for j in params.distribution_variables:
-            assert isinstance(j, str), "Elements of list params.distribution_variables should be str"
+            assert isinstance(j, str), "Elements of list exmas_params.distribution_variables should be str"
     if params.get("type_of_distribution", None) is not None:
         params.type_of_distribution = params.type_of_distribution.lower()
         assert params.type_of_distribution in ["discrete", "manual", "normal", "multinormal"], \

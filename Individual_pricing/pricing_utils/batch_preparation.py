@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import warnings
+import logging
 
 from dotmap import DotMap
 import pandas as pd
@@ -16,11 +17,19 @@ up = os.path.dirname
 sys.path.append(up(up(up(__file__))))
 
 
-def log_func(log, msg):
-    if log is None:
-        print(msg)
+def log_func(
+        log_level: int or str,
+        msg: str,
+        logger: logging.Logger or None = None
+):
+    """ Log things """
+    if logger is None:
+        logging.basicConfig(level=20, format='%(asctime)s-%(levelname)s-%(message)s',
+                            datefmt='%H:%M:%S')
+        logger = logging.getLogger()
+        logger.log(log_level, msg)
     else:
-        log.info(msg)
+        logger.log(log_level, msg)
 
 
 def get_parameters(
@@ -36,27 +45,48 @@ def get_parameters(
     return config
 
 
-def create_results_directory(config, date=None):
-    if date is None:
-        the_day = str(datetime.date.today().strftime("%d-%m-%y"))
+def create_directory(
+        directory: str,
+        logger: logging.Logger or None = None,
+        log_level: int or str = 20
+):
+    """ Create a directory with optional logging """
+    try:
+        os.mkdir(directory)
+    except OSError:
+        log_func(log_level,
+                 f'Folder "{directory}" already exists and is set'
+                 f' as results destination (warning: possible overwriting).',
+                 logger)
     else:
-        the_day = date
-    config.path_results += the_day
-    try:
-        os.mkdir(config.path_results)
-    except OSError as error:
-        print(error)
-        print('overwriting current files in the folder')
-    try:
-        os.mkdir(os.path.join(config.path_results, 'temp'))
-    except OSError as error:
-        print(error)
-        print('temp folder already exists')
+        log_func(log_level,
+                 f'Folder "{directory}" created and set for results.',
+                 logger)
+
+
+def create_results_directory(
+        config: DotMap or dict,
+        name: str or None = None,
+        **kwargs
+):
+    if name is None:
+        name = str(datetime.date.today().strftime("%d-%m-%y"))
+
+    create_directory(config.path_results, kwargs.get('logger'), 10)
+    config.path_results += name
+    create_directory(config.path_results, kwargs.get('logger'), 20)
     config.path_results += '/'
+
+    create_directory(config.partial_results, kwargs.get('logger'), 10)
+    config.partial_results += name
+    create_directory(config.partial_results, kwargs.get('logger'), 20)
+    config.partial_results += '/'
+
     return config
 
 
 def initialise_input_dotmap():
+    """ Function required for the original ExMAS """
     databank_dotmap = DotMap()
     databank_dotmap['passengers'] = pd.DataFrame(columns=['id', 'pos', 'status'])
     databank_dotmap.passengers = databank_dotmap.passengers.set_index('id')
@@ -106,54 +136,60 @@ def nyc_pick_batch(batches, trips, inData, _params, batch_no):
 
 
 def prepare_batches(
-        general_config: DotMap,
-        params: DotMap,
+        exmas_params: DotMap,
+        no_replications: int = 1,
         filter_function: Callable[[int], bool] = lambda x: len(x.requests) > 0,
         output_params: bool = True,
-        logger: logging.Logger or None = None
-) -> list[DotMap]:
+        **kwargs
+) -> list[DotMap] or (list[DotMap], DotMap or dict):
     """ Prepare batches from the NYC request file"""
-
     databank_dotmap = initialise_input_dotmap()
     try:
-        databank_dotmap = load_G(databank_dotmap, params, stats=True)
+        databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
     except FileNotFoundError:
+        log_func(30, "'G', 'skim' and 'nyc_requests' not found. "
+                     "Checking parent directory",
+                 kwargs.get('logger'))
         for _name in ["G", "skim", "nyc_requests"]:
-            params.paths[_name] = os.path.join(up(up(up(__file__))), params.paths[_name])
+            exmas_params.paths[_name] = os.path.join(up(up(up(__file__))),
+                                                     exmas_params.paths[_name])
 
-        databank_dotmap = load_G(databank_dotmap, params, stats=True)
+        databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
 
-    batches, trips = nyc_csv_prepare_batches(params)
+    batches, trips = nyc_csv_prepare_batches(exmas_params)
 
-    log_func(logger, "Preparing NYC batches \n")
+    logger = kwargs.get("logger")
+
+    log_func(20, "Preparing NYC batches", logger)
 
     out_data = []
-    pbar = tqdm(total=general_config.no_replications)
+    pbar = tqdm(total=no_replications)
     counter = 0
     batch_no = 0
 
-    while counter < general_config.no_replications and batch_no < 8736:
+    while counter < no_replications and batch_no < 8736:
         try:
-            temp = nyc_pick_batch(batches, trips, databank_dotmap, params, batch_no)
+            temp = nyc_pick_batch(batches, trips, databank_dotmap, exmas_params, batch_no)
             if filter_function(temp):
-                out_data.append(temp)
+                out_temp = {k: temp[k] for k in ["requests", "skim"]}
+                out_data.append(out_temp)
                 pbar.update(1)
                 counter += 1
             else:
-                log_func(logger, f'Batch no: {batch_no} skipped due to filter')
+                log_func(10, f'Batch no: {batch_no} skipped due to filter', logger)
 
             batch_no += 1
 
         except AttributeError:
-            log_func(logger, f'Impossible to attach batch number: {batch_no}')
+            log_func(10, f'Impossible to attach batch number: {batch_no}', logger)
             batch_no += 1
 
     pbar.close()
 
-    log_func(logger, f"Batches READY! \n")
+    log_func(20, f"Batches READY!", logger)
 
     if output_params:
-        return out_data, params
+        return out_data, exmas_params
     else:
         return out_data
 

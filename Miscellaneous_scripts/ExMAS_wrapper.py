@@ -28,14 +28,14 @@ if __name__ == "__main__":
     utils.create_results_directory(config)
 
     """ Prepare data """
-    # dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
+    # dotmaps_list, exmas_params = nyc_tools.prepare_batches(config.no_batches,
     #                                                  filter_function=lambda x: (len(x.requests) < 150) &
     #                                                                            (len(x.requests) > 140),
     #                                                  config=config.initial_parameters)
     # with open("data/exemplary_demand.obj", "wb") as file:
     #     pickle.dump(dotmaps_list, file)
     # with open("data/params_in_process.obj", "wb") as file:
-    #     pickle.dump(params, file)
+    #     pickle.dump(exmas_params, file)
 
     with open("data/exemplary_demand.obj", "rb") as file:
         dotmaps_list = pickle.load(file)
@@ -55,7 +55,7 @@ if __name__ == "__main__":
                                                                                   (s * 2.625 / 3600, s * 0.105)),
                                                                                  ((7.78 / 3600, 1.18),
                                                                                   (s * 0.778 / 3600, s * 0.118)))
-    # utils.display_text(params, is_dotmap=True)
+    # utils.display_text(exmas_params, is_dotmap=True)
 
     dotmaps_list_results, settings_list = nyc_tools.testing_exmas_basic(exmas_algorithm=exmas_algo,
                                                                         params=params,

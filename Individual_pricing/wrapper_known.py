@@ -34,9 +34,9 @@ params.multinormal_args = (
 
 databanks_list, settings_list = exmas_loop_func(
     exmas_algorithm=exmas_algo,
-    params=params,
+    exmas_params=params,
     list_databanks=databanks_list,
-    topo_params=general_config,
+    general_configuration=general_config,
     replications=general_config.no_replications,
     logger=None,
     sampling_function_with_index=True
