@@ -77,7 +77,8 @@ if not sum(args.load_partial[2:]):
                                         final_sample_size=args.sample_size,
                                         price=exmas_params["price"] / 1000,
                                         speed=exmas_params["avg_speed"],
-                                        one_shot=False
+                                        one_shot=False,
+                                        minimal_discount=0
                                         )
         for t in databanks_list
     ]

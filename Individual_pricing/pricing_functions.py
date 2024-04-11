@@ -370,11 +370,13 @@ def _row_maximise_profit(
 #         time_s = row_rides["individual_times"][num]
 
 
-def calculate_expected_profitability(
+def expected_profitability_function(
         databank: DotMap or dict,
         final_sample_size: int = 10,
         price: float = 0.0015,
         # cost_to_price_ratio: float = 0.3,
+        one_shot: bool = False,
+        minimal_discount: float = 0,
         speed: float = 6
 ) -> DotMap or dict:
     rides = databank["exmas"]["rides"]
@@ -400,89 +402,35 @@ def calculate_expected_profitability(
 
     rides["best_profit"] = rides.progress_apply(_row_maximise_profit,
                                                 axis=1,
-                                                _price=price
-                                                # _cost_to_price_ratio=cost_to_price_ratio
+                                                _price=price,
+                                                _one_shot=one_shot,
+                                                _minimal_discount=minimal_discount
                                                 # _sample_size=final_sample_size
                                                 )
-    rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
-    rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
-    op_costs = [0.2, 0.3, 0.4, 0.5, 0.6]
-    objectives = ["expected_revenue"]
+    if not one_shot:
+        rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0])
+        objectives = ["max_profit"]
+    else:
+        rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
+        rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
+        op_costs = [0.2, 0.3, 0.4, 0.5, 0.6]
+        objectives = ["expected_revenue"]
 
-    for op_cost in op_costs:
-        rides["cost_" + str(int(100 * op_cost))] = rides["veh_dist"] * price * op_cost
-        rides["expected_cost_" + str(int(100 * op_cost))] = rides.apply(lambda x:
-                                                                        x["cost_" + str(int(100 * op_cost))] *
-                                                                        x["best_profit"][3],
-                                                                        axis=1)
-        rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
-                                                              - rides["expected_cost_" + str(int(100 * op_cost))]
-        rides["expected_profit_int_" + str(int(100 * op_cost))] = rides["expected_profit_"
-                                                                        + str(int(100 * op_cost))].apply(
-            lambda x: int(1000 * x))
-        objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
+        for op_cost in op_costs:
+            rides["cost_" + str(int(100 * op_cost))] = rides["veh_dist"] * price * op_cost
+            rides["expected_cost_" + str(int(100 * op_cost))] = rides.apply(lambda x:
+                                                                            x["cost_" + str(int(100 * op_cost))] *
+                                                                            x["best_profit"][3],
+                                                                            axis=1)
+            rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
+                                                                  - rides["expected_cost_" + str(int(100 * op_cost))]
+            rides["expected_profit_int_" + str(int(100 * op_cost))] = rides["expected_profit_"
+                                                                            + str(int(100 * op_cost))].apply(
+                lambda x: int(1000 * x))
+            objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
 
     # rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
     # rides["max_profit_int"] = rides["best_profit"].apply(lambda x: int(1000 * x[0]))
-
-    databank["exmas"]["recalibrated_rides"] = rides.copy()
-    databank["exmas"]["objectives"] = objectives
-
-    return databank
-
-
-def expected_profitability_function(
-        databank: DotMap or dict,
-        one_shot: bool,
-        final_sample_size: int = 10,
-        price: float = 0.0015,
-        minimal_discount: float = 0.1,
-        operating_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6),
-        speed: float = 6
-) -> DotMap or dict:
-    rides = databank["exmas"]["rides"]
-    times_non_shared = dict(databank['exmas']['requests']['ttrav'])
-    b_s = databank['prob']['bs_samples']
-    b_t = databank['prob']['bt_sample']
-    interval_size = int(len(b_s[2]) * len(b_t) / final_sample_size)
-
-    tqdm.pandas()
-
-    rides["accepted_discount"] = rides.progress_apply(
-        _row_sample_acceptable_disc,
-        axis=1,
-        _times_non_shared=times_non_shared,
-        _bs_samples=b_s,
-        _bt_sample=b_t,
-        _interval=interval_size,
-        _price=price
-    )
-
-    rides["veh_dist"] = rides["u_veh"] * speed
-
-    rides["best_profit"] = rides.progress_apply(_row_maximise_profit,
-                                                axis=1,
-                                                _price=price,
-                                                _one_shot=one_shot
-                                                # _cost_to_price_ratio=cost_to_price_ratio
-                                                # _sample_size=final_sample_size
-                                                )
-    rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
-    rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
-    objectives = ["expected_revenue"]
-
-    for op_cost in operating_costs:
-        rides["cost_" + str(int(100 * op_cost))] = rides["veh_dist"] * price * op_cost
-        rides["expected_cost_" + str(int(100 * op_cost))] = rides.apply(lambda x:
-                                                                        x["cost_" + str(int(100 * op_cost))] *
-                                                                        sum(x["best_profit"][3]),
-                                                                        axis=1)
-        rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
-                                                              - rides["expected_cost_" + str(int(100 * op_cost))]
-        rides["expected_profit_int_" + str(int(100 * op_cost))] = rides["expected_profit_"
-                                                                        + str(int(100 * op_cost))].apply(
-            lambda x: int(1000 * x))
-        objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
 
     databank["exmas"]["recalibrated_rides"] = rides.copy()
     databank["exmas"]["objectives"] = objectives
