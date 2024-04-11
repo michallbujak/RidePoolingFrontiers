@@ -73,12 +73,12 @@ if args.load_partial[1]:
 if not sum(args.load_partial[2:]):
     """ Calculate new (probabilistic) measures """
     databanks_list = [
-        calculate_expected_profitability(
-            t,
-            final_sample_size=args.sample_size,
-            price=exmas_params["price"] / 1000,
-            speed=exmas_params["avg_speed"]
-        )
+        expected_profitability_function(t,
+                                        final_sample_size=args.sample_size,
+                                        price=exmas_params["price"] / 1000,
+                                        speed=exmas_params["avg_speed"],
+                                        one_shot=False
+                                        )
         for t in databanks_list
     ]
 
@@ -94,6 +94,7 @@ if args.load_partial[2]:
               + ".pickle", "rb") as file:
         databanks_list, exmas_params = pickle.load(file)
 
+""" Conduct matching """
 databanks_list = [
     matching_function(
         databank=db,

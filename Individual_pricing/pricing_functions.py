@@ -3,6 +3,7 @@ import itertools
 from bisect import bisect_right
 
 import pandas as pd
+import numpy as np
 from dotmap import DotMap
 from math import isnan
 from tqdm import tqdm
@@ -281,7 +282,8 @@ def _row_sample_acceptable_disc(
         out2 = []
         j = int(_interval / 2)
         while j < len(out1):
-            out2.append(out1[j] /
+            out3 = out1[j] if out1[j] >= 0 else 0
+            out2.append(out3 /
                         (_price * _rides_row["individual_distances"][no]))
             j += _interval
         out.append(out2)
@@ -291,33 +293,62 @@ def _row_sample_acceptable_disc(
 
 def _row_maximise_profit(
         _rides_row: pd.Series,
+        _one_shot: bool,
         _price: float = 0.0015,
-        _probability_single: float = 1
+        _probability_single: float = 1,
+        _minimal_discount: float = 0.1
 ):
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
         return [_probability_single * _rides_row["veh_dist"] * _price,
                 0,
                 _rides_row["veh_dist"] * _price,
-                _probability_single,
+                [_probability_single],
                 _rides_row["veh_dist"] * _price]
 
     discounts = list(itertools.product(*_rides_row["accepted_discount"]))
     best = [0, 0, 0, 0, 0]
     for discount in discounts:
+        """ For effectively shared ride """
         eff_price = [_price * (1 - t) for t in discount]
-        revenue = [a * b for a, b in
-                   zip(_rides_row["individual_distances"], eff_price)]
-        probability = 1
-        for num, indiv_disc in enumerate(discount):
-            accepted_disc = _rides_row["accepted_discount"][num]
-            probability *= bisect_right(accepted_disc, indiv_disc)
-            probability /= len(accepted_disc)
+        revenue_shared = [a * b for a, b in
+                          zip(_rides_row["individual_distances"], eff_price)]
 
-        # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]
-        out = [sum(revenue) * probability, discount, sum(revenue), probability, _rides_row["veh_dist"] * _price]
-        if out[0] > best[0]:
-            best = out.copy()
+        probability_shared = 1
+        prob_ind = [0] * len(discount)
+        for num, individual_disc in enumerate(discount):
+            accepted_disc = _rides_row["accepted_discount"][num]
+            prob_ind[num] = bisect_right(accepted_disc, individual_disc)/len(accepted_disc)
+            probability_shared *= prob_ind[num]
+            probability_shared /= len(accepted_disc)
+
+        if _one_shot:
+            # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]
+            out = [sum(revenue_shared) * probability_shared, discount, sum(revenue_shared),
+                   prob_ind, _rides_row["veh_dist"] * _price]
+            if out[0] > best[0]:
+                best = out.copy()
+        else:
+            remaining_revenue = 0
+            for traveller in range(len(discount)):
+                others = prob_ind[:]
+                others.pop(traveller)
+                prob_others = np.prod(others)
+                rev = _rides_row["individual_distances"][traveller] * _price
+                # First, if the P(X_j = 0)*r_j
+                prob_not_trav = (1 - prob_ind[traveller])*prob_others
+                remaining_revenue += prob_not_trav * rev
+                # Then, P(X_j = 1, \pi_{i != j} X_i = 0)*r_j*(1-\lambda)
+                rev *= (1 - _minimal_discount)
+                remaining_revenue += (prob_ind[traveller]*(1 - prob_others))*rev
+
+            out = [sum(revenue_shared) * probability_shared + remaining_revenue,
+                   discount,
+                   sum(revenue_shared) + remaining_revenue,
+                   prob_ind,
+                   _rides_row["veh_dist"] * _price]
+            if out[0] > best[0]:
+                best = out.copy()
 
     return best
 
@@ -393,6 +424,65 @@ def calculate_expected_profitability(
 
     # rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
     # rides["max_profit_int"] = rides["best_profit"].apply(lambda x: int(1000 * x[0]))
+
+    databank["exmas"]["recalibrated_rides"] = rides.copy()
+    databank["exmas"]["objectives"] = objectives
+
+    return databank
+
+
+def expected_profitability_function(
+        databank: DotMap or dict,
+        one_shot: bool,
+        final_sample_size: int = 10,
+        price: float = 0.0015,
+        minimal_discount: float = 0.1,
+        operating_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6),
+        speed: float = 6
+) -> DotMap or dict:
+    rides = databank["exmas"]["rides"]
+    times_non_shared = dict(databank['exmas']['requests']['ttrav'])
+    b_s = databank['prob']['bs_samples']
+    b_t = databank['prob']['bt_sample']
+    interval_size = int(len(b_s[2]) * len(b_t) / final_sample_size)
+
+    tqdm.pandas()
+
+    rides["accepted_discount"] = rides.progress_apply(
+        _row_sample_acceptable_disc,
+        axis=1,
+        _times_non_shared=times_non_shared,
+        _bs_samples=b_s,
+        _bt_sample=b_t,
+        _interval=interval_size,
+        _price=price
+    )
+
+    rides["veh_dist"] = rides["u_veh"] * speed
+
+    rides["best_profit"] = rides.progress_apply(_row_maximise_profit,
+                                                axis=1,
+                                                _price=price,
+                                                _one_shot=one_shot
+                                                # _cost_to_price_ratio=cost_to_price_ratio
+                                                # _sample_size=final_sample_size
+                                                )
+    rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
+    rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
+    objectives = ["expected_revenue"]
+
+    for op_cost in operating_costs:
+        rides["cost_" + str(int(100 * op_cost))] = rides["veh_dist"] * price * op_cost
+        rides["expected_cost_" + str(int(100 * op_cost))] = rides.apply(lambda x:
+                                                                        x["cost_" + str(int(100 * op_cost))] *
+                                                                        sum(x["best_profit"][3]),
+                                                                        axis=1)
+        rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
+                                                              - rides["expected_cost_" + str(int(100 * op_cost))]
+        rides["expected_profit_int_" + str(int(100 * op_cost))] = rides["expected_profit_"
+                                                                        + str(int(100 * op_cost))].apply(
+            lambda x: int(1000 * x))
+        objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
 
     databank["exmas"]["recalibrated_rides"] = rides.copy()
     databank["exmas"]["objectives"] = objectives
