@@ -353,7 +353,7 @@ def _row_maximise_profit(
                    discount,
                    sum(revenue_shared),
                    prob_ind,
-                   _rides_row["veh_dist"] * probability_shared]
+                   _rides_row["veh_dist"] * probability_shared/1000]
             if _max_output_func(out) > _max_output_func(best):
                 best = out.copy()
         else:
@@ -374,8 +374,8 @@ def _row_maximise_profit(
                    discount,
                    sum(revenue_shared),
                    prob_ind,
-                   _rides_row["veh_dist"] * probability_shared +
-                   sum(_rides_row["individual_distances"]) * (1 - probability_shared)]
+                   _rides_row["veh_dist"] * probability_shared/1000 +
+                   sum(_rides_row["individual_distances"]) * (1 - probability_shared)/1000]
 
             if _max_output_func(out) > _max_output_func(best):
                 best = out.copy()
