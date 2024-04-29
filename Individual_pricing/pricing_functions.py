@@ -232,7 +232,7 @@ def prepare_samples(
     databank["prob"]["bt_sample"] = beta.sample.copy()
 
     databank["prob"]["bs_samples"] = {}
-    for no_paxes, multiplier in zip([2, 3, 4, 5], [0.95, 1, 1.1, 1.2, 2]):
+    for no_paxes, multiplier in zip([2, 3, 4, 5], [0.95, 1, 1.2, 2]):
         beta.remove_sample(0)
         beta.new_sample(
             distribution_type="multinormal",
@@ -296,8 +296,28 @@ def _row_maximise_profit(
         _one_shot: bool,
         _price: float = 0.0015,
         _probability_single: float = 1,
-        _minimal_discount: float = 0.1
+        _guaranteed_discount: float = 0.1
 ):
+    """
+    Function to calculate the expected performance of a precalculated exmas ride
+    --------
+    @param _rides_row: row of exmas rides (potential combination + characteristics)
+    @param _one_shot: scenario where if shared ride is not accepted by any of the
+    co-travellers, all co-travellers drop out of the system
+    @param _price: per-kilometre fare
+    @param _probability_single: probability that a customer is satisfied with a private
+    ride if offered one
+    @param _guaranteed_discount: when traveller accepts a shared ride and any of the co-travellers
+    reject a ride, the traveller is offered
+    --------
+    @return vector comprising 5 main characteristics when applied discount maximising
+    the expected revenue:
+    - expected revenue
+    - vector of individual discounts
+    - revenue from the shared ride if accepted
+    - vector of probabilities that individuals accept the shared ride
+    - expected cost
+    """
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
         return [_probability_single * _rides_row["veh_dist"] * _price,
@@ -309,6 +329,7 @@ def _row_maximise_profit(
     discounts = list(itertools.product(*_rides_row["accepted_discount"]))
     best = [0, 0, 0, 0, 0]
     for discount in discounts:
+        discount = [t if t > _guaranteed_discount else _guaranteed_discount for t in discount]
         """ For effectively shared ride """
         eff_price = [_price * (1 - t) for t in discount]
         revenue_shared = [a * b for a, b in
@@ -324,8 +345,11 @@ def _row_maximise_profit(
 
         if _one_shot:
             # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]
-            out = [sum(revenue_shared) * probability_shared, discount, sum(revenue_shared),
-                   prob_ind, _rides_row["veh_dist"] * _price]
+            out = [sum(revenue_shared) * probability_shared,
+                   discount,
+                   sum(revenue_shared),
+                   prob_ind,
+                   _rides_row["veh_dist"] * _price * probability_shared]
             if out[0] > best[0]:
                 best = out.copy()
         else:
@@ -336,15 +360,15 @@ def _row_maximise_profit(
                 prob_others = np.prod(others)
                 rev = _rides_row["individual_distances"][traveller] * _price
                 # First, if the P(X_j = 0)*r_j
-                prob_not_trav = (1 - prob_ind[traveller])*prob_others
+                prob_not_trav = 1 - prob_ind[traveller]
                 remaining_revenue += prob_not_trav * rev
                 # Then, P(X_j = 1, \pi_{i != j} X_i = 0)*r_j*(1-\lambda)
-                rev *= (1 - _minimal_discount)
+                rev *= (1 - _guaranteed_discount)
                 remaining_revenue += (prob_ind[traveller]*(1 - prob_others))*rev
 
             out = [sum(revenue_shared) * probability_shared + remaining_revenue,
                    discount,
-                   sum(revenue_shared) + remaining_revenue,
+                   sum(revenue_shared),
                    prob_ind,
                    _rides_row["veh_dist"] * _price]
             if out[0] > best[0]:
@@ -376,7 +400,7 @@ def expected_profitability_function(
         price: float = 0.0015,
         # cost_to_price_ratio: float = 0.3,
         one_shot: bool = False,
-        minimal_discount: float = 0,
+        guaranteed_discount: float = 0,
         speed: float = 6
 ) -> DotMap or dict:
     rides = databank["exmas"]["rides"]
@@ -404,8 +428,7 @@ def expected_profitability_function(
                                                 axis=1,
                                                 _price=price,
                                                 _one_shot=one_shot,
-                                                _minimal_discount=minimal_discount
-                                                # _sample_size=final_sample_size
+                                                _guaranteed_discount=guaranteed_discount
                                                 )
     if not one_shot:
         rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0])
