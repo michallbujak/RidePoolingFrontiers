@@ -19,6 +19,9 @@ plot_discounts = False
 prob_distribution = False
 res_analysis = True
 
+with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_[100, 100]_10.pickle", "rb") as file:
+    x = pickle.load(file)
+
 
 with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
     data = pickle.load(_file)

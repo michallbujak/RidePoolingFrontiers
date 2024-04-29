@@ -100,7 +100,7 @@ databanks_list = [
     matching_function(
         databank=db,
         params=exmas_params,
-        objectives=None,
+        objectives=["profitability"],
         min_max="max"
     ) for db in databanks_list
 ]
@@ -108,3 +108,5 @@ databanks_list = [
 with open(directories.path_results + "results_" + str(args.batch_size) +
           "_" + str(args.sample_size) + ".pickle", "wb") as f:
     pickle.dump(databanks_list, f)
+
+x = 0
