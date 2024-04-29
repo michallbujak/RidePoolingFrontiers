@@ -7,6 +7,7 @@ import numpy as np
 from dotmap import DotMap
 from math import isnan
 from tqdm import tqdm
+from typing import Callable
 
 from Individual_pricing.pricing_utils.product_distribution import ProductDistribution
 
@@ -296,10 +297,12 @@ def _row_maximise_profit(
         _one_shot: bool,
         _price: float = 0.0015,
         _probability_single: float = 1,
-        _guaranteed_discount: float = 0.1
+        _guaranteed_discount: float = 0.1,
+        _max_output_func: Callable[[list], float] = lambda x: x[0] / x[4] if x[4] != 0 else 0
 ):
     """
-    Function to calculate the expected performance of a precalculated exmas ride
+    Function to calculate the expected performance (or its derivatives)
+     of a precalculated exmas ride
     --------
     @param _rides_row: row of exmas rides (potential combination + characteristics)
     @param _one_shot: scenario where if shared ride is not accepted by any of the
@@ -309,6 +312,7 @@ def _row_maximise_profit(
     ride if offered one
     @param _guaranteed_discount: when traveller accepts a shared ride and any of the co-travellers
     reject a ride, the traveller is offered
+    @param _max_output_func: specify what is the maximisation objective
     --------
     @return vector comprising 5 main characteristics when applied discount maximising
     the expected revenue:
@@ -349,8 +353,8 @@ def _row_maximise_profit(
                    discount,
                    sum(revenue_shared),
                    prob_ind,
-                   _rides_row["veh_dist"] * _price * probability_shared]
-            if out[0] > best[0]:
+                   _rides_row["veh_dist"] * probability_shared]
+            if _max_output_func(out) > _max_output_func(best):
                 best = out.copy()
         else:
             remaining_revenue = 0
@@ -370,8 +374,10 @@ def _row_maximise_profit(
                    discount,
                    sum(revenue_shared),
                    prob_ind,
-                   _rides_row["veh_dist"] * _price]
-            if out[0] > best[0]:
+                   _rides_row["veh_dist"] * probability_shared +
+                   sum(_rides_row["individual_distances"]) * (1 - probability_shared)]
+
+            if _max_output_func(out) > _max_output_func(best):
                 best = out.copy()
 
     return best
