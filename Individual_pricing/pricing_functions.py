@@ -440,7 +440,7 @@ def expected_profitability_function(
     rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
     rides["profitability"] = rides["best_profit"].apply(lambda x: x[0]/x[4] if x[4] != 0 else 0)
-    rides["profitability"] = rides.apply(lambda x: x["profitability"]*x["u_veh"]/1000)
+    rides["profitability"] = rides.apply(lambda x: x["profitability"]*x["u_veh"]/1000, axis=1)
     op_costs = [0.2, 0.3, 0.4, 0.5, 0.6]
     objectives = ["expected_revenue", "profitability"]
 
