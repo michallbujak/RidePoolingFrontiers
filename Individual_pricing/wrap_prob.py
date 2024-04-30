@@ -95,6 +95,12 @@ if args.load_partial[2]:
               + ".pickle", "rb") as file:
         databanks_list, exmas_params = pickle.load(file)
 
+databanks_list = [
+    profitability_measures(
+        databank=t
+    ) for t in databanks_list
+]
+
 """ Conduct matching """
 databanks_list = [
     matching_function(

@@ -437,24 +437,30 @@ def expected_profitability_function(
                                                 _guaranteed_discount=guaranteed_discount
                                                 )
 
+    return databank
+
+
+def profitability_measures(
+        databank: DotMap or dict
+):
+    rides = databank["exmas"]["rides"]
     rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
-    rides["profitability"] = rides["best_profit"].apply(lambda x: x[0]/x[4] if x[4] != 0 else 0)
-    rides["profitability"] = rides.apply(lambda x: x["profitability"]*x["u_veh"]/1000, axis=1)
+    # rides["profitability"] = rides["best_profit"].apply(lambda x: x[0]/x[4] if x[4] != 0 else 0)
+    rides["profitability"] = rides["best_profit"].apply(lambda x: x[0] if x[4] != 0 else 0)
+    rides["profitability"] = rides.apply(lambda x: x["profitability"] * len(x["indexes"]), axis=1)
+    # rides["profitability"] = rides.apply(lambda x: x["profitability"]*x["u_veh"]/1000, axis=1)
     op_costs = [0.2, 0.3, 0.4, 0.5, 0.6]
     objectives = ["expected_revenue", "profitability"]
 
     for op_cost in op_costs:
-        rides["expected_cost_" + str(int(100 * op_cost))] = rides["best_profit"].apply(lambda x: x[4])
+        rides["expected_cost_" + str(int(100 * op_cost))] = rides["best_profit"].apply(lambda x: op_cost*x[4])
         rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
                                                               - rides["expected_cost_" + str(int(100 * op_cost))]
         rides["expected_profit_int_" + str(int(100 * op_cost))] = rides["expected_profit_"
                                                                         + str(int(100 * op_cost))].apply(
             lambda x: int(1000 * x))
         objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
-
-    # rides["max_profit"] = rides["best_profit"].apply(lambda x: x[0] * price)
-    # rides["max_profit_int"] = rides["best_profit"].apply(lambda x: int(1000 * x[0]))
 
     databank["exmas"]["recalibrated_rides"] = rides.copy()
     databank["exmas"]["objectives"] = objectives
