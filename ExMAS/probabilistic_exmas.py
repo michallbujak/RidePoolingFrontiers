@@ -427,6 +427,7 @@ def pairs(_inData, params, process=True, check=True, plot=False):
     # now we can see if j is reachebale from i with the delay acceptable for both
     # determine delay for i and for j (by def delay/2, otherwise use bound of one delta and remainder for other trip)
     r['delay'] = r.treq_i + r.t_oo - r.treq_j
+    # TODO
     r['delay_i'] = r.apply(lambda x: min(abs(x.delay / 2), x.delta_i, x.delta_j) * (1 if x.delay < 0 else -1), axis=1)
     r['delay_j'] = r.delay + r.delay_i
 
