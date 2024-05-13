@@ -78,7 +78,7 @@ if not sum(args.load_partial[2:]):
                                         price=exmas_params["price"] / 1000,
                                         speed=exmas_params["avg_speed"],
                                         one_shot=False,
-                                        guaranteed_discount=0
+                                        guaranteed_discount=0.1
                                         )
         for t in databanks_list
     ]
@@ -97,7 +97,8 @@ if args.load_partial[2]:
 
 databanks_list = [
     profitability_measures(
-        databank=t
+        databank=t,
+        op_costs=[0.2, 0.4, 0.6]
     ) for t in databanks_list
 ]
 
@@ -106,7 +107,7 @@ databanks_list = [
     matching_function(
         databank=db,
         params=exmas_params,
-        objectives=["profitability"],
+        objectives=None,
         min_max="max"
     ) for db in databanks_list
 ]

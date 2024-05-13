@@ -14,17 +14,18 @@ _num = 150
 _sample = 25
 
 performance = False
-plot_degrees = False
+plot_degrees = True
 plot_discounts = False
 prob_distribution = False
-res_analysis = True
+res_analysis = False
 
-with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_[100, 100]_10.pickle", "rb") as file:
-    x = pickle.load(file)
+with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_[100, 100]_10.pickle",
+          "rb") as file:
+    data = pickle.load(file)[0]
 
 
-with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
-    data = pickle.load(_file)
+# with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
+#     data = pickle.load(_file)
 
 rr = data["exmas"]["recalibrated_rides"]
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
@@ -41,20 +42,19 @@ if plot_degrees:
     for obj in data['exmas']['objectives']:
         _d[obj] = [len(t) for t in data['exmas']['schedules'][obj]["indexes"]]
 
+    max_deg = max(max(j for j in tt) for tt in _d.values())
+
     _df = {}
     for k, v in _d.items():
         c = Counter(v)
-        _df[k] = [c[j] for j in range(1, 4)]
+        _df[k] = [c[j] for j in range(1, max(v)+1)]
 
-    _df = {k: v for k, v in _df.items() if
-           k in ['expected_revenue',
-                 'expected_profit_int_20',
-                 'expected_profit_int_40',
-                 'expected_profit_int_60']}
-    _df2 = {j: [] for j in range(1, 4)}
+    # _df = {k: v for k, v in _df.items() if
+    #        k in ['elo']}
+    _df2 = {j: [] for j in range(1, max_deg+1)}
     for k, v in _df.items():
-        for j in range(1, 4):
-            _df2[j].append(v[j - 1])
+        for j in range(1, max_deg+1):
+            _df2[j].append(v[j - 1] if j <= len(v) else 0)
 
     x = np.arange(len(_df.keys()))
     width = 0.25  # the width of the bars
@@ -70,12 +70,12 @@ if plot_degrees:
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Number of rides')
     # ax.set_title('Penguin attributes by species')
-    ax.set_xticks(x + width, ['0 (Revenue)', '0.2', '0.4', '0.6'])
+    ax.set_xticks(x + width, data['exmas']['objectives'])
     ax.legend(title='Degree', loc='upper left', ncols=3)
     ax.set_ylim(0, 80)
     ax.set_xlabel("Expected profit with operating cost of")
 
-    plt.savefig('degrees_' + str(_sample) + '.png', dpi=200)
+    plt.savefig('degrees_' + str(_sample) + '_test.png', dpi=200)
 
 if plot_discounts:
     discounts = shared["best_profit"].apply(lambda x: x[1])

@@ -338,7 +338,6 @@ def _row_maximise_profit(
         eff_price = [_price * (1 - t) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
-
         probability_shared = 1
         prob_ind = [0] * len(discount)
         for num, individual_disc in enumerate(discount):
@@ -359,16 +358,14 @@ def _row_maximise_profit(
         else:
             remaining_revenue = 0
             for traveller in range(len(discount)):
-                others = prob_ind[:]
-                others.pop(traveller)
-                prob_others = np.prod(others)
+                anti_prob = (1 - probability_shared)
                 rev = _rides_row["individual_distances"][traveller] * _price
                 # First, if the P(X_j = 0)*r_j
                 prob_not_trav = 1 - prob_ind[traveller]
                 remaining_revenue += prob_not_trav * rev
-                # Then, P(X_j = 1, \pi_{i != j} X_i = 0)*r_j*(1-\lambda)
+                # Then, P(X_j = 1, \pi X_i = 0)*r_j*(1-\lambda)
                 rev *= (1 - _guaranteed_discount)
-                remaining_revenue += (prob_ind[traveller]*(1 - prob_others))*rev
+                remaining_revenue += (prob_ind[traveller]*anti_prob)*rev
 
             out = [sum(revenue_shared) * probability_shared + remaining_revenue,
                    discount,
@@ -381,23 +378,6 @@ def _row_maximise_profit(
                 best = out.copy()
 
     return best
-
-
-# def _row_recalculate_utility(
-#         row_rides: pd.Series,
-#         times_non_shared: dict,
-#         price: float
-# ) -> list:
-#     if len(row_rides["indexes"]) == 1:
-#         return row_rides["u_pax"]
-#
-#     utilities = []
-#
-#     for num, traveller in enumerate(row_rides["indexes"]):
-#         discount = row_rides["best_profit"][1][num]
-#         distance = row_rides["individual_distances"][num]
-#         time_ns = times_non_shared[traveller]
-#         time_s = row_rides["individual_times"][num]
 
 
 def expected_profitability_function(
@@ -441,7 +421,8 @@ def expected_profitability_function(
 
 
 def profitability_measures(
-        databank: DotMap or dict
+        databank: DotMap or dict,
+        op_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6)
 ):
     rides = databank["exmas"]["rides"]
     rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
@@ -450,7 +431,6 @@ def profitability_measures(
     rides["profitability"] = rides["best_profit"].apply(lambda x: x[0] if x[4] != 0 else 0)
     rides["profitability"] = rides.apply(lambda x: x["profitability"] * len(x["indexes"]), axis=1)
     # rides["profitability"] = rides.apply(lambda x: x["profitability"]*x["u_veh"]/1000, axis=1)
-    op_costs = [0.2, 0.3, 0.4, 0.5, 0.6]
     objectives = ["expected_revenue", "profitability"]
 
     for op_cost in op_costs:
