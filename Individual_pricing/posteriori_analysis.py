@@ -14,15 +14,14 @@ _num = 150
 _sample = 25
 
 performance = False
-plot_degrees = True
-plot_discounts = False
+plot_degrees = False
+plot_discounts = True
 prob_distribution = False
 res_analysis = False
 
-with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_[100, 100]_10.pickle",
+with open(r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_[100, 100]_10.pickle",
           "rb") as file:
     data = pickle.load(file)[0]
-
 
 # with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
 #     data = pickle.load(_file)
@@ -38,6 +37,9 @@ if performance:
         print(f"RIDE-POOLING: {obj}:\n {sum(data['exmas']['schedules'][obj][obj_no_int])} \n")
 
 if plot_degrees:
+    objectives_to_plot = ['profitability'] + ['expected_profit_int_' + str(t) for t in [20, 40, 60]]
+    objectives_labels = ['Profitability', 'OC02', 'OC04', 'OC06']
+
     _d = {}
     for obj in data['exmas']['objectives']:
         _d[obj] = [len(t) for t in data['exmas']['schedules'][obj]["indexes"]]
@@ -47,17 +49,17 @@ if plot_degrees:
     _df = {}
     for k, v in _d.items():
         c = Counter(v)
-        _df[k] = [c[j] for j in range(1, max(v)+1)]
+        _df[k] = [c[j] for j in range(1, max(v) + 1)]
 
-    # _df = {k: v for k, v in _df.items() if
-    #        k in ['elo']}
-    _df2 = {j: [] for j in range(1, max_deg+1)}
+    _df = {k: v for k, v in _df.items() if
+           k in objectives_to_plot}
+    _df2 = {j: [] for j in range(1, max_deg + 1)}
     for k, v in _df.items():
-        for j in range(1, max_deg+1):
+        for j in range(1, max_deg + 1):
             _df2[j].append(v[j - 1] if j <= len(v) else 0)
 
     x = np.arange(len(_df.keys()))
-    width = 0.25  # the width of the bars
+    width = 0.2  # the width of the bars
     multiplier = 0
     fig, ax = plt.subplots()
 
@@ -69,39 +71,34 @@ if plot_degrees:
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Number of rides')
-    # ax.set_title('Penguin attributes by species')
-    ax.set_xticks(x + width, data['exmas']['objectives'])
-    ax.legend(title='Degree', loc='upper left', ncols=3)
-    ax.set_ylim(0, 80)
-    ax.set_xlabel("Expected profit with operating cost of")
-
-    plt.savefig('degrees_' + str(_sample) + '_test.png', dpi=200)
+    # ax.set_title('Degree distribution')
+    # ax.set_xticks(x + width, data['exmas']['objectives'])
+    ax.set_xticks(x + width, objectives_labels)
+    lgd = ax.legend(title='Degree', bbox_to_anchor=(1.02, 1), borderaxespad=0, ncols=2, loc='upper left')
+    ax.set_ylim(0, max(max(t) for t in _df.values()) + 2)
+    # ax.set_xlabel("Expected profit with operating cost of")
+    # plt.show()
+    plt.savefig('degrees_' + str(_sample) + '_test.png', dpi=200,
+                bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 if plot_discounts:
-    discounts = shared["best_profit"].apply(lambda x: x[1])
-    discounts = [a for b in discounts for a in b]
-    discounts_revenue = shared.loc[shared['selected_expected_revenue'] == 1, "best_profit"].apply(lambda x: x[1])
-    discounts_revenue = [a for b in discounts_revenue for a in b]
-    discounts_profit20 = shared.loc[shared['selected_expected_profit_int_20'] == 1, "best_profit"].apply(lambda x: x[1])
-    discounts_profit20 = [a for b in discounts_profit20 for a in b]
-    discounts_profit40 = shared.loc[shared['selected_expected_profit_int_40'] == 1, "best_profit"].apply(lambda x: x[1])
-    discounts_profit40 = [a for b in discounts_profit40 for a in b]
-    discounts_profit60 = shared.loc[shared['selected_expected_profit_int_60'] == 1, "best_profit"].apply(lambda x: x[1])
-    discounts_profit60 = [a for b in discounts_profit60 for a in b]
-    discounts_no_select = shared.loc[(shared['selected_expected_revenue'] == 0)
-                                 & (shared['selected_expected_profit_int_20'] == 0)
-                                 & (shared['selected_expected_profit_int_40'] == 0)
-                                 & (shared['selected_expected_profit_int_60'] == 0), "best_profit"].apply(lambda x: x[1])
-    discounts_no_select = [a for b in discounts_no_select for a in b]
+    objectives = ['profitability'] + ['expected_profit_int_' + str(t) for t in [20, 40, 60]]
+    discounts = {'all': shared["best_profit"].apply(lambda x: x[1])}
+    discounts['all'] = [a for b in discounts['all'] for a in b]
+    for objective in objectives:
+        discounts[objective] = shared.loc[shared['selected_' + objective] == 1, "best_profit"].apply(lambda x: x[1])
+        discounts[objective] = [a for b in discounts[objective] for a in b]
 
+    discounts['no_select'] = shared.loc[pd.concat([shared['selected_' + obj] == 1 for obj in objectives],
+                                                  axis=1).apply(lambda x: not any(t for t in x),
+                                                                axis=1), 'best_profit'].apply(lambda x: x[1])
+    discounts['no_select'] = [a for b in discounts['no_select'] for a in b]
+
+    colors = list(mcolors.BASE_COLORS)
+    labels = ['All', 'Profit'] + ['OC0' + str(j) for j in [2, 4, 6]]
     fig, ax = plt.subplots()
-    sns.kdeplot(discounts, color='green', ax=ax, label="All rides")
-    sns.kdeplot(discounts_revenue, color='lightcoral', ax=ax, label="Revenue")
-    sns.kdeplot(discounts_profit20, color='indianred', ax=ax, label="Profit OC 0.2")
-    sns.kdeplot(discounts_profit40, color='brown', ax=ax, label="Profit OC 0.4")
-    sns.kdeplot(discounts_profit60, color='darkred', ax=ax, label="Profit OC 0.6")
-    sns.kdeplot(discounts_no_select, color='blue', ax=ax, label="Not selected")
-
+    for num, obj in enumerate(['all'] + objectives):
+        sns.kdeplot(discounts[obj], ax=ax, label=labels[num], color=colors[num])
 
     def upper_rugplot(data, height=.02, _ax=None, **kwargs):
         from matplotlib.collections import LineCollection
@@ -114,19 +111,20 @@ if plot_discounts:
         lc = LineCollection(segs, transform=_ax.get_xaxis_transform(), **kwargs)
         _ax.add_collection(lc)
 
-    upper_rugplot(discounts, _ax=ax)
-    sns.rugplot(discounts_revenue, color='lightcoral')
+
+    upper_rugplot(discounts['all'], _ax=ax, color=colors[0])
+    sns.rugplot(discounts['profitability'], color=colors[1])
+    plt.axvline(0.05, label='Guaranteed discount', ls=':', lw=0.5, color='black')
     # sns.kdeplot(discounts_no_select, color='blue', ax=ax, label="Not selected")
 
     ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
     plt.tight_layout()
     plt.savefig('discount_density_' + str(_sample) + '_rug.png', dpi=200)
 
-    d_list = [discounts, discounts_revenue, discounts_profit20, discounts_profit40, discounts_profit60]
+    d_list = discounts.values()
 
     print(pd.DataFrame({'mean': [np.mean(t) for t in d_list]},
-                       index=["discount", "discounts_revenue", "discounts_profit20", "discounts_profit40", "discounts_profit60"]))
-
+                       index=list(discounts.keys())))
 
 if prob_distribution or res_analysis:
     shared["prob"] = shared["best_profit"].apply(lambda x: x[3])
@@ -170,8 +168,8 @@ if prob_distribution:
         # sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
         #              cumulative=False, label=name, kde=False, alpha=0.1,
         #              stat="frequency", element="step")
-                     # log_scale=True, element="step", fill=False,
-                     # cumulative=True, stat="density", label=name)
+        # log_scale=True, element="step", fill=False,
+        # cumulative=True, stat="density", label=name)
         # sns.ecdfplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name)
         sns.kdeplot(dat, color=list(mcolors.BASE_COLORS.keys())[num], label=name, bw_adjust=1)
     # ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
@@ -201,7 +199,6 @@ if prob_distribution:
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_all.png", dpi=200)
 
-
 if res_analysis:
     schedules = data['exmas']['schedules']
 
@@ -213,7 +210,7 @@ if res_analysis:
             schedule["prob"] = schedule[col]
 
         schedule["dist_saved"] = schedule['ttrav_ns'] - schedule['ttrav']
-        schedule["e_dist_saved"] = schedule.apply(lambda x: x["prob"]*x["dist_saved"], axis=1)
+        schedule["e_dist_saved"] = schedule.apply(lambda x: x["prob"] * x["dist_saved"], axis=1)
 
     # measures = ['u_veh', 'revenue', 'expected_revenue', 'expected_profit_20',
     #             'expected_profit_30', 'expected_profit_40', 'expected_profit_50',
