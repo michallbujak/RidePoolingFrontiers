@@ -343,11 +343,11 @@ def _row_maximise_profit(
 
         # if _rides_row['indexes'] == [20, 39, 53]:
         #     print('eyy')
-            # if all(t > 0.2 for t in discount):
-            #     print('u')
+        # if all(t > 0.2 for t in discount):
+        #     print('u')
         for num, individual_disc in enumerate(discount):
             accepted_disc = _rides_row["accepted_discount"][num]
-            prob_ind[num] = bisect_right(accepted_disc, individual_disc)/len(accepted_disc)
+            prob_ind[num] = bisect_right(accepted_disc, individual_disc) / len(accepted_disc)
             probability_shared *= prob_ind[num]
 
         if _one_shot:
@@ -356,10 +356,12 @@ def _row_maximise_profit(
                    discount,
                    sum(revenue_shared),
                    prob_ind,
-                   _rides_row["veh_dist"] * probability_shared/1000]
+                   _rides_row["veh_dist"] * probability_shared / 1000]
             if _max_output_func(out) > _max_output_func(best):
                 best = out.copy()
         else:
+            # if (_rides_row['indexes'] == [43, 46]) & (sum(prob_ind) >= 1.3):
+            #     print('ee')
             remaining_revenue = 0
             base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in enumerate(_rides_row['indexes'])}
             for traveller in range(len(discount)):
@@ -367,16 +369,16 @@ def _row_maximise_profit(
                 prob_not_trav = 1 - prob_ind[traveller]
                 remaining_revenue += prob_not_trav * base_revenues[traveller]
                 # Then, P(X_j = 1, \pi X_i = 0)*r_j*(1-\lambda)
-                others_not = 1 - np.prod([t for t in prob_ind if t != traveller])
-                rev_discounted = base_revenues[traveller]*(1 - _guaranteed_discount)
-                remaining_revenue += (prob_ind[traveller]*others_not)*rev_discounted
+                others_not = 1 - np.prod([t for num, t in enumerate(prob_ind) if num != traveller])
+                rev_discounted = base_revenues[traveller] * (1 - _guaranteed_discount)
+                remaining_revenue += (prob_ind[traveller] * others_not) * rev_discounted
 
             out = [sum(revenue_shared) * probability_shared + remaining_revenue,
                    discount,
                    sum(revenue_shared),
                    prob_ind,
                    (_rides_row["veh_dist"] * probability_shared +
-                   sum(_rides_row["individual_distances"]) * (1 - probability_shared))/1000]
+                    sum(_rides_row["individual_distances"]) * (1 - probability_shared)) / 1000]
 
             if _max_output_func(out) > _max_output_func(best):
                 best = out.copy()
@@ -429,7 +431,6 @@ def profitability_measures(
         op_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6)
 ):
     rides = databank["exmas"]["rides"]
-    rides["revenue"] = rides["best_profit"].apply(lambda x: x[2])
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
     # rides["profitability"] = rides["best_profit"].apply(lambda x: x[0]/x[4] if x[4] != 0 else 0)
     rides["profitability"] = rides["best_profit"].apply(lambda x: x[0] if x[4] != 0 else 0)
@@ -438,7 +439,7 @@ def profitability_measures(
     objectives = ["expected_revenue", "profitability"]
 
     for op_cost in op_costs:
-        rides["expected_cost_" + str(int(100 * op_cost))] = rides["best_profit"].apply(lambda x: op_cost*x[4])
+        rides["expected_cost_" + str(int(100 * op_cost))] = rides["best_profit"].apply(lambda x: op_cost * x[4])
         rides["expected_profit_" + str(int(100 * op_cost))] = rides["expected_revenue"] \
                                                               - rides["expected_cost_" + str(int(100 * op_cost))]
         rides["expected_profit_int_" + str(int(100 * op_cost))] = rides["expected_profit_"

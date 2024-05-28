@@ -16,6 +16,7 @@ _sample = 25
 performance = False
 plot_degrees = False
 plot_discounts = True
+kde_plot = False
 prob_distribution = False
 res_analysis = False
 
@@ -97,32 +98,41 @@ if plot_discounts:
     colors = list(mcolors.BASE_COLORS)
     labels = ['All', 'Profit'] + ['OC0' + str(j) for j in [2, 4, 6]]
     fig, ax = plt.subplots()
-    for num, obj in enumerate(['all'] + objectives):
-        sns.kdeplot(discounts[obj], ax=ax, label=labels[num], color=colors[num])
+    if kde_plot:
+        for num, obj in enumerate(['all'] + objectives):
+            sns.histplot(discounts[obj], ax=ax, label=labels[num], color=colors[num])
 
-    def upper_rugplot(data, height=.02, _ax=None, **kwargs):
-        from matplotlib.collections import LineCollection
-        _ax = _ax or plt.gca()
-        kwargs.setdefault("linewidth", 0.1)
-        kwargs.setdefault("color", "green")
-        segs = np.stack((np.c_[data, data],
-                         np.c_[np.ones_like(data), np.ones_like(data) - height]),
-                        axis=-1)
-        lc = LineCollection(segs, transform=_ax.get_xaxis_transform(), **kwargs)
-        _ax.add_collection(lc)
+        def upper_rugplot(data, height=.02, _ax=None, **kwargs):
+            from matplotlib.collections import LineCollection
+            _ax = _ax or plt.gca()
+            kwargs.setdefault("linewidth", 0.1)
+            kwargs.setdefault("color", "green")
+            segs = np.stack((np.c_[data, data],
+                             np.c_[np.ones_like(data), np.ones_like(data) - height]),
+                            axis=-1)
+            lc = LineCollection(segs, transform=_ax.get_xaxis_transform(), **kwargs)
+            _ax.add_collection(lc)
 
 
-    upper_rugplot(discounts['all'], _ax=ax, color=colors[0])
-    sns.rugplot(discounts['profitability'], color=colors[1])
-    plt.axvline(0.05, label='Guaranteed discount', ls=':', lw=0.5, color='black')
-    # sns.kdeplot(discounts_no_select, color='blue', ax=ax, label="Not selected")
+        upper_rugplot(discounts['all'], _ax=ax, color=colors[0])
+        sns.rugplot(discounts['profitability'], color=colors[1])
+        plt.axvline(0.05, label='Guaranteed discount', ls=':', lw=0.5, color='black')
+        # sns.kdeplot(discounts_no_select, color='blue', ax=ax, label="Not selected")
 
-    ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
-    plt.tight_layout()
-    plt.savefig('discount_density_' + str(_sample) + '_rug.png', dpi=200)
+        ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+        plt.tight_layout()
+        plt.savefig('discount_density_' + str(_sample) + '_rug.png', dpi=200)
+
+    else:
+        obj_discounts = {k: v for k, v in discounts.items() if k in objectives}
+        no_obj_discounts = {k: v for k, v in discounts.items() if k not in objectives}
+        plt.hist(list(obj_discounts.values()), stacked=True, density=True, label=objectives)
+        plt.axvline(0.05, label='Guaranteed discount', ls=':', lw=0.5, color='black')
+        ax.legend(bbox_to_anchor=(1.02, 1.02), loc='upper left')
+        plt.tight_layout()
+        plt.show()
 
     d_list = discounts.values()
-
     print(pd.DataFrame({'mean': [np.mean(t) for t in d_list]},
                        index=list(discounts.keys())))
 
