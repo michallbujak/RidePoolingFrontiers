@@ -472,7 +472,7 @@ def check_prob_if_accepted(
         discount: float
 ):
     if len(row_rides["indexes"]) == 1:
-        return 0.5
+        return 1
 
     out = 1
     for pax_disc in row_rides["accepted_discount"]:
