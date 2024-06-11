@@ -64,12 +64,12 @@ def matching_function(
         )
         schedules[objective + opt_flag]['degree'] = schedules[objective + opt_flag].apply(lambda x: len(x.indexes), axis=1)
 
-    databank.exmas.recalibrated_rides = rides
-    if len(databank.exmas.get('schedules')) > 0:
+    databank['exmas']['recalibrated_rides'] = rides
+    if len(databank['exmas'].get('schedules', [])) > 0:
         for objective in objectives:
-            databank.exmas.schedules[objective + opt_flag] = schedules[objective + opt_flag]
+            databank['exmas']['schedules'][objective + opt_flag] = schedules[objective + opt_flag]
     else:
-        databank.exmas.schedules = {objective + opt_flag: schedules[objective + opt_flag] for objective in objectives}
-    databank.exmas.requests = requests
+        databank['exmas']['schedules'] = {objective + opt_flag: schedules[objective + opt_flag] for objective in objectives}
+    databank['exmas']['requests'] = requests
 
     return databank

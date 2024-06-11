@@ -1,4 +1,6 @@
 import pickle
+import os
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,8 +14,8 @@ from matching import matching_function
 from pricing_utils.batch_preparation import get_parameters
 
 _cr = 0.3
-_num = 150
-_sample = 25
+_num = 100
+_sample = 10
 
 performance = True
 plot_degrees = True
@@ -22,11 +24,14 @@ kde_plot = False
 prob_distribution = True
 res_analysis = True
 
-with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_[150, 150]_25.pickle",
+with open(r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_["
+          + str(_num) + ", " + str(_num) + "]_" + str(_sample) + ".pickle",
           "rb") as file:
     data = pickle.load(file)[0]
 # with open("results_" + str(_num) + "_" + str(_sample) + "_v4.pickle", "rb") as _file:
 #     data = pickle.load(_file)
+
+os.chdir(os.path.join(os.getcwd(), "data/figs"))
 
 rr = data["exmas"]["recalibrated_rides"]
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
