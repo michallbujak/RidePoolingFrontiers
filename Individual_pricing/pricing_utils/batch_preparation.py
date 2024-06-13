@@ -129,6 +129,7 @@ def nyc_pick_batch(batches, trips, inData, _params, batch_no):
         requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
         requests = requests.sort_values('treq')
         requests['pax_id'] = requests.index.copy()
+        requests = requests.loc[requests['dist'] > 0]
         _inData.requests = requests
         _inData.passengers.pos = _inData.requests.origin
         _params.nP = _inData.requests.shape[0]

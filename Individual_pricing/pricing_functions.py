@@ -324,14 +324,12 @@ def _row_maximise_profit(
     """
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        profitability = _probability_single * _rides_row["veh_dist"] \
-                        / _rides_row["veh_dist"] * _price \
-            if _rides_row["veh_dist"] != 0 else 0
+        profitability = _price * 1000 if _rides_row["veh_dist"] else 0
         return [_probability_single * _rides_row["veh_dist"] * _price,
                 0,
                 _rides_row["veh_dist"] * _price,
                 [_probability_single],
-                _rides_row["veh_dist"] * _price,
+                _rides_row["veh_dist"]/1000,
                 profitability]
 
     discounts = list(itertools.product(*_rides_row["accepted_discount"]))
