@@ -25,7 +25,8 @@ plot_degrees = True
 plot_discounts = True
 kde_plot = False
 prob_distribution = True
-res_analysis = False
+res_analysis = True
+profitability_vector = True
 
 with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_["
           + str(_num) + ", " + str(_num) + "]_" + str(_sample) + ".pickle",
@@ -92,8 +93,6 @@ data = matching_function(
     filter_rides=False,
     opt_flag=''
 )
-
-
 
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
 shared = rr.loc[[len(t) > 1 for t in rr['indexes']]].copy()
@@ -222,15 +221,15 @@ if prob_distribution or res_analysis:
     objectives = ["selected_" + names_discs[0] + '_profitability',
                   "selected_" + names_discs[1] + '_profitability',
                   "selected_profitability"]
-                  # "selected_expected_profit_int_20",
-                  # "selected_expected_profit_int_40",
-                  # "selected_expected_profit_int_60"]
+    # "selected_expected_profit_int_20",
+    # "selected_expected_profit_int_40",
+    # "selected_expected_profit_int_60"]
     names = ["Flat discount 0." + str(discs[0])[2:],
              "Flat discount 0." + str(discs[1])[2:],
              "Personalised"]
-             # "Pers. Profit OC 0.2",
-             # "Pers. Profit OC 0.4",
-             # "Pers. Profit OC 0.6"]
+    # "Pers. Profit OC 0.2",
+    # "Pers. Profit OC 0.4",
+    # "Pers. Profit OC 0.6"]
     selected = {
         objective: (shared.loc[rr[objective] == 1], name) for objective, name in zip(objectives, names)
     }
@@ -308,20 +307,47 @@ if prob_distribution:
 
     plt.close()
 
-
 if res_analysis:
-    profit_data = rr.loc[rr['selected_profitability']==1]
+    temp_data = rr.loc[rr['selected_profitability'] == 1]
     results = {
-        'profitability': [np.mean(profit_data['profitability'])],
-        'e_dist_saved': 0
+        'profitability': [np.mean(temp_data['profitability'])],
+        'e_dist': [sum(temp_data['best_profit'].apply(lambda x: x[4]))]
     }
 
     for flat_disc in names_discs:
-        temp_data = rr.loc[rr['selected']]
+        temp_data = rr.loc[rr['selected_' + flat_disc + '_profitability'] == 1]
+        results['profitability'] += [np.mean(temp_data[flat_disc + '_profitability'])]
+        results['e_dist'] += [sum(temp_data.apply(
+            lambda x: (x['veh_dist']*x[flat_disc+'_accepted'] +
+                      sum(x['individual_distances'])*(1-x[flat_disc+'_accepted']))/1000,
+            axis=1
+        ))]
 
-
+    results['profitability'] += [1.5]
+    results['e_dist'] += [sum(singles['veh_dist'])/1000]
 
     results = pd.DataFrame(results)
-    results.index = schedules.keys()
-    results = results.round()
+    results.index = ['Personalised', 'Flat 0.14', 'Flat 0.2', 'Private only']
+    results = results.round(2)
     print(results.to_latex())
+
+if profitability_vector:
+    temp_data = rr.loc[rr['selected_profitability'] == 1]
+    results = {
+        'Personalised': list(temp_data['profitability'])
+    }
+
+    for flat_disc in names_discs:
+        temp_data = rr.loc[rr['selected_' + flat_disc + '_profitability'] == 1]
+        results['Flat disc. 0.' + flat_disc[1:]] = temp_data[flat_disc + '_profitability']
+
+    fig, ax = plt.subplots()
+
+    for k, v in results.items():
+        sns.kdeplot(v, label=k, bw_adjust=1)
+
+    ax.legend(loc='upper left')
+    plt.xlabel(None)
+    plt.ylabel(None)
+    plt.tight_layout()
+    plt.savefig("profitability" + str(_sample) + "_sel.png", dpi=200)

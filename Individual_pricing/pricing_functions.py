@@ -314,13 +314,14 @@ def _row_maximise_profit(
     reject a ride, the traveller is offered
     @param _max_output_func: specify what is the maximisation objective
     --------
-    @return vector comprising 5 main characteristics when applied discount maximising
+    @return vector comprising 6 main characteristics when applied discount maximising
     the expected revenue:
     - expected revenue
     - vector of individual discounts
     - revenue from the shared ride if accepted
     - vector of probabilities that individuals accept the shared ride
-    - expected cost
+    - expected distance
+    - profitability
     """
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
