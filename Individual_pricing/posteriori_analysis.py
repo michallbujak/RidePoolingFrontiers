@@ -15,7 +15,7 @@ from pricing_utils.batch_preparation import get_parameters
 
 _cr = 0.3
 _num = 150
-_sample = 25
+_sample = 10
 
 avg_speed = 6
 price = 1.5
@@ -28,7 +28,7 @@ prob_distribution = True
 res_analysis = True
 profitability_vector = True
 
-with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_["
+with open(r"C:\Users\zmich\Documents\GitHub\ExMAS_sideline\Individual_pricing\data\test\results_["
           + str(_num) + ", " + str(_num) + "]_" + str(_sample) + ".pickle",
           "rb") as file:
     data = pickle.load(file)[0]
@@ -58,7 +58,7 @@ for name, disc in zip(names_discs, discs):
 
     rr[name + '_profitability'] = rr.apply(
         lambda x: price if len(x['indexes']) == 1 else
-        x["avg_prob_" + name] * len(x['indexes']) * sum(x['individual_distances']) * price / (x['u_veh'] * avg_speed),
+        x["avg_prob_" + name] * len(x['indexes']) * sum(x['individual_distances']) * price * (1-disc) / (x['u_veh'] * avg_speed),
         axis=1
     )
 
