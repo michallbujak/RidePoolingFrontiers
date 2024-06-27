@@ -9,16 +9,18 @@ import seaborn as sns
 from collections import Counter
 import matplotlib.pylab as pylab
 
+from pricing_functions import _expected_profit_flat
 from pricing_functions import *
 from matching import matching_function
 from pricing_utils.batch_preparation import get_parameters
 
 _cr = 0.3
 _num = 150
-_sample = 25
+_sample = 10
 
 avg_speed = 6
 price = 1.5
+guaranteed_discount = 0.05
 
 performance = True
 plot_degrees = True
@@ -54,11 +56,18 @@ for name, disc in zip(names_discs, discs):
     ) > 0 for j in range(len(x['indexes']))]),
                                       axis=1)
 
-    rr["avg_prob_" + name] = rr.apply(check_prob_if_accepted, axis=1, discount=disc)
+    rr["prod_prob_" + name] = rr.apply(check_prob_if_accepted, axis=1, discount=disc)
+    rr["probs_" + name] = rr.apply(check_prob_if_accepted, axis=1, discount=disc, total=False)
 
     rr[name + '_profitability'] = rr.apply(
-        lambda x: price if len(x['indexes']) == 1 else
-        x["avg_prob_" + name] * len(x['indexes']) * sum(x['individual_distances']) * price / (x['u_veh'] * avg_speed),
+        lambda x: _expected_profit_flat(
+            vector_probs=x["probs_" + name],
+            shared_dist=x['u_veh'] * avg_speed,
+            ind_dists=x['individual_distances'],
+            price=price,
+            sharing_disc=disc,
+            guaranteed_disc=guaranteed_discount
+        ),
         axis=1
     )
 
@@ -66,7 +75,7 @@ for name, disc in zip(names_discs, discs):
         databank=data,
         objectives=[name + '_profitability'],
         min_max='max',
-        filter_rides=name + '_accepted',
+        filter_rides=False,  # name + '_accepted',
         opt_flag=""
     )
 
@@ -247,9 +256,9 @@ if prob_distribution:
 
     for num, (sel, name) in enumerate(selected.values()):
         if num == 0:
-            dat = sel["avg_prob_" + names_discs[0]]
+            dat = sel["prod_prob_" + names_discs[0]]
         elif num == 1:
-            dat = sel["avg_prob_" + names_discs[1]]
+            dat = sel["prod_prob_" + names_discs[1]]
         else:
             dat = sel["prob"].apply(np.prod)
         # sns.histplot(dat, color=list(mcolors.BASE_COLORS.keys())[num],
@@ -272,8 +281,8 @@ if prob_distribution:
 
     fig, ax = plt.subplots()
 
-    for obj, lab in [("avg_prob_" + names_discs[0], "Flat discount 0." + names_discs[0][1:]),
-                     ("avg_prob_" + names_discs[1], "Flat discount 0." + names_discs[1][1:]),
+    for obj, lab in [("prod_prob_" + names_discs[0], "Flat discount 0." + names_discs[0][1:]),
+                     ("prod_prob_" + names_discs[1], "Flat discount 0." + names_discs[1][1:]),
                      ("prob", "Personalised")]:
         r_s = rr.loc[[len(t) != 1 for t in rr["indexes"]]]
         # sns.histplot(data[obj], cumulative=False, label=lab, kde=False, alpha=0.1,
@@ -291,9 +300,9 @@ if prob_distribution:
     plt.close()
     fig, ax = plt.subplots()
     for _n, obj, lab in [
-        ('selected_' + names_discs[0] + '_profitability', "avg_prob_" + names_discs[0],
+        ('selected_' + names_discs[0] + '_profitability', "prod_prob_" + names_discs[0],
          "Flat discount 0." + names_discs[0][1:]),
-        ('selected_' + names_discs[1] + '_profitability', "avg_prob_" + names_discs[1],
+        ('selected_' + names_discs[1] + '_profitability', "prod_prob_" + names_discs[1],
          "Flat discount 0." + names_discs[1][1:]),
         ('selected_profitability', "prob", "Personalised")]:
         r_s = rr.loc[[len(t) != 1 for t in rr["indexes"]]]
