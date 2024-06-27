@@ -98,7 +98,7 @@ if args.load_partial[2]:
 databanks_list = [
     profitability_measures(
         databank=t,
-        op_costs=[0.2, 0.4, 0.6]
+        op_costs=[]
     ) for t in databanks_list
 ]
 

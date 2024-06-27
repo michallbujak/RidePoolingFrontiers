@@ -325,20 +325,26 @@ def _row_maximise_profit(
     """
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        profitability = _price * 1000 if _rides_row["veh_dist"] else 0
-        return [_probability_single * _rides_row["veh_dist"] * _price,
+        profitability = _price * 1000 * (1 - _guaranteed_discount) if _rides_row["veh_dist"] else 0
+        return [_probability_single * _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
                 0,
-                _rides_row["veh_dist"] * _price,
+                _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
                 [_probability_single],
-                _rides_row["veh_dist"]/1000,
+                _rides_row["veh_dist"] / 1000 * _probability_single,
                 profitability]
 
-    discounts = list(itertools.product(*_rides_row["accepted_discount"]))
+    discounts = _rides_row["accepted_discount"].copy()
+    discounts = [[_guaranteed_discount] + t if t[0] > _guaranteed_discount else t for t in discounts]
+    discounts = list(itertools.product(*discounts))
+
+    # discounts = list(itertools.product(*_rides_row["accepted_discount"]))
     discounts = [[t if t > _guaranteed_discount else _guaranteed_discount
                   for t in discount] for discount in discounts]
     discounts = list(set(tuple(discount) for discount in discounts))
+    base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in
+                     enumerate(_rides_row['indexes'])}
     best = [0, 0, 0, 0, 0, 0]
-    # if _rides_row['indexes'] == [80, 77]:
+    # if _rides_row['indexes'] == [142, 133]:
     #     print('ee')
     for discount in discounts:
         """ For effectively shared ride """
@@ -371,7 +377,6 @@ def _row_maximise_profit(
             # if (_rides_row['indexes'] == [43, 46]) & (sum(prob_ind) >= 1.3):
             #     print('ee')
             remaining_revenue = 0
-            base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in enumerate(_rides_row['indexes'])}
             for num_trav in range(len(discount)):
                 # First, if the P(X_j = 0)*r_j
                 prob_not_trav = 1 - prob_ind[num_trav]
@@ -442,7 +447,7 @@ def profitability_measures(
 ):
     rides = databank["exmas"]["rides"]
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
-    rides["profitability"] = rides["best_profit"].apply(lambda x: x[5]*len(x[3]))
+    rides["profitability"] = rides["best_profit"].apply(lambda x: x[5] * len(x[3]))
     objectives = ["expected_revenue", "profitability"]
 
     for op_cost in op_costs:
@@ -476,14 +481,53 @@ def calculate_delta_utility(
 
 def check_prob_if_accepted(
         row_rides: pd.Series,
-        discount: float
+        discount: float,
+        total: bool = True
 ):
-    if len(row_rides["indexes"]) == 1:
-        return 1
+    if total:
+        if len(row_rides["indexes"]) == 1:
+            return 1
 
-    out = 1
+        out = 1
+        for pax_disc in row_rides["accepted_discount"]:
+            out *= bisect_right(pax_disc, discount)
+            out /= len(pax_disc)
+
+        return out
+
+    if len(row_rides["indexes"]) == 1:
+        return [1]
+
+    out = []
     for pax_disc in row_rides["accepted_discount"]:
-        out *= bisect_right(pax_disc, discount)
-        out /= len(pax_disc)
+        out += [bisect_right(pax_disc, discount) / len(pax_disc)]
 
     return out
+
+
+def _expected_profit_flat(
+        vector_probs: pd.Series or list,
+        shared_dist: float,
+        ind_dists: pd.Series or list,
+        price: float,
+        sharing_disc: float,
+        guaranteed_disc: float
+):
+    if len(vector_probs) == 1:
+        return price * (1 - guaranteed_disc)
+
+    prob_shared = np.prod(vector_probs)
+    # if shared
+    rev = prob_shared * sum(ind_dists) * price * (1 - sharing_disc) / 1000
+
+    # if not shared
+    for pax in range(len(vector_probs)):
+        prob_not_trav = 1 - vector_probs[pax]
+        rev += ind_dists[pax] * prob_not_trav * price / 1000
+
+        others_not = 1 - np.prod(vector_probs[:pax] + vector_probs[(pax + 1):])
+        rev += ind_dists[pax] * others_not * vector_probs[pax] * (price - guaranteed_disc) / 1000
+
+    costs = prob_shared * shared_dist / 1000 + (1 - prob_shared) * sum(ind_dists) / 1000
+
+    return (rev / costs) * len(vector_probs)
