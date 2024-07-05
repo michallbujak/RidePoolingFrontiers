@@ -12,8 +12,7 @@ from Individual_pricing.pricing_functions import *
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
 parser.add_argument("--batch-size", nargs='+', type=int, default=[148, 152])
-parser.add_argument("--sample-size", type=int, default=100)
-parser.add_argument("--behavioural-size", type=int, default=20)
+parser.add_argument("--sample-size", type=int, default=25)
 parser.add_argument("--save-partial", action="store_true")
 parser.add_argument("--load-partial", nargs='+', type=int, default=[0, 0, 0])
 parser.add_argument("--simulation-name", type=str or None, default=None)
@@ -56,7 +55,7 @@ if args.load_partial[0]:
 if not sum(args.load_partial[1:]):
     """ Extend dataframe rides & prepare behavioural samples """
     databanks_list = [expand_rides(t) for t in databanks_list]
-    databanks_list = [prepare_samples(t, args.behavioural_size) for t in databanks_list]
+    databanks_list = [prepare_samples(t, args.sample_size) for t in databanks_list]
 
     if args.save_partial:
         with open(directories.partial_results + "expanded_rides_" +

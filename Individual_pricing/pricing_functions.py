@@ -1,6 +1,7 @@
 """ Script for analysis of the individual pricing """
 import itertools
 from bisect import bisect_right
+import os
 
 import pandas as pd
 import numpy as np
@@ -233,7 +234,7 @@ def prepare_samples(
     databank["prob"]["bt_sample"] = beta.sample.copy()
 
     databank["prob"]["bs_samples"] = {}
-    for no_paxes, multiplier in zip([2, 3, 4, 5], [0.95, 1, 1.2, 2]):
+    for no_paxes, multiplier in zip([2, 3, 4, 5], [0.98, 1, 1.2, 2]):
         beta.remove_sample(0)
         beta.new_sample(
             distribution_type="multinormal",
@@ -531,3 +532,30 @@ def _expected_profit_flat(
     costs = prob_shared * shared_dist / 1000 + (1 - prob_shared) * sum(ind_dists) / 1000
 
     return (rev / costs) * len(vector_probs)
+
+
+def check_percentiles_distribution(ab, perc, multiplier=1):
+    beta = ProductDistribution()
+    if ab:
+        beta.new_sample(
+            distribution_type="multinormal",
+            probs=[0.29, 0.28, 0.24, 0.19],
+            means=[t / 3600 for t in [16.98, 14.02, 26.25, 7.78]],
+            st_devs=[t / 3600 for t in [0.318, 0.201, 5.77, 1]],
+            size=1000,
+            seed=123
+        )
+    else:
+        beta.new_sample(
+            distribution_type="multinormal",
+            probs=[0.29, 0.28, 0.24, 0.19],
+            means=[t * multiplier for t in [1.22, 1.135, 1.049, 1.18]],
+            st_devs=[t * multiplier for t in [0.082, 0.071, 0.06, 0.076]],
+            size=1000,
+            seed=123
+        )
+    return np.percentile(beta.sample, perc)
+
+
+def path_joiner(path1: str, path2: str):
+    return os.path.join(path1, path2)
