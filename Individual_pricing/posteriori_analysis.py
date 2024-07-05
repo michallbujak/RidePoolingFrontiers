@@ -278,7 +278,7 @@ if args.analysis_parts[5]:
     plt.hist(results_list, label=['Personalised'] + discounts_names,
              stacked=False, density=True,
              weights=[[1 / max(t)] * len(t) for t in results_list])
-    ax.legend(loc='upper left')
+    ax.legend(loc='upper right')
     plt.xlabel(None)
     plt.ylabel(None)
     plt.tight_layout()
