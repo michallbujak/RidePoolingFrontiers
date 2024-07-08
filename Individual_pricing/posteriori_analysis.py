@@ -178,12 +178,14 @@ if args.analysis_parts[2]:
                                   'best_profit'].apply(lambda x: x[1])
                                   for a in b]
                      }
+    fig, ax = plt.subplots()
     plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['All', 'Selected'],
              weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())])
-    plt.legend()
+    ax.legend()
+    ax.set_xlim(0.05, 0.55)
     plt.yticks([])
     plt.tight_layout()
-    plt.savefig('discounts_density_objectives_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi)
+    plt.savefig('discounts_density_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi)
     plt.close()
 
 if args.analysis_parts[3] + args.analysis_parts[4] >= 1:
@@ -195,28 +197,32 @@ if args.analysis_parts[3] + args.analysis_parts[4] >= 1:
     }
 
 if args.analysis_parts[3]:
-    fig, ax = plt.subplots()
     col_labels = ["prob"] + ["prod_prob_" + t for t in discounts_names]
     dat = []
     labels = []
     for num, (sel, name) in enumerate(selected.values()):
         dat += [list(sel[col_labels[num]])]
         labels += [name]
-        # plt.hist(dat, label=name)
+
+    fig, ax = plt.subplots()
     plt.hist(dat, label=labels)
     ax.legend(loc='upper right')
-    ax.set_xlim(0, 1)
     plt.xlabel(None)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_sel." + args.pic_format, dpi=args.dpi)
     plt.close()
 
+    dat = []
+    labels = []
     for obj, label in zip(col_labels, discounts_labels):
         r_s = rr.loc[[len(t) != 1 for t in rr["indexes"]]]
-        sns.kdeplot(r_s[obj], label=label, bw_adjust=1)
+        dat += [list(r_s[obj])]
+        labels += [label]
 
-    ax.legend(loc='upper left')
-    ax.set_xlim(0, 1)
+    fig, ax = plt.subplots()
+    plt.hist(dat, label=labels)
+    # ax.legend(loc='upper right')
+    # ax.get_legend().remove()
     plt.xlabel(None)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_all." + args.pic_format, dpi=args.dpi)
