@@ -685,11 +685,11 @@ def plot_demand(inData, t0=None, vehicles=False, s=40, **kwargs):
     # plot osmnx graph, its center, scattered nodes of requests origins and destinations
     # plots requests temporal distribution
     fig, ax = plt.subplots(1, 3, figsize=(12, 4), dpi=kwargs.get("dpi", 300))
-    ((t0 - inData.requests.treq) / np.timedelta64(1, 'h')).plot.kde(title='Temporal distribution', ax=ax[0])
-    (inData.requests.ttrav / np.timedelta64(1, 'm')).plot(kind='box', title='Trips travel times [min]', ax=ax[1])
-    inData.requests.dist.plot(kind='box', title='Trips distance [m]', ax=ax[2])
+    # ((t0 - inData.requests.treq) / np.timedelta64(1, 'h')).plot.kde(title='Temporal distribution', ax=ax[0])
+    # (inData.requests.ttrav / np.timedelta64(1, 'm')).plot(kind='box', title='Trips travel times [min]', ax=ax[1])
+    # inData.requests.dist.plot(kind='box', title='Trips distance [m]', ax=ax[2])
     # (inData.requests.ttrav / np.timedelta64(1, 'm')).describe().to_frame().T
-    plt.show()
+    # plt.show()
     fig, ax = ox.plot_graph(inData.G, figsize=(s, s), node_size=0, edge_linewidth=0.5,
                             show=False, close=False,
                             edge_color='grey', bgcolor='white', dpi=kwargs.get("dpi", 300))
@@ -703,7 +703,7 @@ def plot_demand(inData, t0=None, vehicles=False, s=40, **kwargs):
     #            s=10 * s, marker='+')
     # plt.title(
     #     'Demand in {} with origins marked in green, destinations in orange'.format(exmas_params.city))
-    plt.savefig('AAAAA.jpeg', dpi=kwargs.get("dpi", 300))
+    plt.savefig('aaaa.png', dpi=kwargs.get("dpi", 300))
     # plt.show()
 
 

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import Counter
 import matplotlib.pylab as pylab
+from matplotlib.markers import MarkerStyle
 
 from pricing_functions import _expected_profit_flat
 from pricing_functions import *
@@ -16,7 +17,7 @@ from matching import matching_function
 parser = argparse.ArgumentParser()
 parser.add_argument("--no-requests", type=int, required=True)
 parser.add_argument("--sample-size", type=int, required=True)
-parser.add_argument("--analysis-parts", nargs='+', type=int, default=[1] * 6)
+parser.add_argument("--analysis-parts", nargs='+', type=int, default=[1] * 7)
 parser.add_argument("--discounts", nargs='+', type=int, default=[0.2])
 parser.add_argument("--avg-speed", type=float, default=6)
 parser.add_argument("--price", type=float, default=1.5)
@@ -290,3 +291,47 @@ if args.analysis_parts[5]:
     plt.tight_layout()
     plt.savefig("profitability_" + str(_sample) + "_sel_hist." + args.pic_format, dpi=args.dpi)
     plt.close()
+
+if args.analysis_parts[6]:
+    profitability_scatter = [list(shared['profitability'])]
+    profitability_scatter += [list(shared[k + '_profitability']) for k in discounts_names]
+    degrees = [len(t) for t in shared['indexes']]
+    degrees = list(Counter(degrees).values())
+    degrees_positions = list(np.cumsum(degrees))
+    degrees_positions = [int(t1 + t2/2)
+                         for t1, t2 in zip([0] + degrees_positions[:-1], degrees)]
+
+    def bracket(ax, pos=[0, 0], scalex=1, scaley=1, text="", textkw=None, linekw=None):
+        if textkw is None:
+            textkw = dict()
+        if linekw is None:
+            linekw = dict()
+        x = np.array([0, 0.05, 0.45, 0.5])
+        y = np.array([0, -0.01, -0.01, -0.02])
+        x = np.concatenate((x, x + 0.5))
+        y = np.concatenate((y, y[::-1]))
+        ax.plot(x * scalex + pos[0], y * scaley + pos[1], clip_on=False,
+                transform=ax.get_xaxis_transform(), **linekw)
+        ax.text(pos[0] + 0.5 * scalex, (y.min() - 0.01) * scaley + pos[1], text,
+                transform=ax.get_xaxis_transform(),
+                ha="center", va="top", **textkw)
+
+    fig, ax = plt.subplots()
+    for num, cur_label in enumerate(discounts_labels):
+        dat = profitability_scatter[num]
+        dat.sort()
+        plt.scatter(x=range(len(dat)), y=dat, label=discounts_labels[num], s=1,
+                    edgecolors='none')
+
+    for num, (deg_len, deg_post) in enumerate(zip(degrees, [0] + list(np.cumsum(degrees)))):
+        bracket(ax, text=str(num+2), pos=[deg_post, -0.01], scalex=deg_len,
+                linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
+
+    # ax.set_xticks(degrees_positions, [t + 2 for t in range(len(degrees_positions))])
+    ax.set_xticks([])
+    lgnd = plt.legend(loc='upper left', fontsize=10)
+    for handle in lgnd.legend_handles:
+        handle.set_sizes([30])
+    plt.savefig("scatter_all_profitability_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+    plt.close()
+

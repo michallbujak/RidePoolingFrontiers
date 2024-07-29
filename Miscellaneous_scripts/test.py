@@ -17,28 +17,7 @@ import Utils.utils_topology as utils
 import ExMAS.utils as ut
 
 
-# date = "18-01-23"
-# special_name = "_net_fixed"
-# sblts_exmas = "exmas"
-#
-#
-#
-# # with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
-# #     e = pickle.load(file)[31]
-#
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\22-03-24\147_homo_22-03-24.obj", 'rb') as file:
-#     e = pickle.load(file)[0]
-#
-# # ut.plot_map_rides(e, [715], light=True, lw=3, fontsize=30, m_size=1)
-# ut.plot_map_rides(e, [680], light=True, lw=3, fontsize=30, m_size=1)
-#
-#
-# os.chdir(os.path.dirname(os.getcwd()))
+with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\22-07-24\150_old_22-07-24.obj",'rb') as file:
+    e = pickle.load(file)
 
-# with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
-#     e = pickle.load(file)[31]
-
-with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\22-03-24\147_homo_22-03-24.obj", 'rb') as file:
-    e = pickle.load(file)[0]
-
-ut.plot_demand(e, dpi=300) #, origin_colour="green", destination_colour="orange")
+ut.plot_demand(e, dpi=400, origin_colour="red", destination_colour="blue")

@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) == 147,
+                                                     filter_function=lambda x: len(x.requests) == 150,
                                                      config=config.initial_parameters)
 
     """ Run ExMAS """
@@ -46,4 +46,4 @@ if __name__ == "__main__":
     #                   "rides": x[3],
     #                   "settings": x[4]} for x in final_results]
     # utils.save_with_pickle(final_results, 'final_res', config)
-    utils.save_with_pickle(dotmaps_list_results, "147_old", config)
+    utils.save_with_pickle(dotmaps_list_results[0], "150_old", config)
