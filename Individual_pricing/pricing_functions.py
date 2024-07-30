@@ -527,7 +527,7 @@ def _expected_profit_flat(
         rev += ind_dists[pax] * prob_not_trav * price / 1000
 
         others_not = 1 - np.prod(vector_probs[:pax] + vector_probs[(pax + 1):])
-        rev += ind_dists[pax] * others_not * vector_probs[pax] * (price - guaranteed_disc) / 1000
+        rev += ind_dists[pax] * others_not * vector_probs[pax] * (1 - guaranteed_disc) * price / 1000
 
     costs = prob_shared * shared_dist / 1000 + (1 - prob_shared) * sum(ind_dists) / 1000
 

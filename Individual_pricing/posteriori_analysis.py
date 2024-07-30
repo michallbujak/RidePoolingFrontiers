@@ -293,8 +293,14 @@ if args.analysis_parts[5]:
     plt.close()
 
 if args.analysis_parts[6]:
-    profitability_scatter = [list(shared['profitability'])]
-    profitability_scatter += [list(shared[k + '_profitability']) for k in discounts_names]
+    profitability_scatter = [(x, num) for num, x in enumerate(list(shared['profitability']))]
+    profitability_scatter.sort(reverse=False)
+    profitability_scatter, permutation = zip(*profitability_scatter)
+    profitability_scatter = [list(profitability_scatter)]
+    for disc_name in discounts_names:
+        dat = list(shared[disc_name + '_profitability'])
+        dat = [dat[t] for t in permutation]
+        profitability_scatter += [dat]
     degrees = [len(t) for t in shared['indexes']]
     degrees = list(Counter(degrees).values())
     degrees_positions = list(np.cumsum(degrees))
@@ -319,8 +325,11 @@ if args.analysis_parts[6]:
     fig, ax = plt.subplots()
     for num, cur_label in enumerate(discounts_labels):
         dat = profitability_scatter[num]
-        dat.sort()
-        plt.scatter(x=range(len(dat)), y=dat, label=discounts_labels[num], s=1,
+        if num == 0:
+            size = 2
+        else:
+            size = 1
+        plt.scatter(x=range(len(dat)), y=dat, label=discounts_labels[num], s=2,
                     edgecolors='none')
 
     for num, (deg_len, deg_post) in enumerate(zip(degrees, [0] + list(np.cumsum(degrees)))):
@@ -335,3 +344,8 @@ if args.analysis_parts[6]:
     plt.savefig("scatter_all_profitability_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
     plt.close()
 
+    # for num, j in enumerate(profitability_scatter[0]):
+    #     if j < profitability_scatter[1][num]:
+    #         print(f'{j} < {profitability_scatter[1][num]} and num = {num}')
+    #     if j < profitability_scatter[2][num]:
+    #         print(f'{j} < {profitability_scatter[2][num]} and num = {num}')
