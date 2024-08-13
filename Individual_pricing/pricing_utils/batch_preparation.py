@@ -11,7 +11,7 @@ from collections.abc import Callable
 from tqdm import tqdm
 import datetime
 
-from ExMAS.utils import load_G
+from ExMAS.utils import load_G, download_G
 
 up = os.path.dirname
 sys.path.append(up(up(up(__file__))))
@@ -155,7 +155,10 @@ def prepare_batches(
             exmas_params.paths[_name] = os.path.join(up(up(up(__file__))),
                                                      exmas_params.paths[_name])
 
-        databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
+        try:
+            databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
+        except FileNotFoundError:
+            databank_dotmap = download_G(databank_dotmap, exmas_params)
 
     batches, trips = nyc_csv_prepare_batches(exmas_params)
 
