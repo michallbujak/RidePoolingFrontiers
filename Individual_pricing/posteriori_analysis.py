@@ -341,11 +341,53 @@ if args.analysis_parts[6]:
     lgnd = plt.legend(loc='upper left', fontsize=10)
     for handle in lgnd.legend_handles:
         handle.set_sizes([30])
-    plt.savefig("scatter_all_profitability_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+    plt.savefig("scatter_all_profitability_balanced_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
     plt.close()
 
-    # for num, j in enumerate(profitability_scatter[0]):
-    #     if j < profitability_scatter[1][num]:
-    #         print(f'{j} < {profitability_scatter[1][num]} and num = {num}')
-    #     if j < profitability_scatter[2][num]:
-    #         print(f'{j} < {profitability_scatter[2][num]} and num = {num}')
+    shared['profitability_unbalanced'] = shared.apply(
+        lambda row: row['profitability']/len(row['indexes']),
+        axis=1
+    )
+    for disc_name in discounts_names:
+        shared[disc_name + '_profitability_unbalanced'] = shared.apply(
+            lambda row: row[disc_name + '_profitability']/len(row['indexes']),
+            axis=1
+        )
+
+    shared_reordered = shared.copy()
+    shared_reordered = shared_reordered.reset_index(drop=True)
+    unbalanced = [shared_reordered.apply(
+        lambda row: (row.name, 'Personalised', len(row['indexes']), row['profitability_unbalanced']),
+        axis=1
+    ).to_list()]
+    unbalanced[0].sort(key=lambda it: (it[2], it[3]))
+    new_order = [t[0] for t in unbalanced[0]]
+    shared_reordered = shared_reordered.reindex(new_order)
+
+    for disc_name, label in zip(discounts_names, discounts_labels[1:]):
+        unbalanced += [shared_reordered.apply(
+            lambda row: (row.name, label, len(row['indexes']), row[disc_name + '_profitability_unbalanced']),
+            axis=1
+        ).to_list()]
+
+    fig, ax = plt.subplots()
+    for num, cur_label in enumerate(discounts_labels):
+        if num == 0:
+            size = 2
+        else:
+            size = 1
+        plt.scatter(x=range(len(unbalanced[num])), y=[t[3] for t in unbalanced[num]], label=cur_label, s=size,
+                    edgecolors='none')
+
+    for num, (deg_len, deg_post) in enumerate(zip(degrees, [0] + list(np.cumsum(degrees)))):
+        bracket(ax, text=str(num+2), pos=[deg_post, -0.01], scalex=deg_len,
+                linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
+
+    ax.set_xticks([])
+    lgnd = plt.legend(loc='upper left', fontsize=10)
+    for handle in lgnd.legend_handles:
+        handle.set_sizes([30])
+    plt.savefig("scatter_all_profitability_unbalanced_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+    plt.close()
+
+
