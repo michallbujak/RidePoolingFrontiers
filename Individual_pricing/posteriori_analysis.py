@@ -40,10 +40,10 @@ path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str
 
 try:
     with open(path + '_amended.pickle', "rb") as file:
-        data = pickle.load(file)
+        data = pd.read_pickle(file)
 except FileNotFoundError:
     with open(path + '.pickle', "rb") as file:
-        data = pickle.load(file)[0]
+        data = pd.read_pickle(file)[0]
 
 os.chdir(os.path.join(os.getcwd(), "results"))
 res_path = os.path.join(os.getcwd(), str(_num) + "_" + str(_sample))

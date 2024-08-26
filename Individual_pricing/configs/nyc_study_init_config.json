@@ -15,8 +15,6 @@
 		"main": "ExMAS",
 		"data": "ExMAS\\data",
 		"params": "ExMAS\\data\\configs",
-		"postcodes": "ExMAS\\data\\postcodes\\PC4_Nederland_2015.shp",
-		"albatross": "ExMAS\\data\\albatross",
 		"G": "ExMAS\\data\\graphs\\Manhattan.graphml",
 		"skim": "ExMAS\\data\\graphs\\Manhattan.csv",
 		"nyc_trips": "ExMAS/data/nyc.csv",
