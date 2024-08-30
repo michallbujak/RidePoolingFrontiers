@@ -9,6 +9,7 @@ import seaborn as sns
 from collections import Counter
 import matplotlib.pylab as pylab
 from matplotlib.markers import MarkerStyle
+from matplotlib.ticker import PercentFormatter
 
 from pricing_functions import _expected_profit_flat
 from pricing_functions import *
@@ -390,4 +391,28 @@ if args.analysis_parts[6]:
     plt.savefig("scatter_all_profitability_unbalanced_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
     plt.close()
 
+    shared_reordered['dist_prop'] = shared_reordered.apply(
+        lambda row: 1 - row['u_veh']*args.avg_speed/sum(row['individual_distances']),
+        axis=1
+    )
+
+    output_list = shared_reordered.apply(
+        lambda row: [row['dist_prop'], row['profitability_unbalanced']] +
+                    [row[t + '_profitability_unbalanced'] for t in discounts_names],
+        axis=1
+    ).to_list()
+
+    output_list.sort(key=lambda it: it[0])
+
+    fig, ax = plt.subplots()
+    for _num in range(len(output_list[0])-1):
+        _size = 1 if _num != 0 else 2
+        plt.scatter(x=[t[0] for t in output_list], y=[t[1+_num] for t in output_list],
+                    s=_size, label=discounts_labels[_num])
+    lgnd = plt.legend(loc='upper left', fontsize=10)
+    for handle in lgnd.legend_handles:
+        handle.set_sizes([30])
+    ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+    plt.savefig('scatter_all_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+    plt.close()
 
