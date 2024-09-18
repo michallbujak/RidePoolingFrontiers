@@ -99,7 +99,8 @@ def initialise_input_dotmap():
 
 
 def nyc_csv_prepare_batches(
-        _params: DotMap
+        _params: DotMap,
+        skim_nodes: list or None = None
 ):
     try:
         _params.paths.nyc_requests
@@ -107,6 +108,9 @@ def nyc_csv_prepare_batches(
         raise Exception("no nyc trips data path specified") from exc
 
     trips = pd.read_csv(_params.paths.nyc_requests, index_col=0)  # load csv (prepared in the other notebook)
+    if skim_nodes:
+        trips = trips.loc[[(t in skim_nodes)&(z in skim_nodes) for t, z in trips[['origin', 'destination']].values.tolist()]]
+        trips.to_csv(_params.paths.nyc_requests)
     trips.pickup_datetime = pd.to_datetime(trips.pickup_datetime)  # convert to times
 
     batches = trips.groupby(pd.Grouper(key='pickup_datetime', freq=_params.get('freq', '10min')))
@@ -160,7 +164,7 @@ def prepare_batches(
         except FileNotFoundError:
             databank_dotmap = download_G(databank_dotmap, exmas_params)
 
-    batches, trips = nyc_csv_prepare_batches(exmas_params)
+    batches, trips = nyc_csv_prepare_batches(exmas_params) #
 
     logger = kwargs.get("logger")
 

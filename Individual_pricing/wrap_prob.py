@@ -23,7 +23,6 @@ assert sum(args.load_partial) <= 1, "Cannot load more than 1 intermediate step"
 
 """ Import configuration & prepare results folder"""
 directories = bt_prep.get_parameters(args.directories_json)
-bt_prep.create_results_directory(directories, args.simulation_name)
 
 if not sum(args.load_partial):
     """ Prepare requests """
@@ -40,6 +39,11 @@ if not sum(args.load_partial):
         exmas_algorithm=exmas_algo,
         exmas_params=exmas_params,
         list_databanks=databanks_list
+    )
+
+    bt_prep.create_results_directory(
+        directories,
+        str(len(databanks_list[0]['requests'])) + "_" + str(args.sample_size)
     )
 
     if args.save_partial:
@@ -97,7 +101,7 @@ if args.load_partial[2]:
 databanks_list = [
     profitability_measures(
         databank=t,
-        op_costs=[]
+        op_costs=[0.2]
     ) for t in databanks_list
 ]
 

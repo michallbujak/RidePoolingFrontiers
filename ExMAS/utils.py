@@ -189,11 +189,11 @@ def save_G(inData, _params, path=None):
     inData.skim.to_csv(_params.paths.skim, chunksize=20000000)
 
 
-def load_G(inData, _params=None, stats=False, set_t=True):
+def load_G(inData, _params=None, stats=False, graph=False):
     # loads graph and skim from a file
-
-    inData.G = ox.load_graphml(filepath=_params.paths.G)
-    inData.nodes = pd.DataFrame.from_dict(dict(inData.G.nodes(data=True)), orient='index')
+    if graph:
+        inData.G = ox.load_graphml(filepath=_params.paths.G)
+        inData.nodes = pd.DataFrame.from_dict(dict(inData.G.nodes(data=True)), orient='index')
     skim = pd.read_csv(_params.paths.skim, index_col='Unnamed: 0')
     skim.columns = [int(c) for c in skim.columns]
     inData.skim = skim
