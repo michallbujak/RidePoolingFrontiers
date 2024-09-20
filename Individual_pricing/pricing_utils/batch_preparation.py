@@ -82,6 +82,12 @@ def create_results_directory(
     create_directory(config.partial_results, kwargs.get('logger'), 20)
     config.partial_results += '/'
 
+    if kwargs.get("new_directories"):
+        keys = ['initial_parameters', 'path_results', 'partial_results']
+        dirs = {k: v for k, v in config.items() if k in keys}
+        with open(kwargs["directories_path"][:-5] + "_" + name + ".json", "w") as f:
+            json.dump(dirs, f)
+
     return config
 
 

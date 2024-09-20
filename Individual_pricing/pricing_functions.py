@@ -444,10 +444,14 @@ def expected_profitability_function(
 
 def profitability_measures(
         databank: DotMap or dict,
-        op_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6)
+        op_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6),
+        threshold_rides_prob: float or None = None
 ):
     rides = databank["exmas"]["rides"]
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
+    rides["acceptance_prob"] = rides["best_profit"].apply(lambda x: np.prod(x[3]))
+    if threshold_rides_prob is not None:
+        rides = rides.loc[rides["acceptance_prob"] >= threshold_rides_prob]
     rides["profitability"] = rides["best_profit"].apply(lambda x: x[5] * len(x[3]))
     objectives = ["expected_revenue", "profitability"]
 

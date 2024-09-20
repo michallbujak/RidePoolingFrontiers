@@ -4,7 +4,6 @@ import pickle
 
 from ExMAS.probabilistic_exmas import main as exmas_algo
 import Individual_pricing.pricing_utils.batch_preparation as bt_prep
-from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
 from Individual_pricing.evaluation import *
 from Individual_pricing.pricing_functions import *
@@ -25,6 +24,7 @@ assert sum(args.load_partial) <= 1, "Cannot load more than 1 intermediate step"
 directories = bt_prep.get_parameters(args.directories_json)
 
 if not sum(args.load_partial):
+    from Individual_pricing.exmas_loop import exmas_loop_func
     """ Prepare requests """
     databanks_list, exmas_params = bt_prep.prepare_batches(
         exmas_params=bt_prep.get_parameters(directories.initial_parameters),
@@ -43,7 +43,9 @@ if not sum(args.load_partial):
 
     bt_prep.create_results_directory(
         directories,
-        str(len(databanks_list[0]['requests'])) + "_" + str(args.sample_size)
+        str(len(databanks_list[0]['requests'])) + "_" + str(args.sample_size),
+        new_directories=True,
+        directories_path=args.directories_json
     )
 
     if args.save_partial:
@@ -100,8 +102,7 @@ if args.load_partial[2]:
 
 databanks_list = [
     profitability_measures(
-        databank=t,
-        op_costs=[0.2]
+        databank=t
     ) for t in databanks_list
 ]
 

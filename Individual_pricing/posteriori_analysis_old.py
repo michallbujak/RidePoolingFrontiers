@@ -30,7 +30,7 @@ prob_distribution = True
 res_analysis = True
 profitability_vector = True
 
-with open("C:/Users/szmat/Documents/GitHub/ExMAS_sideline/Individual_pricing/data/"
+with open("Individual_pricing/data/"
           + str(_num) + "_" + str(_sample) + "/results_["
           + str(_num) + ", " + str(_num) + "]_" + str(_sample) + ".pickle",
           "rb") as file:
