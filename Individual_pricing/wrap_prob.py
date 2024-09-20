@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
 parser.add_argument("--batch-size", nargs='+', type=int, default=[148, 152])
 parser.add_argument("--sample-size", type=int, default=25)
+parser.add_argument("--min-accept", type=int, default=0.1)
 parser.add_argument("--save-partial", action="store_false")
 parser.add_argument("--load-partial", nargs='+', type=int, default=[0, 0, 0])
 parser.add_argument("--simulation-name", type=str or None, default=None)
@@ -102,7 +103,8 @@ if args.load_partial[2]:
 
 databanks_list = [
     profitability_measures(
-        databank=t
+        databank=t,
+        threshold_rides_prob=0.2
     ) for t in databanks_list
 ]
 

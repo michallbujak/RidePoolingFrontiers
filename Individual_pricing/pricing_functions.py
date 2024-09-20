@@ -299,7 +299,9 @@ def _row_maximise_profit(
         _price: float = 0.0015,
         _probability_single: float = 1,
         _guaranteed_discount: float = 0.05,
-        _max_output_func: Callable[[list], float] = lambda x: x[5]
+        _max_output_func: Callable[[list], float] =
+        lambda x: x[0]/x[4] if x[4] != 0 else 0,
+        _min_acceptance: float = 0
 ):
     """
     Function to calculate the expected performance (or its derivatives)
@@ -314,6 +316,7 @@ def _row_maximise_profit(
     @param _guaranteed_discount: when traveller accepts a shared ride and any of the co-travellers
     reject a ride, the traveller is offered
     @param _max_output_func: specify what is the maximisation objective
+    @param _min_acceptance: minimum acceptance probability
     --------
     @return vector comprising 6 main characteristics when applied discount maximising
     the expected revenue:
@@ -322,17 +325,18 @@ def _row_maximise_profit(
     - revenue from the shared ride if accepted
     - vector of probabilities that individuals accept the shared ride
     - expected distance
-    - profitability
+    - max output function (by default, profitability)
     """
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        profitability = _price * 1000 * (1 - _guaranteed_discount) if _rides_row["veh_dist"] else 0
-        return [_probability_single * _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
+        out = [_probability_single * _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
                 0,
                 _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
                 [_probability_single],
-                _rides_row["veh_dist"] / 1000 * _probability_single,
-                profitability]
+                _rides_row["veh_dist"] / 1000 * _probability_single
+        ]
+        out += [_max_output_func(out)]
+        return out
 
     discounts = _rides_row["accepted_discount"].copy()
     discounts = [[_guaranteed_discount] + t if t[0] > _guaranteed_discount else t for t in discounts]
@@ -363,6 +367,9 @@ def _row_maximise_profit(
             prob_ind[num] = bisect_right(accepted_disc, individual_disc) / len(accepted_disc)
             probability_shared *= prob_ind[num]
 
+        if probability_shared < _min_acceptance:
+            continue
+
         if _one_shot:
             # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]
             out = [sum(revenue_shared) * probability_shared,
@@ -370,9 +377,9 @@ def _row_maximise_profit(
                    sum(revenue_shared),
                    prob_ind,
                    _rides_row["veh_dist"] * probability_shared / 1000]
-            profitability = [out[0] / out[4]] if out[4] != 0 else [0]
-            out += profitability
-            if _max_output_func(out) > _max_output_func(best):
+            max_out = _max_output_func(out)
+            out += [max_out]
+            if max_out > best[-1]:
                 best = out.copy()
         else:
             # if (_rides_row['indexes'] == [43, 46]) & (sum(prob_ind) >= 1.3):
@@ -393,10 +400,10 @@ def _row_maximise_profit(
                    prob_ind,
                    (_rides_row["veh_dist"] * probability_shared +
                     sum(_rides_row["individual_distances"]) * (1 - probability_shared)) / 1000]
-            profitability = [out[0] / out[4]] if out[4] != 0 else [0]
-            out += profitability
+            max_out = _max_output_func(out)
+            out += [max_out]
 
-            if _max_output_func(out) > _max_output_func(best):
+            if max_out > best[-1]:
                 best = out.copy()
 
     return best
@@ -436,7 +443,8 @@ def expected_profitability_function(
                                                 axis=1,
                                                 _price=price,
                                                 _one_shot=one_shot,
-                                                _guaranteed_discount=guaranteed_discount
+                                                _guaranteed_discount=guaranteed_discount,
+                                                _min_acceptance=0.1
                                                 )
 
     return databank
@@ -450,8 +458,7 @@ def profitability_measures(
     rides = databank["exmas"]["rides"]
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
     rides["acceptance_prob"] = rides["best_profit"].apply(lambda x: np.prod(x[3]))
-    if threshold_rides_prob is not None:
-        rides = rides.loc[rides["acceptance_prob"] >= threshold_rides_prob]
+
     rides["profitability"] = rides["best_profit"].apply(lambda x: x[5] * len(x[3]))
     objectives = ["expected_revenue", "profitability"]
 
@@ -463,6 +470,10 @@ def profitability_measures(
                                                                         + str(int(100 * op_cost))].apply(
             lambda x: int(1000 * x))
         objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
+
+    if threshold_rides_prob is not None:
+        for obj in objectives:
+            rides.loc[rides["acceptance_prob"] <= threshold_rides_prob, obj] += 10000
 
     databank["exmas"]["recalibrated_rides"] = rides.copy()
     databank["exmas"]["objectives"] = objectives
