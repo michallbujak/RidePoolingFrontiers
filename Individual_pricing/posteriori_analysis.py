@@ -11,18 +11,22 @@ import matplotlib.pylab as pylab
 from matplotlib.markers import MarkerStyle
 from matplotlib.ticker import PercentFormatter
 
-from pricing_functions import _expected_profit_flat
+from pricing_functions import _expected_flat_measures
 from pricing_functions import *
 from matching import matching_function
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--no-requests", type=int, required=True)
 parser.add_argument("--sample-size", type=int, required=True)
+parser.add_argument("--profitability", action="store_false")
+parser.add_argument("--min-accept", type=float, default=0.1)
+parser.add_argument("--operating-cost", type=float, default=0.5)
 parser.add_argument("--analysis-parts", nargs='+', type=int, default=[1] * 7)
-parser.add_argument("--discounts", nargs='+', type=int, default=[0.2])
+parser.add_argument("--discounts", nargs='+', type=int, default=[0.3])
 parser.add_argument("--avg-speed", type=float, default=6)
 parser.add_argument("--price", type=float, default=1.5)
 parser.add_argument("--guaranteed-discount", type=float, default=0.05)
+parser.add_argument("--operating-costs", nargs='+', type=int, default=[0.3])
 parser.add_argument("--dpi", type=int, default=300)
 parser.add_argument("--pic-format", type=str, default='png')
 args = parser.parse_args()
@@ -38,6 +42,9 @@ else:
 path = path_joiner(path, 'data')
 path = path_joiner(path, str(_num) + '_' + str(_sample))
 path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample))
+
+if not args.profitability:
+    path += "_" + str(args.operating_cost) + "_" + str(args.min_accept)
 
 try:
     with open(path + '_amended.pickle', "rb") as file:
@@ -86,8 +93,8 @@ else:
         rr["prod_prob_" + name] = rr.apply(check_prob_if_accepted, axis=1, discount=disc)
         rr["probs_" + name] = rr.apply(check_prob_if_accepted, axis=1, discount=disc, total=False)
 
-        rr[name + '_profitability'] = rr.apply(
-            lambda x: _expected_profit_flat(
+        rr['rev_cost'] = rr.apply(
+            lambda x: _expected_flat_measures(
                 vector_probs=x["probs_" + name],
                 shared_dist=x['u_veh'] * args.avg_speed,
                 ind_dists=x['individual_distances'],
@@ -97,6 +104,21 @@ else:
             ),
             axis=1
         )
+
+        rr[name + '_profitability'] = rr['rev_cost'].apply(lambda x: x[0]/x[1] if x[1] != 0 else 0)
+        rr[name + '_profitability'] = rr[name + '_profitability']*[len(t) for t in rr['indexes']]
+
+        for oc in args.operating_costs:
+            rr[name + '_profit_' + str(int(100*oc))] = rr['rev_cost'].apply(
+                lambda el: el[0] - oc*el[1]
+            ).copy()
+            data = matching_function(
+                databank=data,
+                objectives=[name + '_profit_' + str(int(100*oc))],
+                min_max='max',
+                filter_rides=False,  # name + '_accepted',
+                opt_flag=""
+            )
 
         data = matching_function(
             databank=data,
@@ -112,6 +134,8 @@ else:
             'exmas': data['exmas'],
             'flat_analysis': data['flat_analysis']
         }, file)
+
+    raise Warning("Please, rerun the project to ensure the data integrity")
 
 # Now analysis
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
@@ -188,6 +212,15 @@ if args.analysis_parts[2]:
     plt.yticks([])
     plt.tight_layout()
     plt.savefig('discounts_density_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi)
+    plt.close()
+
+    fig, ax = plt.subplots()
+    sns.kdeplot(list(obj_discounts.values()), label=['All', 'Selected'])
+    ax.legend()
+    ax.set_xlim(0.05, 0.55)
+    plt.yticks([])
+    plt.tight_layout()
+    plt.savefig('discounts_density_kde_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi)
     plt.close()
 
 if args.analysis_parts[3] + args.analysis_parts[4] >= 1:

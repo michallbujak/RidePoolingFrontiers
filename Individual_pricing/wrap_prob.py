@@ -5,14 +5,15 @@ import pickle
 from ExMAS.probabilistic_exmas import main as exmas_algo
 import Individual_pricing.pricing_utils.batch_preparation as bt_prep
 from Individual_pricing.matching import matching_function
-from Individual_pricing.evaluation import *
 from Individual_pricing.pricing_functions import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
-parser.add_argument("--batch-size", nargs='+', type=int, default=[148, 152])
-parser.add_argument("--sample-size", type=int, default=25)
-parser.add_argument("--min-accept", type=int, default=0.1)
+parser.add_argument("--profitability", action="store_false")
+parser.add_argument("--min-accept", type=float, default=0.1)
+parser.add_argument("--operating-cost", type=float, default=0.5)
+parser.add_argument("--batch-size", nargs='+', type=int, default=[100, 200])
+parser.add_argument("--sample-size", type=int, default=20)
 parser.add_argument("--save-partial", action="store_false")
 parser.add_argument("--load-partial", nargs='+', type=int, default=[0, 0, 0])
 parser.add_argument("--simulation-name", type=str or None, default=None)
@@ -78,13 +79,20 @@ if args.load_partial[1]:
 
 if not sum(args.load_partial[2:]):
     """ Calculate new (probabilistic) measures """
+    if args.profitability:
+        func = lambda x: x[0]/x[4] if x[4] != 0 else 0
+    else:
+        func = lambda x: x[0] - x[4]*args.operating_cost
+
     databanks_list = [
         expected_profitability_function(t,
+                                        max_func=func,
                                         final_sample_size=args.sample_size,
                                         price=exmas_params["price"] / 1000,
                                         speed=exmas_params["avg_speed"],
                                         one_shot=False,
-                                        guaranteed_discount=0.05
+                                        guaranteed_discount=0.05,
+                                        min_acceptance=args.min_accept
                                         )
         for t in databanks_list
     ]
@@ -103,8 +111,7 @@ if args.load_partial[2]:
 
 databanks_list = [
     profitability_measures(
-        databank=t,
-        threshold_rides_prob=0.2
+        databank=t
     ) for t in databanks_list
 ]
 
@@ -118,8 +125,12 @@ databanks_list = [
     ) for db in databanks_list
 ]
 
-with open(directories.path_results + "results_" + str(args.batch_size) +
-          "_" + str(args.sample_size) + ".pickle", "wb") as f:
-    pickle.dump(databanks_list, f)
-
-x = 0
+if args.profitability:
+    with open(directories.path_results + "results_" + str(args.batch_size) +
+              "_" + str(args.sample_size) + ".pickle", "wb") as f:
+        pickle.dump(databanks_list, f)
+else:
+    with open(directories.path_results + "results_" + str(args.batch_size) +
+              "_" + str(args.sample_size) + "_" + str(args.operating_cost) +
+              "_" + str(args.min_accept) + ".pickle", "wb") as f:
+        pickle.dump(databanks_list, f)

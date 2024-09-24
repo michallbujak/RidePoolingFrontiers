@@ -296,11 +296,10 @@ def _row_sample_acceptable_disc(
 def _row_maximise_profit(
         _rides_row: pd.Series,
         _one_shot: bool,
+        _max_output_func: Callable[[list], float],
         _price: float = 0.0015,
         _probability_single: float = 1,
         _guaranteed_discount: float = 0.05,
-        _max_output_func: Callable[[list], float] =
-        lambda x: x[0]/x[4] if x[4] != 0 else 0,
         _min_acceptance: float = 0
 ):
     """
@@ -414,6 +413,8 @@ def expected_profitability_function(
         final_sample_size: int = 10,
         price: float = 0.0015,
         # cost_to_price_ratio: float = 0.3,
+        max_func: Callable[[list], float] = lambda x: x[0]/x[4] if x[4] != 0 else 0,
+        min_acceptance: float or None = None,
         one_shot: bool = False,
         guaranteed_discount: float = 0.1,
         speed: float = 6
@@ -443,8 +444,9 @@ def expected_profitability_function(
                                                 axis=1,
                                                 _price=price,
                                                 _one_shot=one_shot,
+                                                _max_output_func=max_func,
                                                 _guaranteed_discount=guaranteed_discount,
-                                                _min_acceptance=0.1
+                                                _min_acceptance=min_acceptance
                                                 )
 
     return databank
@@ -452,8 +454,7 @@ def expected_profitability_function(
 
 def profitability_measures(
         databank: DotMap or dict,
-        op_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6),
-        threshold_rides_prob: float or None = None
+        op_costs: list[float] or tuple[float] = (0.2, 0.3, 0.4, 0.5, 0.6)
 ):
     rides = databank["exmas"]["rides"]
     rides["expected_revenue"] = rides["best_profit"].apply(lambda x: x[0])
@@ -471,11 +472,8 @@ def profitability_measures(
             lambda x: int(1000 * x))
         objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
 
-    if threshold_rides_prob is not None:
-        for obj in objectives:
-            rides.loc[rides["acceptance_prob"] <= threshold_rides_prob, obj] += 10000
-
     databank["exmas"]["recalibrated_rides"] = rides.copy()
+    databank["exmas"]["rides"] = rides
     databank["exmas"]["objectives"] = objectives
 
     return databank
@@ -521,7 +519,7 @@ def check_prob_if_accepted(
     return out
 
 
-def _expected_profit_flat(
+def _expected_flat_measures(
         vector_probs: pd.Series or list,
         shared_dist: float,
         ind_dists: pd.Series or list,
@@ -530,7 +528,7 @@ def _expected_profit_flat(
         guaranteed_disc: float
 ):
     if len(vector_probs) == 1:
-        return price * (1 - guaranteed_disc)
+        return [price * shared_dist/1000, shared_dist/1000]
 
     prob_shared = np.prod(vector_probs)
     # if shared
@@ -544,9 +542,9 @@ def _expected_profit_flat(
         others_not = 1 - np.prod(vector_probs[:pax] + vector_probs[(pax + 1):])
         rev += ind_dists[pax] * others_not * vector_probs[pax] * (1 - guaranteed_disc) * price / 1000
 
-    costs = prob_shared * shared_dist / 1000 + (1 - prob_shared) * sum(ind_dists) / 1000
+    dist = prob_shared * shared_dist / 1000 + (1 - prob_shared) * sum(ind_dists) / 1000
 
-    return (rev / costs) * len(vector_probs)
+    return [rev, dist]
 
 
 def check_percentiles_distribution(ab, perc, multiplier=1):
