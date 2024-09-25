@@ -14,6 +14,7 @@ from matplotlib.ticker import PercentFormatter
 from pricing_functions import _expected_flat_measures
 from pricing_functions import *
 from matching import matching_function
+from auxiliary_functions import extract_selected_discounts, extract_selected_profitability, bracket
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--no-requests", type=int, required=True)
@@ -22,11 +23,11 @@ parser.add_argument("--profitability", action="store_false")
 parser.add_argument("--min-accept", type=float, default=0.1)
 parser.add_argument("--operating-cost", type=float, default=0.5)
 parser.add_argument("--analysis-parts", nargs='+', type=int, default=[1] * 7)
-parser.add_argument("--discounts", nargs='+', type=int, default=[0.3])
+parser.add_argument("--discounts", nargs='+', type=int, default=[0.2])
 parser.add_argument("--avg-speed", type=float, default=6)
 parser.add_argument("--price", type=float, default=1.5)
 parser.add_argument("--guaranteed-discount", type=float, default=0.05)
-parser.add_argument("--operating-costs", nargs='+', type=int, default=[0.3])
+parser.add_argument("--separate", action='store_false')
 parser.add_argument("--dpi", type=int, default=300)
 parser.add_argument("--pic-format", type=str, default='png')
 args = parser.parse_args()
@@ -55,6 +56,10 @@ except FileNotFoundError:
 
 os.chdir(os.path.join(os.getcwd(), "results"))
 res_path = os.path.join(os.getcwd(), str(_num) + "_" + str(_sample))
+if not args.profitability:
+    res_path = os.path.join(res_path,
+                            str(args.operating_cost) + "_" + str(args.min_accept))
+
 try:
     os.chdir(res_path)
 except FileNotFoundError:
@@ -105,16 +110,19 @@ else:
             axis=1
         )
 
-        rr[name + '_profitability'] = rr['rev_cost'].apply(lambda x: x[0]/x[1] if x[1] != 0 else 0)
-        rr[name + '_profitability'] = rr[name + '_profitability']*[len(t) for t in rr['indexes']]
+        rr[name + '_profitability'] = rr.apply(
+            lambda row: len(row['indexes']) * row['rev_cost'][0] / row['rev_cost'][1]
+            if row['rev_cost'][1] != 0 else 0,
+            axis=1
+        )
 
-        for oc in args.operating_costs:
-            rr[name + '_profit_' + str(int(100*oc))] = rr['rev_cost'].apply(
-                lambda el: el[0] - oc*el[1]
+        for oc in discounts:
+            rr[name + '_profit_' + str(int(100 * oc))] = rr['rev_cost'].apply(
+                lambda el: el[0] - oc * el[1]
             ).copy()
             data = matching_function(
                 databank=data,
-                objectives=[name + '_profit_' + str(int(100*oc))],
+                objectives=[name + '_profit_' + str(int(100 * oc))],
                 min_max='max',
                 filter_rides=False,  # name + '_accepted',
                 opt_flag=""
@@ -215,7 +223,8 @@ if args.analysis_parts[2]:
     plt.close()
 
     fig, ax = plt.subplots()
-    sns.kdeplot(list(obj_discounts.values()), label=['All', 'Selected'])
+    sns.kdeplot(list(obj_discounts.values())[0], label='All')
+    sns.kdeplot(list(obj_discounts.values())[1], label='Selected')
     ax.legend()
     ax.set_xlim(0.05, 0.55)
     plt.yticks([])
@@ -278,7 +287,7 @@ if args.analysis_parts[4]:
             axis=1
         ))]
     results['profitability'] += [1.5]
-    results['e_dist'] += [sum(singles['veh_dist'])/1000]
+    results['e_dist'] += [sum(singles['veh_dist']) / 1000]
 
     results = pd.DataFrame(results)
     results.index = discounts_labels + ['Private only']
@@ -286,22 +295,7 @@ if args.analysis_parts[4]:
     print(results.to_latex())
 
 if args.analysis_parts[5]:
-    temp_data = rr.loc[rr['selected_profitability'] == 1]
-
-    results_list = []
-    results = {
-        'Personalised': list(temp_data['best_profit'].apply(lambda x: x[5]))
-    }
-    results_list += [list(temp_data['best_profit'].apply(lambda x: x[5]))]
-
-    for flat_disc in discounts_names:
-        temp_data = rr.loc[rr['selected_' + flat_disc + '_profitability'] == 1]
-        td = temp_data.apply(
-            lambda x: x[flat_disc + '_profitability']/len(x['indexes']),
-            axis=1
-        )
-        results['Flat disc. 0.' + flat_disc[1:]] = list(td)
-        results_list += [list(td)]
+    results, results_list = extract_selected_discounts(rr, discounts_names)
 
     fig, ax = plt.subplots()
 
@@ -338,23 +332,8 @@ if args.analysis_parts[6]:
     degrees = [len(t) for t in shared['indexes']]
     degrees = list(Counter(degrees).values())
     degrees_positions = list(np.cumsum(degrees))
-    degrees_positions = [int(t1 + t2/2)
+    degrees_positions = [int(t1 + t2 / 2)
                          for t1, t2 in zip([0] + degrees_positions[:-1], degrees)]
-
-    def bracket(ax, pos=[0, 0], scalex=1, scaley=1, text="", textkw=None, linekw=None):
-        if textkw is None:
-            textkw = dict()
-        if linekw is None:
-            linekw = dict()
-        x = np.array([0, 0.05, 0.45, 0.5])
-        y = np.array([0, -0.01, -0.01, -0.02])
-        x = np.concatenate((x, x + 0.5))
-        y = np.concatenate((y, y[::-1]))
-        ax.plot(x * scalex + pos[0], y * scaley + pos[1], clip_on=False,
-                transform=ax.get_xaxis_transform(), **linekw)
-        ax.text(pos[0] + 0.5 * scalex, (y.min() - 0.01) * scaley + pos[1], text,
-                transform=ax.get_xaxis_transform(),
-                ha="center", va="top", **textkw)
 
     fig, ax = plt.subplots()
     for num, cur_label in enumerate(discounts_labels):
@@ -367,7 +346,7 @@ if args.analysis_parts[6]:
                     edgecolors='none')
 
     for num, (deg_len, deg_post) in enumerate(zip(degrees, [0] + list(np.cumsum(degrees)))):
-        bracket(ax, text=str(num+2), pos=[deg_post, -0.01], scalex=deg_len,
+        bracket(ax, text=str(num + 2), pos=[deg_post, -0.01], scalex=deg_len,
                 linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
 
     # ax.set_xticks(degrees_positions, [t + 2 for t in range(len(degrees_positions))])
@@ -379,12 +358,12 @@ if args.analysis_parts[6]:
     plt.close()
 
     shared['profitability_unbalanced'] = shared.apply(
-        lambda row: row['profitability']/len(row['indexes']),
+        lambda row: row['profitability'] / len(row['indexes']),
         axis=1
     )
     for disc_name in discounts_names:
         shared[disc_name + '_profitability_unbalanced'] = shared.apply(
-            lambda row: row[disc_name + '_profitability']/len(row['indexes']),
+            lambda row: row[disc_name + '_profitability'] / len(row['indexes']),
             axis=1
         )
 
@@ -404,28 +383,44 @@ if args.analysis_parts[6]:
             axis=1
         ).to_list()]
 
-    fig, ax = plt.subplots()
-    for num, cur_label in enumerate(discounts_labels):
-        if num == 0:
-            size = 2
+    if args.separate:
+        _range = range(2, 5)
+    else:
+        _range = [0]
+
+    for _deg in _range:
+        if args.separate:
+            temp_data = [[ins for ins in outs if ins[2] == _deg] for outs in unbalanced]
         else:
-            size = 1
-        plt.scatter(x=range(len(unbalanced[num])), y=[t[3] for t in unbalanced[num]], label=cur_label, s=size,
-                    edgecolors='none')
+            temp_data = unbalanced
+        fig, ax = plt.subplots()
+        for num, cur_label in enumerate(discounts_labels):
+            if num == 0:
+                size = 2
+            else:
+                size = 1
+            plt.scatter(x=range(len(temp_data[num])), y=[t[3] for t in temp_data[num]], label=cur_label, s=size,
+                        edgecolors='none')
 
-    for num, (deg_len, deg_post) in enumerate(zip(degrees, [0] + list(np.cumsum(degrees)))):
-        bracket(ax, text=str(num+2), pos=[deg_post, -0.01], scalex=deg_len,
-                linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
+        if not args.separate:
+            for num, (deg_len, deg_post) in enumerate(zip(degrees, [0] + list(np.cumsum(degrees)))):
+                bracket(ax, text=str(num + 2), pos=[deg_post, -0.01], scalex=deg_len,
+                        linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
 
-    ax.set_xticks([])
-    lgnd = plt.legend(loc='upper left', fontsize=10)
-    for handle in lgnd.legend_handles:
-        handle.set_sizes([30])
-    plt.savefig("scatter_all_profitability_unbalanced_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
-    plt.close()
+        ax.set_xticks([])
+        if _deg == list(_range)[-1]:
+            lgnd = plt.legend(loc='upper left', fontsize=10)
+            for handle in lgnd.legend_handles:
+                handle.set_sizes([50])
+        if args.separate:
+            plt.savefig("scatter_all_profitability_unbalanced_" + str(_deg) + "_"
+                        + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+        else:
+            plt.savefig("scatter_all_profitability_unbalanced_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+        plt.close()
 
     shared_reordered['dist_prop'] = shared_reordered.apply(
-        lambda row: 1 - row['u_veh']*args.avg_speed/sum(row['individual_distances']),
+        lambda row: 1 - row['u_veh'] * args.avg_speed / sum(row['individual_distances']),
         axis=1
     )
 
@@ -438,9 +433,9 @@ if args.analysis_parts[6]:
     output_list.sort(key=lambda it: it[0])
 
     fig, ax = plt.subplots()
-    for _num in range(len(output_list[0])-1):
+    for _num in range(len(output_list[0]) - 1):
         _size = 1 if _num != 0 else 2
-        plt.scatter(x=[t[0] for t in output_list], y=[t[1+_num] for t in output_list],
+        plt.scatter(x=[t[0] for t in output_list], y=[t[1 + _num] for t in output_list],
                     s=_size, label=discounts_labels[_num])
     lgnd = plt.legend(loc='upper left', fontsize=10)
     for handle in lgnd.legend_handles:
@@ -448,4 +443,3 @@ if args.analysis_parts[6]:
     ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
     plt.savefig('scatter_all_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
     plt.close()
-

@@ -5,7 +5,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 import Individual_pricing.pricing_utils.batch_preparation as bt_prep
 from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
-from Individual_pricing.evaluation import evaluate_pooling, \
+from Individual_pricing.auxiliary_functions import evaluate_pooling, \
     compare_objective_methods, aggregate_results
 
 from Individual_pricing.pricing_functions import *

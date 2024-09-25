@@ -81,3 +81,54 @@ def aggregate_results(
         results: list
 ) -> pd.DataFrame:
     pass
+
+
+def extract_selected_profitability(
+        _rides: pd.DataFrame,
+        _disc_names: list
+):
+    out = {
+        'Personalised': _rides.loc[_rides['selected_profitability'] == 1]
+    }
+    for _disc in _disc_names:
+        out[_disc] = _rides.loc[_rides['selected_' + _disc + '_profitability'] == 1]
+    return out
+
+
+def extract_selected_discounts(
+        _rides: pd.DataFrame,
+        _disc_names: list
+):
+    tmp_dat = _rides.loc[_rides['selected_profitability'] == 1]
+
+    out_list = []
+    out = {
+        'Personalised': list(tmp_dat['best_profit'].apply(lambda x: x[5]))
+    }
+    out_list += [list(tmp_dat['best_profit'].apply(lambda x: x[5]))]
+
+    for _disc in _disc_names:
+        tmp_dat = _rides.loc[_rides['selected_' + _disc + '_profitability'] == 1]
+        td = tmp_dat.apply(
+            lambda x: x[_disc + '_profitability'] / len(x['indexes']),
+            axis=1
+        )
+        out['Flat disc. 0.' + _disc[1:]] = list(td)
+        out_list += [list(td)]
+
+    return out, out_list
+
+def bracket(ax, pos=[0, 0], scalex=1, scaley=1, text="", textkw=None, linekw=None):
+    if textkw is None:
+        textkw = dict()
+    if linekw is None:
+        linekw = dict()
+    x = np.array([0, 0.05, 0.45, 0.5])
+    y = np.array([0, -0.01, -0.01, -0.02])
+    x = np.concatenate((x, x + 0.5))
+    y = np.concatenate((y, y[::-1]))
+    ax.plot(x * scalex + pos[0], y * scaley + pos[1], clip_on=False,
+            transform=ax.get_xaxis_transform(), **linekw)
+    ax.text(pos[0] + 0.5 * scalex, (y.min() - 0.01) * scaley + pos[1], text,
+            transform=ax.get_xaxis_transform(),
+            ha="center", va="top", **textkw)

@@ -528,7 +528,7 @@ def _expected_flat_measures(
         guaranteed_disc: float
 ):
     if len(vector_probs) == 1:
-        return [price * shared_dist/1000, shared_dist/1000]
+        return [(1-guaranteed_disc) * price * shared_dist/1000, shared_dist/1000]
 
     prob_shared = np.prod(vector_probs)
     # if shared
@@ -572,3 +572,31 @@ def check_percentiles_distribution(ab, perc, multiplier=1):
 
 def path_joiner(path1: str, path2: str):
     return os.path.join(path1, path2)
+
+
+def _expected_profit_flat(
+        vector_probs: pd.Series or list,
+        shared_dist: float,
+        ind_dists: pd.Series or list,
+        price: float,
+        sharing_disc: float,
+        guaranteed_disc: float
+):
+    if len(vector_probs) == 1:
+        return price * (1 - guaranteed_disc)
+
+    prob_shared = np.prod(vector_probs)
+    # if shared
+    rev = prob_shared * sum(ind_dists) * price * (1 - sharing_disc) / 1000
+
+    # if not shared
+    for pax in range(len(vector_probs)):
+        prob_not_trav = 1 - vector_probs[pax]
+        rev += ind_dists[pax] * prob_not_trav * price / 1000
+
+        others_not = 1 - np.prod(vector_probs[:pax] + vector_probs[(pax + 1):])
+        rev += ind_dists[pax] * others_not * vector_probs[pax] * (1 - guaranteed_disc) * price / 1000
+
+    costs = prob_shared * shared_dist / 1000 + (1 - prob_shared) * sum(ind_dists) / 1000
+
+    return (rev / costs) * len(vector_probs)

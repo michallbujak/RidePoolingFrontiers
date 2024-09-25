@@ -2,7 +2,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 import Individual_pricing.pricing_utils.batch_preparation as bt_prep
 from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
-from Individual_pricing.evaluation import *
+from Individual_pricing.auxiliary_functions import *
 from Individual_pricing.pricing_functions import *
 
 directories = bt_prep.get_parameters("Individual_pricing/configs/directories.json")
