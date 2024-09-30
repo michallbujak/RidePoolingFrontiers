@@ -269,10 +269,10 @@ if args.analysis_parts[3]:
     fig, ax = plt.subplots()
     for _d, _l in zip(dat, labels):
         sns.kdeplot(_d, label=None, bw_method=0.2)
-    plt.tight_layout()
     plt.ylabel(None)
-    plt.xticks(None)
+    ax.set_yticks([])
     plt.yticks(None)
+    plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_sel_kde." + args.pic_format, dpi=args.dpi)
     plt.close()
 
@@ -296,10 +296,10 @@ if args.analysis_parts[3]:
     for _d, _l in zip(dat, labels):
         sns.kdeplot(_d, label=_l, bw_method=0.2)
     ax.legend(loc='upper right')
-    plt.tight_layout()
     plt.ylabel(None)
-    plt.xticks(None)
     plt.yticks(None)
+    ax.set_yticks([])
+    plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_all_kde." + args.pic_format, dpi=args.dpi)
     plt.close()
 
