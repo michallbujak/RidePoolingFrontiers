@@ -260,10 +260,20 @@ if args.analysis_parts[3]:
 
     fig, ax = plt.subplots()
     plt.hist(dat, label=labels)
-    ax.legend(loc='upper right')
+    ax.legend(loc='upper left')
     plt.xlabel(None)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_sel." + args.pic_format, dpi=args.dpi)
+    plt.close()
+
+    fig, ax = plt.subplots()
+    for _d, _l in zip(dat, labels):
+        sns.kdeplot(_d, label=None, bw_method=0.2)
+    plt.tight_layout()
+    plt.ylabel(None)
+    plt.xticks(None)
+    plt.yticks(None)
+    plt.savefig("probability_shared_" + str(_sample) + "_sel_kde." + args.pic_format, dpi=args.dpi)
     plt.close()
 
     dat = []
@@ -280,6 +290,17 @@ if args.analysis_parts[3]:
     plt.xlabel(None)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_all." + args.pic_format, dpi=args.dpi)
+    plt.close()
+
+    fig, ax = plt.subplots()
+    for _d, _l in zip(dat, labels):
+        sns.kdeplot(_d, label=_l, bw_method=0.2)
+    ax.legend(loc='upper right')
+    plt.tight_layout()
+    plt.ylabel(None)
+    plt.xticks(None)
+    plt.yticks(None)
+    plt.savefig("probability_shared_" + str(_sample) + "_all_kde." + args.pic_format, dpi=args.dpi)
     plt.close()
 
 if args.analysis_parts[4]:
@@ -418,10 +439,16 @@ if args.analysis_parts[6]:
                         linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
 
         ax.set_xticks([])
+        plt.ylim(1.1, 2.3)
+        if _deg != list(_range)[0]:
+            plt.yticks([])
+        else:
+            plt.yticks(fontsize=20)
         if _deg == list(_range)[-1]:
-            lgnd = plt.legend(loc='upper left', fontsize=10)
+            lgnd = plt.legend(loc='upper left', fontsize=20)
             for handle in lgnd.legend_handles:
-                handle.set_sizes([50])
+                handle.set_sizes([100])
+        plt.tight_layout()
         if args.separate:
             plt.savefig("scatter_all_profitability_unbalanced_" + str(_deg) + "_"
                         + str(_sample) + "." + args.pic_format, dpi=args.dpi)
