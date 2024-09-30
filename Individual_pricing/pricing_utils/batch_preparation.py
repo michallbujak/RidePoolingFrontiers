@@ -77,10 +77,10 @@ def create_results_directory(
     create_directory(config.path_results, kwargs.get('logger'), 20)
     config.path_results += '/'
 
-    create_directory(config.partial_results, kwargs.get('logger'), 10)
-    config.partial_results += name
-    create_directory(config.partial_results, kwargs.get('logger'), 20)
-    config.partial_results += '/'
+    # create_directory(config.partial_results, kwargs.get('logger'), 10)
+    # config.partial_results += name
+    # create_directory(config.partial_results, kwargs.get('logger'), 20)
+    # config.partial_results += '/'
 
     if kwargs.get("new_directories"):
         keys = ['initial_parameters', 'path_results', 'partial_results']

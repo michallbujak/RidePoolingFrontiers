@@ -42,10 +42,14 @@ else:
     path = path_joiner(os.getcwd(), "Individual_pricing")
 path = path_joiner(path, 'data')
 path = path_joiner(path, str(_num) + '_' + str(_sample))
-path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample))
 
-if not args.profitability:
-    path += "_" + str(args.operating_cost) + "_" + str(args.min_accept)
+
+if args.profitability:
+    path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample))
+else:
+    res_name = 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample)
+    res_name += "_" + str(args.operating_cost) + "_" + str(args.min_accept)
+    path = path_joiner(path, res_name)
 
 try:
     with open(path + '_amended.pickle', "rb") as file:
@@ -56,15 +60,21 @@ except FileNotFoundError:
 
 os.chdir(os.path.join(os.getcwd(), "results"))
 res_path = os.path.join(os.getcwd(), str(_num) + "_" + str(_sample))
-if not args.profitability:
-    res_path = os.path.join(res_path,
-                            str(args.operating_cost) + "_" + str(args.min_accept))
 
 try:
     os.chdir(res_path)
 except FileNotFoundError:
     os.mkdir(res_path)
     os.chdir(res_path)
+
+if not args.profitability:
+    res_path = os.path.join(res_path,
+                            str(args.operating_cost) + "_" + str(args.min_accept))
+    try:
+        os.chdir(res_path)
+    except FileNotFoundError:
+        os.mkdir(res_path)
+        os.chdir(res_path)
 
 rr = data["exmas"]["recalibrated_rides"]
 schedule_profit = data['exmas']['schedules']['profitability']

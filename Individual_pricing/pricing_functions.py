@@ -412,7 +412,6 @@ def expected_profitability_function(
         databank: DotMap or dict,
         final_sample_size: int = 10,
         price: float = 0.0015,
-        # cost_to_price_ratio: float = 0.3,
         max_func: Callable[[list], float] = lambda x: x[0]/x[4] if x[4] != 0 else 0,
         min_acceptance: float or None = None,
         one_shot: bool = False,
