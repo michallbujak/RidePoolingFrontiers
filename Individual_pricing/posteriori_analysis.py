@@ -489,8 +489,8 @@ if args.analysis_parts[6]:
     x_plot, y_plot = _Poly.linspace(n=1000, domain=[min(x), max(x)])
 
     fig, ax = plt.subplots()
-    plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
     plt.scatter(x=x, y=y, s=1, label='Expected profitability')
+    plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
     plt.legend(loc='upper left', fontsize=10, markerscale=3)
     plt.tight_layout()
     plt.savefig('scatter_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
