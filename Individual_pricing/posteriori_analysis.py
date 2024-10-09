@@ -472,11 +472,26 @@ if args.analysis_parts[6]:
     fig, ax = plt.subplots()
     for _num in range(len(output_list[0]) - 1):
         _size = 1 if _num != 0 else 2
+        _lab = discounts_labels[_num]
         plt.scatter(x=[t[0] for t in output_list], y=[t[1 + _num] for t in output_list],
-                    s=_size, label=discounts_labels[_num])
+                    s=_size, label=_lab)
     lgnd = plt.legend(loc='upper left', fontsize=10)
     for handle in lgnd.legend_handles:
         handle.set_sizes([30])
     ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+    plt.tight_layout()
     plt.savefig('scatter_all_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
     plt.close()
+
+    from numpy.polynomial.polynomial import Polynomial
+    x, y = [t[0] for t in output_list], [t[1] for t in output_list]
+    _Poly = Polynomial.fit(x, y, 5)
+    x_plot, y_plot = _Poly.linspace(n=1000, domain=[min(x), max(x)])
+
+    fig, ax = plt.subplots()
+    plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
+    plt.scatter(x=x, y=y, s=1, label='Expected profitability')
+    plt.legend(loc='upper left', fontsize=10, markerscale=3)
+    plt.tight_layout()
+    plt.savefig('scatter_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+
