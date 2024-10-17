@@ -234,7 +234,7 @@ if args.analysis_parts[1]:
                     bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
     plt.xlabel(None)
     plt.ylabel(None)
-    plt.yticks(np.arange(0, 180, 30))
+    plt.yticks(np.arange(0, args.no_requests + 30, 30))
     # plt.tight_layout()
     plt.savefig('degrees_stacked_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
