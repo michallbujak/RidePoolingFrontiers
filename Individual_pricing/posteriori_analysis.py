@@ -239,7 +239,6 @@ if args.analysis_parts[1]:
     plt.savefig('degrees_stacked_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
-    raise Exception('aa')
 
 if args.analysis_parts[2]:
     obj_discounts = {'all': [a for b in shared["best_profit"].apply(lambda x: x[1]) for a in b],
