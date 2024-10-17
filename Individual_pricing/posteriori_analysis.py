@@ -215,6 +215,32 @@ if args.analysis_parts[1]:
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
 
+    penguins = sns.load_dataset("penguins")
+    _df3 = pd.DataFrame(_df2)
+    _df3['kind'] = discounts_labels
+    for num in [2, 3, 4]:
+        _df3[num] = _df3[num].apply(lambda x: num*x)
+    _df4 = pd.DataFrame(columns=['degree', 'kind'])
+    for out_lab, (lab, row) in enumerate(_df3.iterrows()):
+        cur_kind = discounts_labels[out_lab]
+        for deg in range(1, 5):
+            for en in range(row[deg]):
+                _df4 = pd.concat([_df4, pd.DataFrame({'degree': [str(deg)], 'kind': [cur_kind]})])
+    _df4 = _df4.reset_index(drop=True)
+    fig, ax = plt.subplots()
+    sns.histplot(x='kind', data=_df4, hue='degree', multiple='stack', shrink=0.9,
+                 hue_order=[str(t) for t in range(3, 0, -1)])
+    lgd = ax.legend(title='Degree', labels=range(1, 4), title_fontsize='x-large',
+                    bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
+    plt.xlabel(None)
+    plt.ylabel(None)
+    plt.yticks(np.arange(0, 180, 30))
+    # plt.tight_layout()
+    plt.savefig('degrees_stacked_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
+                bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.close()
+    raise Exception('aa')
+
 if args.analysis_parts[2]:
     obj_discounts = {'all': [a for b in shared["best_profit"].apply(lambda x: x[1]) for a in b],
                      'selected': [a for b in
