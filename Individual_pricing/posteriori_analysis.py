@@ -249,7 +249,9 @@ if args.analysis_parts[2]:
                      }
     fig, ax = plt.subplots()
     plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['All', 'Selected'],
-             weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())])
+             weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())],
+             bins=np.arange(0, 0.55, 0.05).tolist())
+    plt.xticks([round(t, 2) for t in np.arange(0.05, 0.55, 0.05)])
     ax.legend()
     ax.set_xlim(0.05, 0.55)
     plt.yticks([])
@@ -293,9 +295,11 @@ if args.analysis_parts[3]:
 
     fig, ax = plt.subplots()
     for _d, _l in zip(dat, labels):
-        sns.kdeplot(_d, label=None, bw_method=0.2)
+        sns.kdeplot(_d, label=_l, bw_method=0.3)
+    # lgd = ax.legend(bbox_to_anchor=(1.02, 1), ncols=1, loc='upper left')
     plt.ylabel(None)
     ax.set_yticks([])
+    plt.xlim(0, 1)
     plt.yticks(None)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_sel_kde." + args.pic_format, dpi=args.dpi)
@@ -321,6 +325,7 @@ if args.analysis_parts[3]:
     for _d, _l in zip(dat, labels):
         sns.kdeplot(_d, label=_l, bw_method=0.2)
     ax.legend(loc='upper right')
+    plt.xlim(0, 1)
     plt.ylabel(None)
     plt.yticks(None)
     ax.set_yticks([])
