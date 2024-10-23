@@ -10,6 +10,7 @@ from collections import Counter
 import matplotlib.pylab as pylab
 from matplotlib.markers import MarkerStyle
 from matplotlib.ticker import PercentFormatter
+from matplotlib.collections import PathCollection
 
 from pricing_functions import _expected_flat_measures
 from pricing_functions import *
@@ -252,6 +253,8 @@ if args.analysis_parts[2]:
              weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())],
              bins=np.arange(0, 0.55, 0.05).tolist())
     plt.xticks([round(t, 2) for t in np.arange(0.05, 0.55, 0.05)])
+    plt.xlabel('Discount level')
+    plt.ylabel('Density')
     ax.legend()
     ax.set_xlim(0.05, 0.55)
     plt.yticks([])
@@ -295,12 +298,13 @@ if args.analysis_parts[3]:
 
     fig, ax = plt.subplots()
     for _d, _l in zip(dat, labels):
-        sns.kdeplot(_d, label=_l, bw_method=0.3)
+        sns.kdeplot(_d, label=_l, bw_method=0.3, lw=2)
     # lgd = ax.legend(bbox_to_anchor=(1.02, 1), ncols=1, loc='upper left')
     plt.ylabel(None)
     ax.set_yticks([])
     plt.xlim(0, 1)
     plt.yticks(None)
+    plt.xlabel('Acceptance probability', fontsize=15)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_sel_kde." + args.pic_format, dpi=args.dpi)
     plt.close()
@@ -323,12 +327,13 @@ if args.analysis_parts[3]:
 
     fig, ax = plt.subplots()
     for _d, _l in zip(dat, labels):
-        sns.kdeplot(_d, label=_l, bw_method=0.2)
-    ax.legend(loc='upper right')
+        sns.kdeplot(_d, label=_l, bw_method=0.2, lw=2)
+    ax.legend(loc='upper right', fontsize=15)
     plt.xlim(0, 1)
-    plt.ylabel(None)
+    plt.ylabel('Density', fontsize=20)
     plt.yticks(None)
     ax.set_yticks([])
+    plt.xlabel('Acceptance probability', fontsize=15)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_all_kde." + args.pic_format, dpi=args.dpi)
     plt.close()
@@ -454,12 +459,12 @@ if args.analysis_parts[6]:
             temp_data = [[ins for ins in outs if ins[2] == _deg] for outs in unbalanced]
         else:
             temp_data = unbalanced
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(8,6))
         for num, cur_label in enumerate(discounts_labels):
             if num == 0:
-                size = 2
+                size = 12
             else:
-                size = 1
+                size = 10
             plt.scatter(x=range(len(temp_data[num])), y=[t[3] for t in temp_data[num]], label=cur_label, s=size,
                         edgecolors='none')
 
@@ -470,14 +475,18 @@ if args.analysis_parts[6]:
 
         ax.set_xticks([])
         plt.ylim(1.1, 2.3)
+        plt.axhline(1.425, lw=2, ls='dotted', color='red', label='Private ride')
+        plt.xlabel('Individual shared rides', fontsize=20)
         if _deg != list(_range)[0]:
             plt.yticks([])
         else:
-            plt.yticks(fontsize=20)
+            plt.yticks(fontsize=25)
+            plt.ylabel('Expected profitability', fontsize=25)
         if _deg == list(_range)[-1]:
-            lgnd = plt.legend(loc='upper left', fontsize=20)
+            lgnd = plt.legend(loc='upper left', fontsize=25)
             for handle in lgnd.legend_handles:
-                handle.set_sizes([100])
+                if type(handle) == PathCollection:
+                    handle.set_sizes([200])
         plt.tight_layout()
         if args.separate:
             plt.savefig("scatter_all_profitability_unbalanced_" + str(_deg) + "_"
@@ -521,7 +530,100 @@ if args.analysis_parts[6]:
     fig, ax = plt.subplots()
     plt.scatter(x=x, y=y, s=1, label='Expected profitability')
     plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
+    plt.xlabel('Relative mileage reduction')
+    plt.ylabel('Expected profitability')
     plt.legend(loc='upper left', fontsize=10, markerscale=3)
+    ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
     plt.tight_layout()
     plt.savefig('scatter_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
 
+    shared_reordered['probs'] = shared_reordered['best_profit'].apply(lambda it: it[3])
+
+    output_list = shared_reordered.apply(
+        lambda row: [row['dist_prop'], row['probs']] +
+                    [row['probs_' + t] for t in discounts_names],
+        axis=1
+    ).to_list()
+
+    output_list2 = []
+    for el in output_list:
+        for j in range(len(el[1])):
+            output_list2 += [[el[0]] + [el[t+1][j] for t in range(len(el)-1)]]
+
+    output_list2.sort(key=lambda it: it[0])
+
+    fig, ax = plt.subplots()
+    for strategy_num, strategy_label in enumerate(discounts_labels):
+        x, y = [t[0] for t in output_list2], [t[strategy_num+1] for t in output_list2]
+        _Poly = Polynomial.fit(x, y, 5)
+        x_plot, y_plot = _Poly.linspace(n=1000, domain=[min(x), max(x)])
+        plt.plot(x_plot, y_plot, lw=1.5, label=strategy_label)
+    plt.legend(loc='upper right', fontsize=10, markerscale=3)
+    ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+    # plt.xlim(-0.45, 0.55)
+    plt.xlabel("Mileage reduction")
+    plt.ylabel("Acceptance probability")
+    plt.tight_layout()
+    plt.savefig('poly_distance_acceptance_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+
+    for _num, (disc_name, disc_lab) in enumerate(zip([""] + ["_" + t for t in discounts_names], discounts_labels)):
+        _data_sel = shared_reordered.loc[shared_reordered['selected' + disc_name + "_profitability"] == 1]
+        _data_sel = _data_sel.apply(lambda row: [row['dist_prop'], row['probs' + disc_name]], axis=1)
+        _data_sel2 = []
+        for el in _data_sel:
+            for j in range(len(el[1])):
+                _data_sel2 += [[el[0], el[1][j]]]
+        _data_all = [[t[0], t[_num+1]] for t in output_list2]
+        _bins_x = [round(t, 1) for t in np.arange(-0.6, 0.7, 0.1)]
+        _bins_y = [round(t, 1) for t in np.arange(0, 1.1, 0.1)]
+
+        def temp_foo(element, _bins):
+            enum = np.digitize(element, _bins)
+            if enum < len(_bins):
+                return enum
+            else:
+                return enum-1
+
+        _data_map = [[_bins_x[temp_foo(t[0], _bins_x)],
+                      _bins_y[temp_foo(t[1], _bins_y)]] for t in _data_all]
+        _heatmap = pd.DataFrame(columns=['Dist', 'Acc'])
+        for element in _data_map:
+            _heatmap = pd.concat([_heatmap, pd.Series({'Dist': element[0], 'Acc': element[1]})])
+        fig, ax = plt.subplots()
+        sns.heatmap(_data_map)
+        # plt.hist([t[_num] for t in output_list2])
+        # plt.scatter([t[0] for t in output_list2], [t[_num+1] for t in output_list2], label=disc_lab, s=0.5)
+        # plt.scatter([t[0] for t in _data_sel2], [t[1] for t in _data_sel2], s=2, color='red', label='Selected')
+        plt.xlabel("Mileage reduction")
+        plt.ylabel("Acceptance probability")
+        plt.tight_layout()
+        plt.savefig('scatter_distance_acceptance_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+        raise Exception('aa')
+
+    output_list = shared_reordered.apply(
+        lambda row: [[row['profitability_unbalanced']] +
+                     [row[t + '_profitability_unbalanced'] for t in discounts_names],
+                     [row['probs']] + [row['probs_' + t] for t in discounts_names]],
+        axis=1
+    ).to_list()
+
+    output_dict = {t: [] for t in discounts_labels}
+    for el in output_list:
+        for lab_num, label in enumerate(discounts_labels):
+            for i in range(len(el[1][0])):
+                output_dict[label] += [[el[0][lab_num], el[1][lab_num][i]]]
+
+    for key in output_dict.keys():
+        output_dict[key].sort(key=lambda it: it[0])
+
+    fig, ax = plt.subplots()
+    for strategy_label in discounts_labels:
+        x, y = [t[0] for t in output_dict[strategy_label]], [t[1] for t in output_dict[strategy_label]]
+        plt.scatter(x, y, s=0.5, label=strategy_label + " observations")
+        _Poly = Polynomial.fit(x, y, 1)
+        x_plot, y_plot = _Poly.linspace(n=1000, domain=[min(x), max(x)])
+        plt.plot(x_plot, y_plot, lw=1.5, label=strategy_label + " regression", ls="solid")
+    plt.legend(loc='lower right', fontsize=10, markerscale=3)
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    plt.savefig('scatter_profitability_acceptance_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
