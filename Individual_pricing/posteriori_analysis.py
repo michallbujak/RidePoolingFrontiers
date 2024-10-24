@@ -574,31 +574,13 @@ if args.analysis_parts[6]:
             for j in range(len(el[1])):
                 _data_sel2 += [[el[0], el[1][j]]]
         _data_all = [[t[0], t[_num+1]] for t in output_list2]
-        _bins_x = [round(t, 1) for t in np.arange(-0.6, 0.7, 0.1)]
-        _bins_y = [round(t, 1) for t in np.arange(0, 1.1, 0.1)]
-
-        def temp_foo(element, _bins):
-            enum = np.digitize(element, _bins)
-            if enum < len(_bins):
-                return enum
-            else:
-                return enum-1
-
-        _data_map = [[_bins_x[temp_foo(t[0], _bins_x)],
-                      _bins_y[temp_foo(t[1], _bins_y)]] for t in _data_all]
-        _heatmap = pd.DataFrame(columns=['Dist', 'Acc'])
-        for element in _data_map:
-            _heatmap = pd.concat([_heatmap, pd.Series({'Dist': element[0], 'Acc': element[1]})])
         fig, ax = plt.subplots()
-        sns.heatmap(_data_map)
-        # plt.hist([t[_num] for t in output_list2])
-        # plt.scatter([t[0] for t in output_list2], [t[_num+1] for t in output_list2], label=disc_lab, s=0.5)
-        # plt.scatter([t[0] for t in _data_sel2], [t[1] for t in _data_sel2], s=2, color='red', label='Selected')
+        plt.scatter([t[0] for t in output_list2], [t[_num+1] for t in output_list2], label=disc_lab, s=0.5)
+        plt.scatter([t[0] for t in _data_sel2], [t[1] for t in _data_sel2], s=2, color='red', label='Selected')
         plt.xlabel("Mileage reduction")
         plt.ylabel("Acceptance probability")
         plt.tight_layout()
-        plt.savefig('scatter_distance_acceptance_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
-        raise Exception('aa')
+        plt.savefig('scatter_distance_acceptance_' + disc_name + str(_sample) + "." + args.pic_format, dpi=args.dpi)
 
     output_list = shared_reordered.apply(
         lambda row: [[row['profitability_unbalanced']] +
@@ -627,3 +609,44 @@ if args.analysis_parts[6]:
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig('scatter_profitability_acceptance_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+
+
+    _bins_x = [round(t, 1) for t in np.arange(-0.6, 0.7, 0.1)]
+    _bins_y = [round(t, 1) for t in np.arange(0, 1.1, 0.1)]
+    _bins_z = [round(t, 1) for t in np.arange(1, 3, 0.1)]
+
+    def temp_foo(element, _bins):
+        enum = np.digitize(element, _bins)
+        if enum < len(_bins):
+            return enum
+        else:
+            return enum - 1
+
+    for _num, (disc_name, disc_lab) in enumerate(zip([""] + ["_" + t for t in discounts_names], discounts_labels)):
+        prefix = "" if _num == 0 else disc_name[1:] + "_"
+        _data_all = shared_reordered.apply(
+            lambda row: [row['dist_prop'], row['probs' + disc_name], row[prefix + 'profitability_unbalanced']],
+            axis=1
+        )
+        _data_all2 = []
+        for el in _data_all:
+            for j in range(len(el[1])):
+                _data_all2 += [[el[0], el[1][j], el[2]]]
+
+        _data_map = [[_bins_x[temp_foo(t[0], _bins_x)],
+                      _bins_y[temp_foo(t[1], _bins_y)],
+                      _bins_z[temp_foo(t[2], _bins_z)]] for t in _data_all2]
+
+        _heatmap = pd.DataFrame(
+            {'Relative mileage reduction': [t[0] for t in _data_map],
+             'Acceptance probability': [t[1] for t in _data_map],
+             'Expected profitability': [t[2] for t in _data_map]}
+        ).reset_index(drop=True)
+        _table = _heatmap.pivot_table(index='Relative mileage reduction',
+                                      columns='Expected profitability',
+                                      values='Acceptance probability',
+                                      aggfunc='mean')
+        fig, ax = plt.subplots()
+        sns.heatmap(_table, yticklabels=[str(round(100*t, 0))[:-2] + '%' for t in _table.index])
+        plt.tight_layout()
+        plt.savefig('heatmap' + disc_name + "_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
