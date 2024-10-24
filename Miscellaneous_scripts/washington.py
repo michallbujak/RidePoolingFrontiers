@@ -249,8 +249,8 @@ with open("results_washington.pickle", "wb") as f:
 # exmas_params = DotMap()
 # exmas_params.city = "Chicago, USA"
 # exmas_params.dist_threshold = 10000
-# exmas_params.paths.G = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.graphml"
-# exmas_params.paths.skim = r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\ExMAS\data\graphs\Chicago.csv"
+# exmas_params.paths.G = r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\ExMAS\data\graphs\Chicago.graphml"
+# exmas_params.paths.skim = r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\ExMAS\data\graphs\Chicago.csv"
 #
 # dm = DotMap()
 #

@@ -150,7 +150,7 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 # print(y)
 # x = 0
 
-# with open("C:/Users/szmat/Documents/GitHub/ExMAS_sideline/Topology/data/results/"
+# with open("C:/Users/szmat/Documents/GitHub/RidePoolingFrontiers/Topology/data/results/"
 #           + date + "/final_matching_" + date + ".json", "r") as file:
 #     matches = json.load(file)
 #
@@ -341,7 +341,7 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 #     plt.close()
 #
 #
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\16-01-23\all_graphs_list_16-01-23.obj", 'rb') as file:
+# with open(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\16-01-23\all_graphs_list_16-01-23.obj", 'rb') as file:
 #     graphs = pickle.load(file)
 #
 # bipartite_shareability_list = [e["bipartite_shareability"] for e in graphs]
@@ -571,7 +571,7 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 #
 #
 # variables = ['shared_discount']
-# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
+# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
 #           topological_config.path_results,
 #           topological_config.path_results + "temp/",
 #           variables,
@@ -582,7 +582,7 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 
 # plt.style.use(['science', 'no-latex'])
 # 
-# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
+# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
 #
 # plt, ax1 = plt.subplots(figsize=(4, 3), dpi=200)
 # ax2 = ax1.twinx()
@@ -595,7 +595,7 @@ topological_config.path_results = 'data/results/' + date + special_name + '/'
 # ax1.tick_params(axis='y', colors='blue', which="both")
 # ax2.tick_params(axis='y', colors='red', which="both")
 # plt.legend(loc=(0.5, 0.2), fontsize=7)
-# plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\temp.png")
+# plt.savefig(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\19-01-23_full\temp.png")
 
 
 #

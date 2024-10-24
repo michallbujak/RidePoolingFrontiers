@@ -247,16 +247,16 @@ plt.close()
 # import seaborn as sns
 #
 #
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\all_graphs_list_18-01-23.obj", 'rb') as file:
+# with open(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\18-01-23_net_fixed\all_graphs_list_18-01-23.obj", 'rb') as file:
 #     all_graphs = pickle.load(file)
 #
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\rep_graphs_18-01-23.obj", 'rb') as file:
+# with open(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\18-01-23_net_fixed\rep_graphs_18-01-23.obj", 'rb') as file:
 #     rep_graphs = pickle.load(file)
 #
-# topological_config = utils.get_parameters(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\configs\topology_settings_no_random2.json")
+# topological_config = utils.get_parameters(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\configs\topology_settings_no_random2.json")
 # utils.create_results_directory(topological_config)
 # #
-# topological_config.path_results = "C:/Users/szmat/Documents/GitHub/ExMAS_sideline/Topology/data/results/18-01-23_net_fixed/"
+# topological_config.path_results = "C:/Users/szmat/Documents/GitHub/RidePoolingFrontiers/Topology/data/results/18-01-23_net_fixed/"
 #
 # class TempClass:
 #     def __init__(self, dataset: pd.DataFrame, output_path: str, output_temp: str, input_variables: list,
@@ -381,7 +381,7 @@ plt.close()
 #
 #
 # variables = ['shared_discount']
-# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
+# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
 #           topological_config.path_results,
 #           topological_config.path_results + "temp/",
 #           variables,
@@ -392,7 +392,7 @@ plt.close()
 #
 #
 # variables = ['shared_discount']
-# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
+# TempClass(pd.read_excel(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\18-01-23_net_fixed\merged_files_18-01-23.xlsx"),
 #           topological_config.path_results,
 #           topological_config.path_results + "temp/",
 #           variables,
@@ -403,9 +403,9 @@ plt.close()
 
 # plt.style.use(['science', 'no-latex'])
 #
-# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
+# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
 #
-# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
+# df = pd.read_excel(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\19-01-23_full\frame_evolution_19-01-23.xlsx")
 # fig, ax1 = plt.subplots(figsize=(5, 4), dpi=300)
 # ax2 = ax1.twinx()
 # # ax1.plot(df["average_degree"], label="Average degree", color='g', lw=.5, marker='o', linestyle='solid', markersize=1)
@@ -421,7 +421,7 @@ plt.close()
 # ax1.legend(lns, labs, loc=(0.5, 0.2), fontsize=10)
 # plt.xlim(left=-10, right=1000)
 # plt.ylim(bottom=0)
-# plt.savefig(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Topology\data\results\19-01-23_full\frame_evo_rev.jpeg", dpi=300)
+# plt.savefig(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Topology\data\results\19-01-23_full\frame_evo_rev.jpeg", dpi=300)
 
 # import os
 #
@@ -447,7 +447,7 @@ plt.close()
 # # with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
 # #     e = pickle.load(file)[31]
 #
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\14-02-23\dotmap_list_14-02-23.obj", 'rb') as file:
+# with open(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Miscellaneous_scripts\data\14-02-23\dotmap_list_14-02-23.obj", 'rb') as file:
 #     e = pickle.load(file)[0]
 #
 # ut.plot_map_rides(e, [715], light=True, lw=3, fontsize=30, m_size=1)
@@ -464,10 +464,10 @@ plt.close()
 # # with open('Topology/data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
 # #     e = pickle.load(file)[31]
 #
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\14-03-23\dotmap_list_14-03-23.obj", 'rb') as file:
+# with open(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Miscellaneous_scripts\data\14-03-23\dotmap_list_14-03-23.obj", 'rb') as file:
 #     e = pickle.load(file)[0]
 #
-# with open(r"C:\Users\szmat\Documents\GitHub\ExMAS_sideline\Miscellaneous_scripts\data\14-03-23\config_14-03-23.obj", 'rb') as file:
+# with open(r"C:\Users\szmat\Documents\GitHub\RidePoolingFrontiers\Miscellaneous_scripts\data\14-03-23\config_14-03-23.obj", 'rb') as file:
 #     e2 = pickle.load(file)[0]
 #
 # ut.plot_demand(e, e2, dpi=300, origin_colour="green", destination_colour="orange")
