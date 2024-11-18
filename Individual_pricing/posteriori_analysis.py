@@ -216,7 +216,6 @@ if args.analysis_parts[1]:
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
 
-    penguins = sns.load_dataset("penguins")
     _df3 = pd.DataFrame(_df2)
     _df3['kind'] = discounts_labels
     for num in [2, 3, 4]:
@@ -229,8 +228,20 @@ if args.analysis_parts[1]:
                 _df4 = pd.concat([_df4, pd.DataFrame({'degree': [str(deg)], 'kind': [cur_kind]})])
     _df4 = _df4.reset_index(drop=True)
     fig, ax = plt.subplots()
-    sns.histplot(x='kind', data=_df4, hue='degree', multiple='stack', shrink=0.9,
+    graph = sns.histplot(x='kind', data=_df4, hue='degree', multiple='stack', shrink=0.9,
                  hue_order=[str(t) for t in range(3, 0, -1)])
+    respective_height = [[0], [0], [0]]
+    for num, rect in enumerate(graph.patches):
+        count = rect.get_height()
+        respective_height[num%3] += [count]
+        tmp = respective_height[num%3]
+        graph.text(rect.get_x()+rect.get_width()/2-0.05, sum(tmp[:-1]) + tmp[-1]/2-1, str(int(count)),
+                   color='white')
+        if num >= len(graph.patches) - 3:
+            graph.text(rect.get_x() + rect.get_width() / 2 - 0.2, sum(tmp)+0.5,
+                       'avg. ' + str(round((tmp[1] + tmp[2]*2 + tmp[3]*3)/150, 2)),
+                       color='black')
+
     lgd = ax.legend(title='Degree', labels=range(1, 4), title_fontsize='x-large',
                     bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
     plt.xlabel(None)
@@ -249,7 +260,7 @@ if args.analysis_parts[2]:
                                   for a in b]
                      }
     fig, ax = plt.subplots()
-    plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['All', 'Selected'],
+    plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['Shareability graph', 'Offer'],
              weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())],
              bins=np.arange(0, 0.55, 0.05).tolist())
     plt.xticks([round(t, 2) for t in np.arange(0.05, 0.55, 0.05)])
@@ -459,7 +470,7 @@ if args.analysis_parts[6]:
             temp_data = [[ins for ins in outs if ins[2] == _deg] for outs in unbalanced]
         else:
             temp_data = unbalanced
-        fig, ax = plt.subplots(figsize=(8,6))
+        fig, ax = plt.subplots(figsize=(8,14))
         for num, cur_label in enumerate(discounts_labels):
             if num == 0:
                 size = 12
@@ -475,7 +486,7 @@ if args.analysis_parts[6]:
 
         ax.set_xticks([])
         plt.ylim(1.1, 2.3)
-        plt.axhline(1.425, lw=2, ls='dotted', color='red', label='Private ride')
+        plt.axhline(1.425, lw=2, ls='solid', color='red', label='Private ride')
         plt.xlabel('Individual shared rides', fontsize=20)
         if _deg != list(_range)[0]:
             plt.yticks([])
@@ -522,17 +533,26 @@ if args.analysis_parts[6]:
     plt.savefig('scatter_all_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
     plt.close()
 
-    from numpy.polynomial.polynomial import Polynomial
     x, y = [t[0] for t in output_list], [t[1] for t in output_list]
-    _Poly = Polynomial.fit(x, y, 5)
-    x_plot, y_plot = _Poly.linspace(n=1000, domain=[min(x), max(x)])
+    from numpy.polynomial.polynomial import Polynomial
+    # _Poly = Polynomial.fit(x, y, 5)
+    # x_plot, y_plot = _Poly.linspace(n=1000, domain=[min(x), max(x)])
 
+    output_list_sel = shared_reordered.loc[shared_reordered['selected_profitability'] == 1]
+    output_list_sel = output_list_sel.apply(
+        lambda it: [it['dist_prop'], it['profitability_unbalanced']],
+        axis=1
+    )
     fig, ax = plt.subplots()
-    plt.scatter(x=x, y=y, s=1, label='Expected profitability')
-    plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
+    plt.scatter(x=x, y=y, s=1, label='Shareability graph', alpha=0.7)
+    plt.scatter(x=[t[0] for t in output_list_sel], y=[t[1] for t in output_list_sel],
+                s=5, label='Offer', color='red')
+    # plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
     plt.xlabel('Relative mileage reduction')
     plt.ylabel('Expected profitability')
-    plt.legend(loc='upper left', fontsize=10, markerscale=3)
+    lgnd = plt.legend(loc='upper left', fontsize=15, markerscale=3)
+    for handle in lgnd.legend_handles:
+        handle.set_sizes([30])
     ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
     plt.tight_layout()
     plt.savefig('scatter_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
@@ -646,7 +666,25 @@ if args.analysis_parts[6]:
                                       columns='Expected profitability',
                                       values='Acceptance probability',
                                       aggfunc='mean')
-        fig, ax = plt.subplots()
-        sns.heatmap(_table, yticklabels=[str(round(100*t, 0))[:-2] + '%' for t in _table.index])
+        for ex_prof in [round(t, 1) for t in np.arange(1.2, 2.4, 0.1)]:
+            if ex_prof not in _table.columns:
+                _table[ex_prof] = np.NaN
+        _table = _table[sorted(_table.columns)]
+        fig, ax = plt.subplots(figsize=(8,8))
+        sns.heatmap(_table, yticklabels=[str(round(100*t, 0))[:-2] + '%' for t in _table.index],
+                    cbar=True if _num == len(discounts_labels) - 1 else False,
+                    cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True))
+        if _num != 0:
+            plt.ylabel(None)
+            plt.yticks([])
+            plt.xlabel(None)
+        else:
+            plt.ylabel('Relative mileage reduction', fontsize=25)
+            plt.yticks(fontsize=25)
+        if _num == len(discounts_labels) - 1:
+            cbar = ax.collections[0].colorbar
+            cbar.ax.tick_params(labelsize=25)
+        plt.xticks(fontsize=20)
+        plt.xlabel('Expected Profitability', fontsize=25)
         plt.tight_layout()
         plt.savefig('heatmap' + disc_name + "_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
