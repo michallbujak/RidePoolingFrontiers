@@ -37,14 +37,14 @@ save_load = [0, args.load_partial, args.save_partial]
 agents_class_prob = {j: [1/2, 1/2] for j in range(args.batch_size)}
 
 
-# Step 1: Obtain demand
+# Step 2: Obtain demand
 if save_load[1][save_load[0]]:
     demand, exmas_params = bt_prep.prepare_batches(
         exmas_params=bt_prep.get_parameters(directories.initial_parameters),
         filter_function=lambda x: len(x.requests) == args.batch_size[0]
     )
 
-# Step 2: Create a dense shareability graph & data manipulation
+# Step 3: Create a dense shareability graph & data manipulation
 if save_load[1][save_load[0]]:
     demand = exmas_loop_func(
         exmas_algorithm=exmas_algo,
@@ -52,3 +52,4 @@ if save_load[1][save_load[0]]:
         list_databanks=demand
     )
     demand = expand_rides(demand[0])
+
