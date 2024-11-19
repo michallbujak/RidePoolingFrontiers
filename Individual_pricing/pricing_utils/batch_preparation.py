@@ -123,7 +123,7 @@ def nyc_csv_prepare_batches(
     return batches, trips
 
 
-def nyc_pick_batch(batches, trips, inData, _params, batch_no):
+def nyc_pick_batch(batches, trips, inData, _params, batch_no, **kwargs):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         _inData = inData.copy()
@@ -169,6 +169,28 @@ def prepare_batches(
             databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
         except FileNotFoundError:
             databank_dotmap = download_G(databank_dotmap, exmas_params)
+
+    if no_replications == 1 & kwargs.get('quick_load'):
+        requests = False
+        req_name = 'nyc_demand_' + str(kwargs['sample_size']) + '.csv'
+        try:
+            requests = pd.read_csv(exmas_params.paths['nyc_requests'][:-16] + req_name)
+        except FileNotFoundError:
+            pass
+        try:
+            requests = pd.read_csv(
+                os.path.join(
+                    up(up(up(__file__))),
+                    exmas_params.paths['nyc_requests'][:-16] + req_name
+                )
+            )
+        except FileNotFoundError:
+            pass
+        if requests:
+            if output_params:
+                return {'requests': requests, 'skim': databank_dotmap['skim']}, exmas_params
+            else:
+                return {'requests': requests, 'skim': databank_dotmap['skim']}
 
     batches, trips = nyc_csv_prepare_batches(exmas_params) #
 
