@@ -146,6 +146,24 @@ def nyc_pick_batch(batches, trips, inData, _params, batch_no, **kwargs):
     return _inData
 
 
+def base_amend_requests(
+        dotmap_data: DotMap or dict
+):
+    requests = dotmap_data['requests']
+    requests['dist'] = requests.apply(lambda request:
+                                      dotmap_data['skim'].loc[request.origin, request.destination],
+                                      axis=1)
+    requests['treq'] = (requests.pickup_datetime.apply(pd.to_datetime)
+                        - requests.pickup_datetime.apply(pd.to_datetime).min())
+    requests['pickup_datetime'] = requests['pickup_datetime'].apply(pd.to_datetime)
+    requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
+    requests['tarr'] = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
+    requests = requests.sort_values('treq')
+    requests['pax_id'] = requests.index.copy()
+    requests = requests.loc[requests['dist'] > 0]
+    return dotmap_data
+
+
 def prepare_batches(
         exmas_params: DotMap,
         no_replications: int = 1,
@@ -155,6 +173,22 @@ def prepare_batches(
 ) -> list[DotMap] or (list[DotMap], DotMap or dict):
     """ Prepare batches from the NYC request file"""
     databank_dotmap = initialise_input_dotmap()
+
+    if no_replications == 1 & kwargs.get('quick_load'):
+        req_name = 'nyc_demand_' + str(kwargs['batch_size']) + '.csv'
+        try:
+            databank_dotmap['requests'] = pd.read_csv(
+                exmas_params.paths['nyc_requests'][:-16] + req_name)
+            databank_dotmap = load_G(databank_dotmap, exmas_params)
+            databank_dotmap = base_amend_requests(databank_dotmap)
+        except FileNotFoundError:
+            raise Warning('Quick load unsuccessful, check paths')
+        if output_params:
+            return databank_dotmap, exmas_params
+        else:
+            return databank_dotmap
+
+
     try:
         databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
     except FileNotFoundError:
@@ -170,27 +204,7 @@ def prepare_batches(
         except FileNotFoundError:
             databank_dotmap = download_G(databank_dotmap, exmas_params)
 
-    if no_replications == 1 & kwargs.get('quick_load'):
-        requests = False
-        req_name = 'nyc_demand_' + str(kwargs['sample_size']) + '.csv'
-        try:
-            requests = pd.read_csv(exmas_params.paths['nyc_requests'][:-16] + req_name)
-        except FileNotFoundError:
-            pass
-        try:
-            requests = pd.read_csv(
-                os.path.join(
-                    up(up(up(__file__))),
-                    exmas_params.paths['nyc_requests'][:-16] + req_name
-                )
-            )
-        except FileNotFoundError:
-            pass
-        if requests:
-            if output_params:
-                return {'requests': requests, 'skim': databank_dotmap['skim']}, exmas_params
-            else:
-                return {'requests': requests, 'skim': databank_dotmap['skim']}
+
 
     batches, trips = nyc_csv_prepare_batches(exmas_params) #
 

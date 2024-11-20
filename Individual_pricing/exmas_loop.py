@@ -20,7 +20,11 @@ def exmas_loop_func(
 
     for i in range(len(list_databanks)):
         log_func(10, "Batch no. " + str(i), kwargs.get('logger'))
-        temp = exmas_algorithm(list_databanks[i],
+        if type(list_databanks) == list:
+            _data = list_databanks[i]
+        else:
+            _data = list_databanks
+        temp = exmas_algorithm(_data,
                                exmas_params,
                                False)
         results.append(temp.copy())

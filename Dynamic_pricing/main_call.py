@@ -1,5 +1,6 @@
 """ Wrapper for dynamic pricing algorithm """
 import argparse
+from operator import index
 
 import Individual_pricing.pricing_utils.batch_preparation as bt_prep
 from Individual_pricing.pricing_functions import expand_rides
@@ -49,7 +50,9 @@ if compute_save[0]:
 if compute_save[0]:
     demand, exmas_params = bt_prep.prepare_batches(
         exmas_params=bt_prep.get_parameters(directories.initial_parameters),
-        filter_function=lambda x: len(x.requests) == args.batch_size
+        filter_function=lambda x: len(x.requests) == args.batch_size,
+        quick_load=True,
+        batch_size=args.batch_size
     )
 
 # Step 3: Create a dense shareability graph & data manipulation
@@ -57,19 +60,19 @@ if compute_save[0]:
     demand = exmas_loop_func(
         exmas_algorithm=exmas_algo,
         exmas_params=exmas_params,
-        list_databanks=demand
+        list_databanks=[demand]
     )
     demand_full = expand_rides(demand[0])
 
 if compute_save[0] & compute_save[3]:
     bt_prep.create_directory('Step_0')
     folder = directories.partial_results + '/Step_0/'
-    demand_name = 'demand_sample_' + str(args.batch_size) + '_' + str(args.sample_size)
-    skim_name = 'skim'
-    demand = demand_full['requests']
-    skim = demand_full['skim']
-    demand.to_csv(folder + demand_name + '.csv')
-    skim.to_csv(folder + skim_name + '.csv')
+    requests_name: str = 'demand_sample_' + '_' + str(args.batch_size)
+    rides_names: str = 'rides' + '_' + str(args.batch_size)
+    sample_name: str = 'sample' + '_' + str(args.sample_size)
+    for _file, _name in zip([demand['exmas']['requests'], demand['exmas']['rides'], sample],
+                            [requests_name, rides_names, sample_name]):
+        _file.to_csv(folder + _name + '.csv', index=False)
 
 
 

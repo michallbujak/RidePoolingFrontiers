@@ -31,4 +31,5 @@ def prepare_samples(
         pop_sample = [(t, subpop_num) for t in pop_sample]
         out += pop_sample
 
-    return out.sort(reverse=descending)
+    out.sort(reverse=descending)
+    return out
