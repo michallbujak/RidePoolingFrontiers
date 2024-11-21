@@ -2,6 +2,9 @@
 import argparse
 from operator import index
 
+import pandas as pd
+import numpy as np
+
 import Individual_pricing.pricing_utils.batch_preparation as bt_prep
 from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
@@ -62,22 +65,26 @@ if compute_save[0]:
         exmas_params=exmas_params,
         list_databanks=[demand]
     )
-    demand_full = expand_rides(demand[0])
+    demand = expand_rides(demand[0])
 
+# Save data if requested
 if compute_save[0] & compute_save[3]:
-    bt_prep.create_directory('Step_0')
+    bt_prep.create_directory(directories.partial_results + 'Step_0')
     folder = directories.partial_results + '/Step_0/'
-    requests_name: str = 'demand_sample_' + '_' + str(args.batch_size)
-    rides_names: str = 'rides' + '_' + str(args.batch_size)
-    sample_name: str = 'sample' + '_' + str(args.sample_size)
-    for _file, _name in zip([demand['exmas']['requests'], demand['exmas']['rides'], sample],
-                            [requests_name, rides_names, sample_name]):
-        _file.to_csv(folder + _name + '.csv', index=False)
+    requests = demand['exmas']['requests']
+    rides = demand['exmas']['rides']
+    requests.to_csv(folder + 'demand_sample_' + '_' + str(args.batch_size) + '.csv',
+                    index=False)
+    rides.to_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv', index=False)
+    np.save(folder + 'sample' + '_' + str(args.sample_size), sample)
 
-
-
+# Skip steps 1-3 and load data
 if compute_save[2] - compute_save[1] == 1:
-    demand, sample = 'LOAD' #TODO
+    rides, requests, sample = None, None, None
+    folder = directories.partial_results + 'Step_0/'
+    requests = pd.read_csv(folder + 'demand_sample_' + '_' + str(args.batch_size) + '.csv')
+    rides = pd.read_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv')
+    sample = np.load(folder + 'sample' + '_' + str(args.sample_size) + '.npy')
 
 compute_save[1] += 1
 compute_save[0] = compute_save[2] <= compute_save[1]
