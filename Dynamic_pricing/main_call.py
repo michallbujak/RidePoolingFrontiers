@@ -1,6 +1,8 @@
 """ Wrapper for dynamic pricing algorithm """
 import argparse
-from operator import index
+import ast
+import random
+import secrets
 
 import pandas as pd
 import numpy as np
@@ -13,7 +15,9 @@ from Dynamic_pricing.auxiliary_functions import prepare_samples
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
-parser.add_argument("--profitability", action="store_false")
+parser.add_argument("--profitability", action="store_true")
+parser.add_argument("--days", type=int, default=5)
+parser.add_argument("--daily-users", type=int, default=100)
 parser.add_argument("--min-accept", type=float, default=0.1)
 parser.add_argument("--operating-cost", type=float, default=1)
 parser.add_argument("--batch-size", type=int, default=150)
@@ -39,7 +43,7 @@ compute_save = [args.starting_step == 0, 0, args.starting_step, args.save_partia
 
 """ Initial data processing """
 
-# Step 1: Prepare behavioural samples (variable: value of time
+# Step PP1: Prepare behavioural samples (variable: value of time
 if compute_save[0]:
     agents_class_prob = {j: [1/2, 1/2] for j in range(args.batch_size)}
     sample = prepare_samples(
@@ -49,7 +53,7 @@ if compute_save[0]:
         seed=args.seed
     )
 
-# Step 2: Obtain demand
+# Step PP2: Obtain demand
 if compute_save[0]:
     demand, exmas_params = bt_prep.prepare_batches(
         exmas_params=bt_prep.get_parameters(directories.initial_parameters),
@@ -58,7 +62,7 @@ if compute_save[0]:
         batch_size=args.batch_size
     )
 
-# Step 3: Create a dense shareability graph & data manipulation
+# Step PP3: Create a dense shareability graph & data manipulation
 if compute_save[0]:
     demand = exmas_loop_func(
         exmas_algorithm=exmas_algo,
@@ -78,16 +82,32 @@ if compute_save[0] & compute_save[3]:
     rides.to_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv', index=False)
     np.save(folder + 'sample' + '_' + str(args.sample_size), sample)
 
-# Skip steps 1-3 and load data
+# Skip steps PP1-PP3 and load data
 if compute_save[2] - compute_save[1] == 1:
     rides, requests, sample = None, None, None
     folder = directories.partial_results + 'Step_0/'
     requests = pd.read_csv(folder + 'demand_sample_' + '_' + str(args.batch_size) + '.csv')
-    rides = pd.read_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv')
+    rides = pd.read_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv',
+                        converters={k: ast.literal_eval for k in
+                                    ['indexes', 'u_paxes', 'individual_times', 'individual_distances']})
     sample = np.load(folder + 'sample' + '_' + str(args.sample_size) + '.npy')
 
 compute_save[1] += 1
 compute_save[0] = compute_save[2] <= compute_save[1]
 
-""" Proceed to evolutionary estimation """
+""" Proceed to evolutionary part of the analysis """
+users_per_day = {}
+for day in range(args.days):
+    # Step E1: filter the shareability graph for a users on a current day
+    rng = np.random.default_rng(secrets.randbits(args.seed))
+    random.seed(args.seed)
+    _ = int(rng.normal(args.daily_users, args.daily_users/100))
+    no_users = _ if (_ > 0 & _ <= args.daily_users) else args.batch_size
+    users = sorted(random.sample(range(150), no_users))
+    users_per_day[day] = users.copy()
+    rides_day = rides.loc[rides['indexes'].apply(
+        lambda _x: all(t in users for t in _x)
+    )]
+    requests_day = requests.loc[requests['index'].apply(lambda _x: _x in users)]
 
+    # Step E2: Optimal pricing
