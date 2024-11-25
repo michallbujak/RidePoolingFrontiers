@@ -7,7 +7,7 @@ import secrets
 import pandas as pd
 import numpy as np
 
-import Individual_pricing.pricing_utils.batch_preparation as bt_prep
+import Individual_pricing.pricing_utils.batch_preparation as batch_prep
 from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
 from ExMAS.probabilistic_exmas import main as exmas_algo
@@ -30,8 +30,8 @@ args = parser.parse_args()
 print(args)
 
 # Import configuration & prepare results folder
-directories = bt_prep.get_parameters(args.directories_json)
-bt_prep.create_results_directory(
+directories = batch_prep.get_parameters(args.directories_json)
+batch_prep.create_results_directory(
     directories,
     str(args.batch_size) + "_" + str(args.sample_size),
     new_directories=True,
@@ -46,7 +46,7 @@ compute_save = [args.starting_step == 0, 0, args.starting_step, args.save_partia
 # Step PP1: Prepare behavioural samples (variable: value of time
 if compute_save[0]:
     agents_class_prob = {j: [1/2, 1/2] for j in range(args.batch_size)}
-    sample = prepare_samples(
+    bt_sample = prepare_samples(
         sample_size=args.sample_size,
         means=directories.means,
         st_devs=directories.st_devs,
@@ -55,8 +55,8 @@ if compute_save[0]:
 
 # Step PP2: Obtain demand
 if compute_save[0]:
-    demand, exmas_params = bt_prep.prepare_batches(
-        exmas_params=bt_prep.get_parameters(directories.initial_parameters),
+    demand, exmas_params = batch_prep.prepare_batches(
+        exmas_params=batch_prep.get_parameters(directories.initial_parameters),
         filter_function=lambda x: len(x.requests) == args.batch_size,
         quick_load=True,
         batch_size=args.batch_size
@@ -73,24 +73,24 @@ if compute_save[0]:
 
 # Save data if requested
 if compute_save[0] & compute_save[3]:
-    bt_prep.create_directory(directories.partial_results + 'Step_0')
+    batch_prep.create_directory(directories.partial_results + 'Step_0')
     folder = directories.partial_results + '/Step_0/'
     requests = demand['exmas']['requests']
     rides = demand['exmas']['rides']
     requests.to_csv(folder + 'demand_sample_' + '_' + str(args.batch_size) + '.csv',
                     index=False)
     rides.to_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv', index=False)
-    np.save(folder + 'sample' + '_' + str(args.sample_size), sample)
+    np.save(folder + 'sample' + '_' + str(args.sample_size), bt_sample)
 
 # Skip steps PP1-PP3 and load data
 if compute_save[2] - compute_save[1] == 1:
-    rides, requests, sample = None, None, None
+    rides, requests, bt_sample = None, None, None
     folder = directories.partial_results + 'Step_0/'
     requests = pd.read_csv(folder + 'demand_sample_' + '_' + str(args.batch_size) + '.csv')
     rides = pd.read_csv(folder + 'rides' + '_' + str(args.batch_size) + '.csv',
                         converters={k: ast.literal_eval for k in
                                     ['indexes', 'u_paxes', 'individual_times', 'individual_distances']})
-    sample = np.load(folder + 'sample' + '_' + str(args.sample_size) + '.npy')
+    bt_sample = np.load(folder + 'sample' + '_' + str(args.sample_size) + '.npy')
 
 compute_save[1] += 1
 compute_save[0] = compute_save[2] <= compute_save[1]
@@ -111,3 +111,5 @@ for day in range(args.days):
     requests_day = requests.loc[requests['index'].apply(lambda _x: _x in users)]
 
     # Step E2: Optimal pricing
+    rides_day = rides.copy()
+

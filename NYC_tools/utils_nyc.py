@@ -316,7 +316,7 @@ def load_albatross_csv(_inData, _params, sample=True):
     df = df[df.dist < _params.dist_threshold]
 
     if sample:
-        df = df.sample(_params.nP)
+        df = df.bt_sample(_params.nP)
 
     df['ttrav_alb'] = pd.to_timedelta(df.ttrav)
 
@@ -434,16 +434,16 @@ def generate_demand(_inData, _params=None, avg_speed=False):
                                 _params.nP)  # apply normal distribution on request times
     requests.treq = [_params.t0 + pd.Timedelta(int(_), 's') for _ in treq]
     requests.origin = list(
-        distances.sample(_params.nP, weights='p_origin', replace=True).index)  # sample origin nodes from a distribution
-    requests.destination = list(distances.sample(_params.nP, weights='p_destination',
-                                                 replace=True).index)  # sample destination nodes from a distribution
+        distances.bt_sample(_params.nP, weights='p_origin', replace=True).index)  # sample origin nodes from a distribution
+    requests.destination = list(distances.bt_sample(_params.nP, weights='p_destination',
+                                                    replace=True).index)  # sample destination nodes from a distribution
 
     requests['dist'] = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)
     while len(requests[requests.dist >= _params.dist_threshold]) > 0:
-        requests.origin = requests.apply(lambda request: (distances.sample(1, weights='p_origin').index[0]
+        requests.origin = requests.apply(lambda request: (distances.bt_sample(1, weights='p_origin').index[0]
                                                           if request.dist >= _params.dist_threshold else request.origin),
                                          axis=1)
-        requests.destination = requests.apply(lambda request: (distances.sample(1, weights='p_destination').index[0]
+        requests.destination = requests.apply(lambda request: (distances.bt_sample(1, weights='p_destination').index[0]
                                                                if request.dist >= _params.dist_threshold else request.destination),
                                               axis=1)
         requests.dist = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)
@@ -552,7 +552,7 @@ def synthetic_demand_poly(_inData, _params=None):
     # we can generate more potential destinations if desired
     for i in range(_params.nCenters):
         for j in range(_params.nP * 3):
-            randomdestinations.append(Dist[i].sample(1, weights='p_destination_fixed', replace=True).index.values[0])
+            randomdestinations.append(Dist[i].bt_sample(1, weights='p_destination_fixed', replace=True).index.values[0])
 
     print('3', pd.Timestamp.now())
 
@@ -591,7 +591,7 @@ def synthetic_demand_poly(_inData, _params=None):
         _distances = _distances[_distances['distance'] < _params.dist_threshold]
 
         while (sum(_distances['distance']) == 0):
-            requests.origin[i + 1] = origins_albatross['origin'].sample(1, replace=True).values[0]
+            requests.origin[i + 1] = origins_albatross['origin'].bt_sample(1, replace=True).values[0]
             _distances = pd.DataFrame(randomdestinations)
             _distances.columns = ["id"]
             _distances['distance'] = _distances.apply(
@@ -617,7 +617,7 @@ def synthetic_demand_poly(_inData, _params=None):
         _distances['fact'] = total / _distances['cant']
         _distances['p_destination_fixed'] = _distances['p_destination'] * _distances['fact']
 
-        samp_destination = _distances.sample(1, weights='p_destination_fixed', replace=True)
+        samp_destination = _distances.bt_sample(1, weights='p_destination_fixed', replace=True)
         destination.append(samp_destination['id'].values[0])
         dist.append(samp_destination['distance'].values[0])
         # print('iter ',i,pd.Timestamp.now())

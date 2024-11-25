@@ -249,7 +249,7 @@ def prepare_samples(
     return databank
 
 
-def _row_sample_acceptable_disc(
+def row_acceptable_discount(
         _rides_row: pd.Series,
         _times_non_shared: dict,
         _bs_samples: dict,
@@ -269,7 +269,7 @@ def _row_sample_acceptable_disc(
     @param _interval: once per how many items from the list
     should be returned for the final sample
     @param _price: price per metre
-    @return: acceptable
+    @return: acceptable discount levels (progressive with probability)
     """
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
@@ -293,7 +293,7 @@ def _row_sample_acceptable_disc(
     return out
 
 
-def _row_maximise_profit(
+def row_maximise_profit(
         _rides_row: pd.Series,
         _one_shot: bool,
         _max_output_func: Callable[[list], float],
@@ -381,8 +381,6 @@ def _row_maximise_profit(
             if max_out > best[-1]:
                 best = out.copy()
         else:
-            # if (_rides_row['indexes'] == [43, 46]) & (sum(prob_ind) >= 1.3):
-            #     print('ee')
             remaining_revenue = 0
             for num_trav in range(len(discount)):
                 # First, if the P(X_j = 0)*r_j
@@ -428,7 +426,7 @@ def expected_profitability_function(
     tqdm.pandas()
 
     rides["accepted_discount"] = rides.progress_apply(
-        _row_sample_acceptable_disc,
+        row_acceptable_discount,
         axis=1,
         _times_non_shared=times_non_shared,
         _bs_samples=b_s,
@@ -439,7 +437,7 @@ def expected_profitability_function(
 
     rides["veh_dist"] = rides["u_veh"] * speed
 
-    rides["best_profit"] = rides.progress_apply(_row_maximise_profit,
+    rides["best_profit"] = rides.progress_apply(row_maximise_profit,
                                                 axis=1,
                                                 _price=price,
                                                 _one_shot=one_shot,
