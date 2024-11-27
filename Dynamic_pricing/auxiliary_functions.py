@@ -1,13 +1,12 @@
 """ Function to support the dynamic pricing algorithm """
 import secrets
 from typing import Callable
+import itertools
+from bisect import bisect_right
 
 import numpy as np
 import pandas as pd
-import tqdm
-
-from Individual_pricing.posteriori_analysis_old import price
-from Individual_pricing.pricing_functions import row_maximise_profit
+from tqdm import tqdm
 
 
 def prepare_samples(
@@ -79,7 +78,7 @@ def row_acceptable_discount_bayes(
         pax_out -= _times_non_shared[trav]
         pax_out = [(t[0] * pax_out, t[1]) for t in _bt_sample]
         pax_out = [(t[0], t[1]) if t[0] >= 0 else (0, t[1]) for t in pax_out]
-        pax_out /= (_fare * _rides_row["individual_distances"][no])
+        pax_out = [(t[0]/(_fare * _rides_row["individual_distances"][no]), t[1]) for t in pax_out]
         out.append(pax_out)
 
     return out
@@ -87,7 +86,9 @@ def row_acceptable_discount_bayes(
 
 def row_maximise_profit_bayes(
         _rides_row: pd.Series,
+        _class_membership: dict[dict],
         _max_output_func: Callable[[list], float],
+        _sample_size: int,
         _price: float = 0.0015,
         _probability_single: float = 1,
         _guaranteed_discount: float = 0.05,
@@ -98,6 +99,8 @@ def row_maximise_profit_bayes(
      of a precalculated exmas ride
     --------
     @param _rides_row: row of exmas rides (potential combination + characteristics)
+    @param _class_membership: probability for each agent to belong to a given class
+    @param _sample_size: number of samples of value of time for a class
     @param _price: per-kilometre fare
     @param _probability_single: probability that a customer is satisfied with a private
     ride if offered one
@@ -126,78 +129,62 @@ def row_maximise_profit_bayes(
         out += [_max_output_func(out)]
         return out
 
+    travellers = _rides_row["indexes"]
     discounts = _rides_row["accepted_discount"].copy()
-    discounts = [[_guaranteed_discount] + t if t[0] > _guaranteed_discount else t for t in discounts]
-    discounts = list(itertools.product(*discounts))
-
-    # discounts = list(itertools.product(*_rides_row["accepted_discount"]))
-    discounts = [[t if t > _guaranteed_discount else _guaranteed_discount
-                  for t in discount] for discount in discounts]
-    discounts = list(set(tuple(discount) for discount in discounts))
+    discounts = [t if t[0] > _guaranteed_discount else (_guaranteed_discount, t[1])
+                 for t in discounts] # at least guaranteed discount
+    discounts = list(itertools.product(*discounts)) # create a list of bi-vectors (disc, class) of discounts (everyone gets one)
     base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in
                      enumerate(_rides_row['indexes'])}
     best = [0, 0, 0, 0, 0, 0]
-    # if _rides_row['indexes'] == [142, 133]:
-    #     print('ee')
+
     for discount in discounts:
-        """ For effectively shared ride """
-        eff_price = [_price * (1 - t) for t in discount]
+        # Start with the effectively shared ride
+        eff_price = [_price * (1 - t[0]) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
         probability_shared = 1
-        prob_ind = [0] * len(discount)
+        prob_individual = [.0] * len(discount)
 
-        # if _rides_row['indexes'] == [20, 39, 53]:
-        #     print('eyy')
-
-        for num, individual_disc in enumerate(discount):
+        for num, individual_disc, pax in enumerate(zip(discount, travellers)):
             accepted_disc = _rides_row["accepted_discount"][num]
-            prob_ind[num] = bisect_right(accepted_disc, individual_disc) / len(accepted_disc)
-            probability_shared *= prob_ind[num]
+            prob_individual[num] = sum(0 if t[0] > individual_disc else _class_membership[pax][t[1]]
+                                       for t in accepted_disc)/_sample_size
+            probability_shared *= prob_individual[num]
 
         if probability_shared < _min_acceptance:
             continue
 
-        if _one_shot:
-            # out = [sum(revenue) * probability - cost, discount, sum(revenue), probability, cost]
-            out = [sum(revenue_shared) * probability_shared,
-                   discount,
-                   sum(revenue_shared),
-                   prob_ind,
-                   _rides_row["veh_dist"] * probability_shared / 1000]
-            max_out = _max_output_func(out)
-            out += [max_out]
-            if max_out > best[-1]:
-                best = out.copy()
-        else:
-            remaining_revenue = 0
-            for num_trav in range(len(discount)):
-                # First, if the P(X_j = 0)*r_j
-                prob_not_trav = 1 - prob_ind[num_trav]
-                remaining_revenue += prob_not_trav * base_revenues[num_trav]
-                # Then, P(X_j = 1, \pi X_i = 0)*r_j*(1-\lambda)
-                others_not = 1 - np.prod([t for num, t in enumerate(prob_ind) if num != num_trav])
-                rev_discounted = base_revenues[num_trav] * (1 - _guaranteed_discount)
-                remaining_revenue += (prob_ind[num_trav] * others_not) * rev_discounted
+        remaining_revenue = 0
+        for num_trav in range(len(discount)):
+            # First, if the P(X_j = 0)*r_j
+            prob_not_trav = 1 - prob_individual[num_trav]
+            remaining_revenue += prob_not_trav * base_revenues[num_trav]
+            # Then, P(X_j = 1, \pi X_i = 0)*r_j*(1-\lambda)
+            others_not = 1 - np.prod([t for num, t in enumerate(prob_individual) if num != num_trav])
+            rev_discounted = base_revenues[num_trav] * (1 - _guaranteed_discount)
+            remaining_revenue += (prob_individual[num_trav] * others_not) * rev_discounted
 
-            out = [sum(revenue_shared) * probability_shared + remaining_revenue,
-                   discount,
-                   sum(revenue_shared),
-                   prob_ind,
-                   (_rides_row["veh_dist"] * probability_shared +
-                    sum(_rides_row["individual_distances"]) * (1 - probability_shared)) / 1000]
-            max_out = _max_output_func(out)
-            out += [max_out]
+        out = [sum(revenue_shared) * probability_shared + remaining_revenue,
+               [t[0] for t in discount],
+               sum(revenue_shared),
+               prob_individual,
+               (_rides_row["veh_dist"] * probability_shared +
+                sum(_rides_row["individual_distances"]) * (1 - probability_shared)) / 1000]
+        max_out = _max_output_func(out)
+        out += [max_out]
 
-            if max_out > best[-1]:
-                best = out.copy()
+        if max_out > best[-1]:
+            best = out.copy()
 
     return best
 
 
-def expected_profit_function(
+def optimise_discounts(
         rides: pd.DataFrame,
         requests: pd.DataFrame,
+        class_membership: dict,
+        times_ns: dict,
         bt_sample: np.array,
         bs_levels: list[float] or dict,
         objective_func: Callable[[list], float] = lambda x: x[0] - x[4],
@@ -207,22 +194,23 @@ def expected_profit_function(
         speed: float = 6
 ) -> pd.DataFrame:
 
-    times_non_shared = dict(requests['ttrav'])
-    tqdm.pandas()
+    tqdm.pandas(desc="Accepted discount calculations")
 
     rides["accepted_discount"] = rides.progress_apply(
         row_acceptable_discount_bayes,
         axis=1,
-        _times_non_shared=times_non_shared,
-        _bs_samples=bs_levels,
+        _times_non_shared=times_ns,
+        _class_membership=class_membership,
+        _bs_levels=bs_levels,
         _bt_sample=bt_sample,
         _interval=1,
-        _price=fare
+        _fare=fare
     )
 
     rides["veh_dist"] = rides["u_veh"] * speed
 
-    rides["best_profit"] = rides.progress_apply(row_maximise_profit,
+    tqdm.pandas(desc="Discount optimisation")
+    rides["best_profit"] = rides.progress_apply(row_maximise_profit_bayes,
                                                 axis=1,
                                                 _price=fare,
                                                 _one_shot=False,
