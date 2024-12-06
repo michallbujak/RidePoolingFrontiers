@@ -102,20 +102,18 @@ times_non_shared = dict(all_requests['ttrav'])
 for day in range(run_config.no_days):
     # Step E1: filter the shareability graph for a users on a current day
     rng = np.random.default_rng(secrets.randbits(args.seed))
-    random.seed(args.seed)
     _ = int(rng.normal(run_config.daily_users, run_config.daily_users/100))
     no_users = _ if (_ > 0 & _ <= run_config.daily_users) else run_config.batch_size
-    users = sorted(random.sample(range(run_config.batch_size), no_users))
+    users = sorted(rng.choice(range(run_config.batch_size), no_users))
     users_per_day[day] = users.copy()
     rides_day = all_rides.loc[all_rides['indexes'].apply(
         lambda _x: all(t in users for t in _x)
     )]
-    requests_day = all_requests.loc[all_requests['index'].apply(lambda _x: _x in users)]
+    requests_day = all_requests.loc[all_requests['index'].apply(lambda _x: _x in users)] # potentially useless
 
     # Step E2: Optimal pricing
     rides_day = optimise_discounts(
         rides=rides_day,
-        requests=requests_day,
         class_membership=class_membership_prob,
         times_ns=times_non_shared,
         bt_sample=bt_sample,
@@ -126,4 +124,5 @@ for day in range(run_config.no_days):
         fare=exmas_params['price'],
         speed=exmas_params['avg_speed']
     )
+
 

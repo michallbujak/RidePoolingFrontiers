@@ -1,6 +1,6 @@
 """ Function to support the dynamic pricing algorithm """
 import secrets
-from typing import Callable
+from typing import Callable, Tuple, Any
 import itertools
 from bisect import bisect_right
 
@@ -131,25 +131,28 @@ def row_maximise_profit_bayes(
 
     travellers = _rides_row["indexes"]
     discounts = _rides_row["accepted_discount"].copy()
-    discounts = [t if t[0] > _guaranteed_discount else (_guaranteed_discount, t[1])
-                 for t in discounts] # at least guaranteed discount
-    discounts = list(itertools.product(*discounts)) # create a list of bi-vectors (disc, class) of discounts (everyone gets one)
+    discounts = [[t if t[0] > _guaranteed_discount else (_guaranteed_discount, t[1])
+                 for t in d] for d in discounts] # at least guaranteed discount
+    discounts_indexes = list(itertools.product(*[range(len(t)) for t in discounts]))
+    # discounts = list(itertools.product(*discounts)) # create a list of bi-vectors (disc, class) of discounts (everyone gets one)
     base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in
                      enumerate(_rides_row['indexes'])}
     best = [0, 0, 0, 0, 0, 0]
 
-    for discount in discounts:
+    discount_indexes: tuple[int]
+    for discount_indexes in discounts_indexes:
         # Start with the effectively shared ride
+        discount = [discounts[_num][_t] for _num, _t in enumerate(discount_indexes)]
         eff_price = [_price * (1 - t[0]) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
         probability_shared = 1
         prob_individual = [.0] * len(discount)
 
-        for num, individual_disc, pax in enumerate(zip(discount, travellers)):
-            accepted_disc = _rides_row["accepted_discount"][num]
-            prob_individual[num] = sum(0 if t[0] > individual_disc else _class_membership[pax][t[1]]
-                                       for t in accepted_disc)/_sample_size
+        for num, pax in enumerate(travellers):
+            prob_individual[num] = (sum(_class_membership[pax][t[1]]
+                                  for t in discounts[num][:(discount_indexes[num]+1)])/
+                               _sample_size)
             probability_shared *= prob_individual[num]
 
         if probability_shared < _min_acceptance:
@@ -182,7 +185,6 @@ def row_maximise_profit_bayes(
 
 def optimise_discounts(
         rides: pd.DataFrame,
-        requests: pd.DataFrame,
         class_membership: dict,
         times_ns: dict,
         bt_sample: np.array,
@@ -212,8 +214,9 @@ def optimise_discounts(
     tqdm.pandas(desc="Discount optimisation")
     rides["best_profit"] = rides.progress_apply(row_maximise_profit_bayes,
                                                 axis=1,
+                                                _class_membership=class_membership,
+                                                _sample_size=len(bt_sample),
                                                 _price=fare,
-                                                _one_shot=False,
                                                 _max_output_func=objective_func,
                                                 _guaranteed_discount=guaranteed_discount,
                                                 _min_acceptance=min_acceptance
