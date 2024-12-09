@@ -5,7 +5,7 @@
 	"VoT": 0.00444,
 	"WtS": 1.14756,
 	"delay_value": 1,
-	"price": 0.0015,
+	"price": 1.5,
 	"matching_obj": "u_veh",
 	"pax_delay": 15,
 	"horizon": 1200,

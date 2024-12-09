@@ -216,7 +216,7 @@ def optimise_discounts(
                                                 axis=1,
                                                 _class_membership=class_membership,
                                                 _sample_size=len(bt_sample),
-                                                _price=fare,
+                                                _price=fare/1000,
                                                 _max_output_func=objective_func,
                                                 _guaranteed_discount=guaranteed_discount,
                                                 _min_acceptance=min_acceptance
