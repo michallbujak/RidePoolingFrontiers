@@ -125,4 +125,5 @@ for day in range(run_config.no_days):
         speed=exmas_params['avg_speed']
     )
 
+    # Step E3:
 

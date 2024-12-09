@@ -1,0 +1,28 @@
+{
+	"avg_speed": 6,
+	"shared_discount": 0.5,
+	"true_discount": 0.3,
+	"VoT": 0.00444,
+	"WtS": 1.14756,
+	"delay_value": 1,
+	"price": 0.0015,
+	"matching_obj": "u_veh",
+	"pax_delay": 15,
+	"horizon": 1200,
+	"profitability": false,
+	"paths": {
+		"main": "ExMAS",
+		"G": "ExMAS//data//graphs//Manhattan.graphml",
+		"skim": "ExMAS//data//graphs//Manhattan.csv",
+		"nyc_requests": "ExMAS/data/nyc_requests.csv"
+	},
+	"nP": 100,
+	"city": "Manhattan, New York County, New York, United States",
+	"simTime": 0.16666666666666667,
+	"dist_threshold": 100000,
+	"max_degree": 4,
+	"t0": "15:00",
+	"date": "20160101",
+	"freq": "30min",
+	"logger_level": "INFO"
+}
