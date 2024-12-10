@@ -89,7 +89,7 @@ def row_maximise_profit_bayes(
         _class_membership: dict[dict],
         _max_output_func: Callable[[list], float],
         _sample_size: int,
-        _price: float = 0.0015,
+        _fare: float = 0.0015,
         _probability_single: float = 1,
         _guaranteed_discount: float = 0.05,
         _min_acceptance: float = 0
@@ -101,7 +101,7 @@ def row_maximise_profit_bayes(
     @param _rides_row: row of exmas rides (potential combination + characteristics)
     @param _class_membership: probability for each agent to belong to a given class
     @param _sample_size: number of samples of value of time for a class
-    @param _price: per-kilometre fare
+    @param _fare: per-kilometre fare
     @param _probability_single: probability that a customer is satisfied with a private
     ride if offered one
     @param _guaranteed_discount: when traveller accepts a shared ride and any of the co-travellers
@@ -118,14 +118,18 @@ def row_maximise_profit_bayes(
     - expected distance
     - max output function (by default, profitability)
     """
+    if _fare > 1:
+        _kmFare = _fare/1000
+    else:
+        _kmFare = _fare
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        out = [_probability_single * _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
-                0,
-                _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
-                [_probability_single],
-                _rides_row["veh_dist"] / 1000 * _probability_single
-        ]
+        out = [_probability_single * _rides_row["veh_dist"] * _kmFare * (1 - _guaranteed_discount),
+               0,
+               _rides_row["veh_dist"] * _kmFare * (1 - _guaranteed_discount),
+               [_probability_single],
+               _rides_row["veh_dist"] / 1000 * _probability_single
+               ]
         out += [_max_output_func(out)]
         return out
 
@@ -135,7 +139,7 @@ def row_maximise_profit_bayes(
                  for t in d] for d in discounts] # at least guaranteed discount
     discounts_indexes = list(itertools.product(*[range(len(t)) for t in discounts]))
     # discounts = list(itertools.product(*discounts)) # create a list of bi-vectors (disc, class) of discounts (everyone gets one)
-    base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in
+    base_revenues = {num: _rides_row["individual_distances"][num] * _kmFare for num, t in
                      enumerate(_rides_row['indexes'])}
     best = [0, 0, 0, 0, 0, 0]
 
@@ -143,7 +147,7 @@ def row_maximise_profit_bayes(
     for discount_indexes in discounts_indexes:
         # Start with the effectively shared ride
         discount = [discounts[_num][_t] for _num, _t in enumerate(discount_indexes)]
-        eff_price = [_price * (1 - t[0]) for t in discount]
+        eff_price = [_kmFare * (1 - t[0]) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
         probability_shared = 1
