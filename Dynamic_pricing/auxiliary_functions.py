@@ -116,6 +116,7 @@ def row_maximise_profit_bayes(
     - revenue from the shared ride if accepted
     - vector of probabilities that individuals accept the shared ride
     - expected distance
+    - probability of acceptance when in certain class: [t1 \in C1, t1 \in C2,...], [t2 \in C1, t2 \in C2, ...]
     - max output function (by default, profitability)
     """
     if _fare > 1:
@@ -129,7 +130,8 @@ def row_maximise_profit_bayes(
                0,
                _rides_row["veh_dist"] * _kmFare * (1 - _guaranteed_discount),
                [_probability_single],
-               _rides_row["veh_dist"] / 1000 * _probability_single
+               _rides_row["veh_dist"] / 1000 * _probability_single,
+               [1]*len(_class_membership[0])
                ]
         out += [_max_output_func(out)]
         return out
@@ -142,7 +144,7 @@ def row_maximise_profit_bayes(
     # discounts = list(itertools.product(*discounts)) # create a list of bi-vectors (disc, class) of discounts (everyone gets one)
     base_revenues = {num: _rides_row["individual_distances"][num] * _kmFare for num, t in
                      enumerate(_rides_row['indexes'])}
-    best = [0, 0, 0, 0, 0, 0]
+    best = [0, 0, 0, 0, 0, 0, 0]
 
     discount_indexes: tuple[int]
     for discount_indexes in discounts_indexes:
@@ -183,6 +185,12 @@ def row_maximise_profit_bayes(
         out += [max_out]
 
         if max_out > best[-1]:
+            membership_class_probability: list[list] = [[] for _ in range(len(travellers))]
+            for num in range(len(travellers)):
+                membership_class_probability[num] = [0]*len(_class_membership[0])
+                for acceptable_discount in discounts[num][:(discount_indexes[num] + 1)]:
+                    membership_class_probability[num][int(acceptable_discount[1])] += 1/_sample_size
+            out.insert(-1, membership_class_probability)
             best = out.copy()
 
     return best
