@@ -119,9 +119,10 @@ def row_maximise_profit_bayes(
     - max output function (by default, profitability)
     """
     if _fare > 1:
-        _kmFare = _fare/1000
+        _kmFare: float = _fare/1000
     else:
-        _kmFare = _fare
+        _kmFare: float = _fare
+
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
         out = [_probability_single * _rides_row["veh_dist"] * _kmFare * (1 - _guaranteed_discount),
@@ -220,11 +221,13 @@ def optimise_discounts(
                                                 axis=1,
                                                 _class_membership=class_membership,
                                                 _sample_size=len(bt_sample),
-                                                _price=fare/1000,
+                                                _fare=fare,
                                                 _max_output_func=objective_func,
                                                 _guaranteed_discount=guaranteed_discount,
                                                 _min_acceptance=min_acceptance
                                                 )
+
+    rides["objective"] = rides['best_profit'].apply(lambda x: x[-1])
 
     return rides
 

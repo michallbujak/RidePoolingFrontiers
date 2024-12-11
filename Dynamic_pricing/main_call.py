@@ -11,6 +11,7 @@ import numpy as np
 import Individual_pricing.pricing_utils.batch_preparation as batch_prep
 from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
+from Individual_pricing.matching import matching_function
 from ExMAS.probabilistic_exmas import main as exmas_algo
 from Dynamic_pricing.auxiliary_functions import prepare_samples, optimise_discounts
 
@@ -100,7 +101,7 @@ class_membership_prob = {u: {_: v for _, v in enumerate(run_config['class_probs'
 times_non_shared = dict(all_requests['ttrav'])
 
 for day in range(run_config.no_days):
-    # Step E1: filter the shareability graph for a users on a current day
+    # Step IP1: filter the shareability graph for a users on a current day
     rng = np.random.default_rng(secrets.randbits(args.seed))
     _ = int(rng.normal(run_config.daily_users, run_config.daily_users/100))
     no_users = _ if (_ > 0 & _ <= run_config.daily_users) else run_config.batch_size
@@ -111,7 +112,7 @@ for day in range(run_config.no_days):
     )]
     requests_day = all_requests.loc[all_requests['index'].apply(lambda _x: _x in users)] # potentially useless
 
-    # Step E2: Optimal pricing
+    # Step IP2: Optimal pricing
     rides_day = optimise_discounts(
         rides=rides_day,
         class_membership=class_membership_prob,
@@ -125,5 +126,31 @@ for day in range(run_config.no_days):
         speed=exmas_params['avg_speed']
     )
 
-    # Step E3:
+    # Step IP3: Matching
+    day_results = matching_function(
+        databank={'rides': rides_day, 'requests': requests_day},
+        params=exmas_params,
+        objectives=['objective'],
+        min_max='max',
+        filter_rides=False,
+        opt_flag='',
+        rides_requests=True,
+        requestsErrorIndex=True
+    )
+    # We concluded probabilistic analysis
+    # We proceed to sampling decisions and Bayesian estimation
+
+    # Step B1: extracting probability
+    individualProbability = {}
+    sharingSchedule = day_results['schedules']['objective']
+    sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
+    acceptanceProbabilities = {}
+    for num, row in sharingSchedule.iterrows():
+        for pax, prob in zip(row['indexes'], row['best_profit'][3]):
+            acceptanceProbabilities[pax] = prob
+
+    # Step B2: sample decisions
+    sampledDecisionValues = rng.random(size=len(acceptanceProbabilities))
+    sampledDecisions = {k: v > sampledDecisionValues[t] for t, (k, v) in
+                        enumerate(acceptanceProbabilities.items())}
 

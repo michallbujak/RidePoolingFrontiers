@@ -969,7 +969,11 @@ def match(im, r, params={"matching_obj": "u_veh"}, plot=False, min_max="min", ma
 
     im['PassHourTrav_ns'] = im.apply(lambda x: sum([r.loc[_].ttrav for _ in x.indexes]), axis=1)
 
-    r = r.reset_index()
+    try:
+        r = r.reset_index()
+    except ValueError:
+        r = r.drop('index', axis=1)
+        r = r.reset_index()
 
     # if exmas_params.profitability:
     #     im = im[im.lambda_r >= exmas_params.shared_discount]
