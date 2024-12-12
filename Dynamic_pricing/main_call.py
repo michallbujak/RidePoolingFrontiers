@@ -13,7 +13,8 @@ from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
 from ExMAS.probabilistic_exmas import main as exmas_algo
-from Dynamic_pricing.auxiliary_functions import prepare_samples, optimise_discounts
+from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_discounts,
+                                                 bayesian_vot_updated)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
@@ -96,7 +97,7 @@ compute_save[0] = compute_save[2] <= compute_save[1]
 
 """ Proceed to evolutionary part of the analysis """
 users_per_day = {}
-class_membership_prob = {u: {_: v for _, v in enumerate(run_config['class_probs'])}
+class_membership_prob: dict = {u: {_: v for _, v in enumerate(run_config['class_probs'])}
                          for u in range(150)}
 times_non_shared = dict(all_requests['ttrav'])
 
@@ -140,17 +141,23 @@ for day in range(run_config.no_days):
     # We concluded probabilistic analysis
     # We proceed to sampling decisions and Bayesian estimation
 
-    # Step B1: extracting probability
+    # Step B1: extracting probability & sample decisions
     individualProbability = {}
     sharingSchedule = day_results['schedules']['objective']
     sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
-    acceptanceProbabilities = {}
-    for num, row in sharingSchedule.iterrows():
-        for pax, prob in zip(row['indexes'], row['best_profit'][3]):
-            acceptanceProbabilities[pax] = prob
+    sampledDecisionValues = rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
 
-    # Step B2: sample decisions
-    sampledDecisionValues = rng.random(size=len(acceptanceProbabilities))
-    sampledDecisions = {k: v > sampledDecisionValues[t] for t, (k, v) in
-                        enumerate(acceptanceProbabilities.items())}
+    sampledDecisions = {}
+    decisionValueIndicator: int = 0
+    for num, row in sharingSchedule.iterrows():
+        for pax, prob, cond_prob in zip(row['indexes'], row['best_profit'][3], row['best_profit'][-2]):
+            decision = prob > sampledDecisionValues[decisionValueIndicator]
+            decisionValueIndicator += 1
+            class_membership_prob = bayesian_vot_updated(
+                decision=decision,
+                pax_id=pax,
+                apriori_distribution=class_membership_prob,
+                conditional_probs=cond_prob
+            )
+    x = 0
 

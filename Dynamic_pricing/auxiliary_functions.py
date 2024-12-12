@@ -240,5 +240,30 @@ def optimise_discounts(
     return rides
 
 
+def bayesian_vot_updated(
+        decision: bool,
+        pax_id: int,
+        apriori_distribution: dict,
+        conditional_probs: list
+):
+    """
+    Update dictionary with class membership probabilities according to the decision.
+    Calculates for a single traveller.
+    :param decision:
+    :param pax_id:
+    :param apriori_distribution:
+    :param conditional_probs:
+    :return: posteriori probabilities
+    """
+    if decision:
+        posteriori_probability = conditional_probs
+    else:
+        posteriori_probability = [1-t for t in conditional_probs]
 
+    posteriori_probability = [a*b for a, b in zip(posteriori_probability, apriori_distribution[pax_id].values())]
+    posteriori_probability = [t/sum(posteriori_probability) for t in posteriori_probability]
 
+    apriori_distribution[pax_id] = {k: v for k, v in
+                                    zip(apriori_distribution[pax_id].keys(), posteriori_probability)}
+
+    return apriori_distribution
