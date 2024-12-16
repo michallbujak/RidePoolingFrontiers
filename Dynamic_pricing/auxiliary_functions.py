@@ -3,6 +3,7 @@ import secrets
 from typing import Callable, Tuple, Any
 import itertools
 from bisect import bisect_right
+from unittest.mock import inplace
 
 import numpy as np
 import pandas as pd
@@ -228,7 +229,7 @@ def optimise_discounts(
     rides["best_profit"] = rides.progress_apply(row_maximise_profit_bayes,
                                                 axis=1,
                                                 _class_membership=class_membership,
-                                                _sample_size=len(bt_sample),
+                                                _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),
                                                 _fare=fare,
                                                 _max_output_func=objective_func,
                                                 _guaranteed_discount=guaranteed_discount,
@@ -267,3 +268,67 @@ def bayesian_vot_updated(
                                     zip(apriori_distribution[pax_id].keys(), posteriori_probability)}
 
     return apriori_distribution
+
+
+def aggregate_daily_results(
+        day_results: dict,
+        decisions: list,
+        fare: float,
+        guaranteed_discount: float = 0.05,
+        speed: float = 6
+):
+    """
+    Aggregate results after each day to track system's evolution.
+    :param day_results: results from a daily run
+    :param decisions: list of decisions: whether a shared ride is realised or not
+    :param fare: per-kilometre price
+    :param guaranteed_discount: discount for traveller who accepted sharing mode
+    and their co-traveller rejected
+    :param a constant speed (assumption, input)
+    :return: table with results
+    """
+    results = pd.Series()
+    schedule = day_results['schedules']['objective']
+    results['TravellersNo'] = len(day_results['requests'])
+    results['Objective'] = sum(schedule['objective'])
+    schedule_sharing = schedule.loc[schedule['indexes'].apply(lambda x: len(x) >= 2)]
+    schedule_sharing = schedule_sharing.reset_index(inplace=False, drop=True)
+    results['SharingTravellerOffer'] = sum(schedule_sharing['indexes'].apply(len))
+    results['SharedRidesNo'] = len(schedule_sharing)
+    results['ExpectedSharingFraction'] = sum(schedule_sharing['indexes'].apply(len))/len(day_results['requests'])
+    results['ExpectedRevenue'] = sum(schedule['best_profit'].apply(lambda x: x[0]))
+    results['ExpectedDistance'] = sum(schedule['best_profit'].apply(lambda x: x[4]))
+    results['ExpectedSharingRevenue'] = sum(schedule_sharing['best_profit'].apply(lambda x: x[0]))
+    results['ExpectedSharingDistance'] = sum(schedule_sharing['best_profit'].apply(lambda x: x[4]))
+
+
+    actualSharingRevenue: float = 0
+    actualSharingDistance: float = 0
+    actualAcceptanceRate: float = 0
+    realisedSharedRides: int = 0
+    for decision_indicator, shared_ride in schedule_sharing.iterrows():
+        # if the share ride is realised
+        if all(decisions[decision_indicator]):
+            actualSharingRevenue += shared_ride['best_profit'][2]
+            actualSharingDistance += shared_ride['u_veh']*speed/1000
+            actualAcceptanceRate += len(shared_ride['indexes'])
+            realisedSharedRides += 1
+        else:
+            actualSharingDistance += sum(shared_ride['individual_distances'])/1000
+            for pax_no, pax in enumerate(shared_ride['indexes']):
+                decision = decisions[decision_indicator][pax_no]
+                if decision:
+                    actualAcceptanceRate += 1
+                    actualSharingRevenue += (shared_ride['individual_distances'][pax_no]*
+                                             fare*(1-guaranteed_discount)/1000)
+                else:
+                    actualSharingRevenue += shared_ride['individual_distances'][pax_no]/1000
+    results['ActualSharingRevenue'] = actualSharingRevenue
+    results['ActualRevenue'] = (actualSharingRevenue + (1-guaranteed_discount)*
+                                 fare*sum(schedule_sharing['u_veh'])*speed/1000)
+    results['ActualSharingDistance'] = actualSharingDistance
+    results['ActualDistance'] = actualSharingDistance + sum(schedule_sharing['u_veh'])*speed/1000
+    results['RealisedSharedRides'] = realisedSharedRides
+    results['ActualAcceptanceRate'] = actualAcceptanceRate/results['SharingTravellerOffer']
+
+    return results
