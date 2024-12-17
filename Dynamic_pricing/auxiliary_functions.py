@@ -245,7 +245,8 @@ def bayesian_vot_updated(
         decision: bool,
         pax_id: int,
         apriori_distribution: dict,
-        conditional_probs: list
+        conditional_probs: list,
+        distribution_history: dict or False = False
 ):
     """
     Update dictionary with class membership probabilities according to the decision.
@@ -254,6 +255,7 @@ def bayesian_vot_updated(
     :param pax_id:
     :param apriori_distribution:
     :param conditional_probs:
+    :param distribution_history:
     :return: posteriori probabilities
     """
     if decision:
@@ -267,6 +269,10 @@ def bayesian_vot_updated(
     apriori_distribution[pax_id] = {k: v for k, v in
                                     zip(apriori_distribution[pax_id].keys(), posteriori_probability)}
 
+    if distribution_history:
+        for _num, key in enumerate(distribution_history[pax_id].keys()):
+            distribution_history[pax_id][key].append(posteriori_probability[_num])
+
     return apriori_distribution
 
 
@@ -274,8 +280,7 @@ def aggregate_daily_results(
         day_results: dict,
         decisions: list,
         fare: float,
-        guaranteed_discount: float = 0.05,
-        speed: float = 6
+        guaranteed_discount: float = 0.05
 ):
     """
     Aggregate results after each day to track system's evolution.
@@ -284,7 +289,6 @@ def aggregate_daily_results(
     :param fare: per-kilometre price
     :param guaranteed_discount: discount for traveller who accepted sharing mode
     and their co-traveller rejected
-    :param a constant speed (assumption, input)
     :return: table with results
     """
     results = pd.Series()
@@ -292,6 +296,7 @@ def aggregate_daily_results(
     results['TravellersNo'] = len(day_results['requests'])
     results['Objective'] = sum(schedule['objective'])
     schedule_sharing = schedule.loc[schedule['indexes'].apply(lambda x: len(x) >= 2)]
+    schedule_non_sharing = schedule.loc[schedule['indexes'].apply(lambda x: len(x) == 1)]
     schedule_sharing = schedule_sharing.reset_index(inplace=False, drop=True)
     results['SharingTravellerOffer'] = sum(schedule_sharing['indexes'].apply(len))
     results['SharedRidesNo'] = len(schedule_sharing)
@@ -310,7 +315,7 @@ def aggregate_daily_results(
         # if the share ride is realised
         if all(decisions[decision_indicator]):
             actualSharingRevenue += shared_ride['best_profit'][2]
-            actualSharingDistance += shared_ride['u_veh']*speed/1000
+            actualSharingDistance += shared_ride['veh_dist']/1000
             actualAcceptanceRate += len(shared_ride['indexes'])
             realisedSharedRides += 1
         else:
@@ -322,12 +327,12 @@ def aggregate_daily_results(
                     actualSharingRevenue += (shared_ride['individual_distances'][pax_no]*
                                              fare*(1-guaranteed_discount)/1000)
                 else:
-                    actualSharingRevenue += shared_ride['individual_distances'][pax_no]/1000
+                    actualSharingRevenue += fare*shared_ride['individual_distances'][pax_no]/1000
     results['ActualSharingRevenue'] = actualSharingRevenue
     results['ActualRevenue'] = (actualSharingRevenue + (1-guaranteed_discount)*
-                                 fare*sum(schedule_sharing['u_veh'])*speed/1000)
+                                 fare*sum(schedule_non_sharing['veh_dist'])/1000)
     results['ActualSharingDistance'] = actualSharingDistance
-    results['ActualDistance'] = actualSharingDistance + sum(schedule_sharing['u_veh'])*speed/1000
+    results['ActualDistance'] = actualSharingDistance + sum(schedule_non_sharing['veh_dist'])/1000
     results['RealisedSharedRides'] = realisedSharedRides
     results['ActualAcceptanceRate'] = actualAcceptanceRate/results['SharingTravellerOffer']
 

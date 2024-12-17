@@ -8,7 +8,7 @@
 	"batch_size": 150,
 	"daily_users": 100,
 	"sample_size": 5,
-	"no_days": 5,
+	"no_days": 50,
 	"mileage_sensitivity": 1,
 	"flat_fleet_cost": 0,
 	"minimum_acceptance_probability": 0.2,

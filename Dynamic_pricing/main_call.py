@@ -116,6 +116,9 @@ class_membership_prob: dict = {u: {_: v for _, v in enumerate(run_config['class_
 times_non_shared = dict(allRequests['ttrav'])
 resultsDaily = []
 
+classMembershipStability = {ko: {ki: [vi] for ki, vi in vo.items()}
+                            for ko, vo in class_membership_prob.items()}
+
 for day in range(run_config.no_days):
     # Step IP1: filter the shareability graph for a users on a current day
     rng = np.random.default_rng(secrets.randbits(args.seed))
@@ -176,7 +179,8 @@ for day in range(run_config.no_days):
                 decision=decision,
                 pax_id=pax,
                 apriori_distribution=class_membership_prob,
-                conditional_probs=cond_prob
+                conditional_probs=cond_prob,
+                distribution_history=classMembershipStability
             )
             sharingScheduleDecisions[num] = sharingScheduleDecisions[num] + [decision]
 
@@ -185,7 +189,7 @@ for day in range(run_config.no_days):
         day_results=dayResults,
         decisions=sharingScheduleDecisions,
         fare=exmas_params['price'],
-        guaranteed_discount = run_config['guaranteed_discount'],
-        speed=exmas_params['avg_speed']
+        guaranteed_discount = run_config['guaranteed_discount']
     ))
-    x = 0
+
+print(resultsDaily[-1])
