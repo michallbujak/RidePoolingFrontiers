@@ -109,87 +109,111 @@ computeSave[0] = computeSave[2] <= computeSave[1]
 
 """ Proceed to evolutionary part of the analysis """
 
+if computeSave[0]:
+    users_per_day = {}
+    class_membership_prob: dict = {u: {_: v for _, v in enumerate(run_config['class_probs'])}
+                             for u in range(150)}
+    times_non_shared = dict(allRequests['ttrav'])
+    resultsDaily = []
 
-users_per_day = {}
-class_membership_prob: dict = {u: {_: v for _, v in enumerate(run_config['class_probs'])}
-                         for u in range(150)}
-times_non_shared = dict(allRequests['ttrav'])
-resultsDaily = []
+    classMembershipStability = {ko: {ki: [vi] for ki, vi in vo.items()}
+                                for ko, vo in class_membership_prob.items()}
 
-classMembershipStability = {ko: {ki: [vi] for ki, vi in vo.items()}
-                            for ko, vo in class_membership_prob.items()}
+    for day in range(run_config.no_days):
+        # Step IP1: filter the shareability graph for a users on a current day
+        rng = np.random.default_rng(secrets.randbits(args.seed))
+        _ = int(rng.normal(run_config.daily_users, run_config.daily_users/100))
+        no_users = _ if (_ > 0 & _ <= run_config.daily_users) else run_config.batch_size
+        users = sorted(rng.choice(range(run_config.batch_size), no_users))
+        users_per_day[day] = users.copy()
+        rides_day = allRides.loc[allRides['indexes'].apply(
+            lambda _x: all(t in users for t in _x)
+        )]
+        requests_day = allRequests.loc[allRequests['index'].apply(lambda _x: _x in users)] # potentially useless
 
-for day in range(run_config.no_days):
-    # Step IP1: filter the shareability graph for a users on a current day
-    rng = np.random.default_rng(secrets.randbits(args.seed))
-    _ = int(rng.normal(run_config.daily_users, run_config.daily_users/100))
-    no_users = _ if (_ > 0 & _ <= run_config.daily_users) else run_config.batch_size
-    users = sorted(rng.choice(range(run_config.batch_size), no_users))
-    users_per_day[day] = users.copy()
-    rides_day = allRides.loc[allRides['indexes'].apply(
-        lambda _x: all(t in users for t in _x)
-    )]
-    requests_day = allRequests.loc[allRequests['index'].apply(lambda _x: _x in users)] # potentially useless
+        # Step IP2: Optimal pricing
+        rides_day = optimise_discounts(
+            rides=rides_day,
+            class_membership=class_membership_prob,
+            times_ns=times_non_shared,
+            bt_sample=votSample,
+            bs_levels=[1, 1, 1.1, 1.2, 1.4, 2],
+            objective_func=lambda x: x[0] - run_config.mileage_sensitivity*x[4] - run_config.flat_fleet_cost,
+            min_acceptance=run_config.minimum_acceptance_probability,
+            guaranteed_discount=run_config.guaranteed_discount,
+            fare=exmas_params['price'],
+            speed=exmas_params['avg_speed']
+        )
 
-    # Step IP2: Optimal pricing
-    rides_day = optimise_discounts(
-        rides=rides_day,
-        class_membership=class_membership_prob,
-        times_ns=times_non_shared,
-        bt_sample=votSample,
-        bs_levels=[1, 1, 1.1, 1.2, 1.4, 2],
-        objective_func=lambda x: x[0] - run_config.mileage_sensitivity*x[4] - run_config.flat_fleet_cost,
-        min_acceptance=run_config.minimum_acceptance_probability,
-        guaranteed_discount=run_config.guaranteed_discount,
-        fare=exmas_params['price'],
-        speed=exmas_params['avg_speed']
-    )
+        # Step IP3: Matching
+        dayResults = matching_function(
+            databank={'rides': rides_day, 'requests': requests_day},
+            params=exmas_params,
+            objectives=['objective'],
+            min_max='max',
+            filter_rides=False,
+            opt_flag='',
+            rides_requests=True,
+            requestsErrorIndex=True
+        )
+        # We concluded probabilistic analysis
+        # We proceed to sampling decisions and Bayesian estimation
 
-    # Step IP3: Matching
-    dayResults = matching_function(
-        databank={'rides': rides_day, 'requests': requests_day},
-        params=exmas_params,
-        objectives=['objective'],
-        min_max='max',
-        filter_rides=False,
-        opt_flag='',
-        rides_requests=True,
-        requestsErrorIndex=True
-    )
-    # We concluded probabilistic analysis
-    # We proceed to sampling decisions and Bayesian estimation
+        # Step B1: extracting probability
+        individualProbability = {}
+        sharingSchedule = dayResults['schedules']['objective'].copy()
+        sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
+        sharingSchedule = sharingSchedule.reset_index(inplace=False, drop=True)
+        sampledDecisionValues = rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
 
-    # Step B1: extracting probability
-    individualProbability = {}
-    sharingSchedule = dayResults['schedules']['objective'].copy()
-    sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
-    sharingSchedule = sharingSchedule.reset_index(inplace=False, drop=True)
-    sampledDecisionValues = rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
+        # Step B2: update class membership
+        sampledDecisions = {}
+        decisionValueIndicator: int = 0
+        sharingScheduleDecisions = [[]]*len(sharingSchedule)
+        for num, row in sharingSchedule.iterrows():
+            for pax, prob, cond_prob in zip(row['indexes'], row['best_profit'][3], row['best_profit'][-2]):
+                pax_class = actualClassMembership[pax]
+                decision = cond_prob[pax_class] > sampledDecisionValues[decisionValueIndicator]
+                decisionValueIndicator += 1
+                class_membership_prob = bayesian_vot_updated(
+                    decision=decision,
+                    pax_id=pax,
+                    apriori_distribution=class_membership_prob,
+                    conditional_probs=cond_prob,
+                    distribution_history=classMembershipStability
+                )
+                sharingScheduleDecisions[num] = sharingScheduleDecisions[num] + [decision]
 
-    # Step B2: update class membership
-    sampledDecisions = {}
-    decisionValueIndicator: int = 0
-    sharingScheduleDecisions = [[]]*len(sharingSchedule)
-    for num, row in sharingSchedule.iterrows():
-        for pax, prob, cond_prob in zip(row['indexes'], row['best_profit'][3], row['best_profit'][-2]):
-            pax_class = actualClassMembership[pax]
-            decision = cond_prob[pax_class] > sampledDecisionValues[decisionValueIndicator]
-            decisionValueIndicator += 1
-            class_membership_prob = bayesian_vot_updated(
-                decision=decision,
-                pax_id=pax,
-                apriori_distribution=class_membership_prob,
-                conditional_probs=cond_prob,
-                distribution_history=classMembershipStability
-            )
-            sharingScheduleDecisions[num] = sharingScheduleDecisions[num] + [decision]
+        # Step IA1: collect data after each run to compare system performance
+        resultsDaily.append(aggregate_daily_results(
+            day_results=dayResults,
+            decisions=sharingScheduleDecisions,
+            fare=exmas_params['price'],
+            guaranteed_discount = run_config['guaranteed_discount']
+        ))
+    resultsDaily = pd.concat(resultsDaily, axis=1)
 
-    # Step IA1: collect data after each run to compare system performance
-    resultsDaily.append(aggregate_daily_results(
-        day_results=dayResults,
-        decisions=sharingScheduleDecisions,
-        fare=exmas_params['price'],
-        guaranteed_discount = run_config['guaranteed_discount']
-    ))
+if computeSave[0] & computeSave[3]:
+    batch_prep.create_directory(run_config.partial_results + 'Step_1')
+    folder = run_config.partial_results + 'Step_1/'
 
-print(resultsDaily[-1])
+    for variable, name in zip([actualClassMembership, classMembershipStability],
+                              ['actual_classes', 'tracked_classes']):
+        with open(folder + name + '.json', 'w') as _file:
+            json.dump(variable, _file)
+
+    resultsDaily.to_csv(folder + 'results_daily' + '.csv', index=False)
+
+# Skip prior and load data
+if computeSave[2] - computeSave[1] == 1:
+    folder = run_config.partial_results + 'Step_1/'
+
+    with open(folder + 'actual_classes' + '.json', 'r') as _file:
+        actualClassMembership = json.load(_file)
+    with open(folder + 'tracked_classes' + '.json', 'r') as _file:
+        classMembershipStability = json.load(_file)
+
+    resultsDaily = pd.read_csv(folder + 'results_daily' + '.csv')
+
+computeSave[1] += 1
+computeSave[0] = computeSave[2] <= computeSave[1]
