@@ -365,18 +365,9 @@ def maximise_profit_bayes_optimised(
     - expected distance
     - probability of acceptance when in certain class: [t1 in C1, t1 in C2,...], [t2 in C1, t2 in C2, ...]
     - max output function (by default, profitability) """
-    if _fare > 1:
-        km_fare: float = _fare/1000
-    else:
-        km_fare: float = _fare
-
-    best_profit = []
-
-    rides_essentials = _rides[['indexes', 'individual_distances', 'accepted_discount', 'veh_dist']].to_numpy()
-
     @jit
     def row_calculations(
-            _indexes: np.ndarray,
+            _travellers_no: int,
             _individual_distances: np.ndarray,
             _discounts: np.ndarray,
             _class_membership: np.ndarray,
@@ -386,14 +377,13 @@ def maximise_profit_bayes_optimised(
             _guaranteed_discount: float,
             _min_acceptance: float
     ):
-        if len(_indexes) == 1:
+        if _travellers_no == 1:
             out = np.array([
                 _veh_dist*_fare_km*(1-_guaranteed_discount),
                 0,
                 _veh_dist,
                 np.array([1]),
-                _veh_dist/1000,
-                np.ones(_class_membership.shape[1], dtype=int)
+                _veh_dist/1000
                 ])
             out = np.append(out, out[4] - out[0])
 
@@ -407,5 +397,47 @@ def maximise_profit_bayes_optimised(
             revenue_shared = np.ndarray([a*b for a,b in zip(
                 _individual_distances, effective_price
             )])
+            probability_shared = np.prod([t[1] for t in discount])
 
+            if probability_shared < _min_acceptance:
+                continue
+
+            remaining_revenue = 0
+            for pax in range(_travellers_no):
+                # First, if the P(X_j = 0)*r_j
+                prob_no_trav = 1 - discount[pax][1]
+                remaining_revenue += prob_no_trav * base_revenues[pax]
+                # Then, P(X_j = 1, \pi X_i = 0)*r_j*(1-\lambda)
+                others_not = 1 - np.prod([t[1] for t in discount[:pax] + discount[(pax+1):]])
+                rev_discounted = base_revenues[pax] * (1 - _guaranteed_discount)
+                remaining_revenue += discount[pax][1]
+
+            out = np.ndarray([
+                sum(revenue_shared) * probability_shared + remaining_revenue,
+                [t[0] for t in discount],
+                sum(revenue_shared),
+                [t[1] for t in discount],
+                _veh_dist*probability_shared+sum(_individual_distances)*(1-probability_shared)/1000
+            ])
+
+            out = np.append(out, out[0] - out[4])
+
+            if out[-1] > best[-1]:
+                best = out.copy()
+
+    if _fare > 1:
+        km_fare: float = _fare/1000
+    else:
+        km_fare: float = _fare
+
+    best_profit = []
+
+    rides_essentials = _rides[['indexes', 'individual_distances', 'accepted_discount', 'veh_dist']].to_numpy()
+
+    indexes = np.ndarray([np.ndarray(t) for t in _rides['indexes']])
+    individual_distances = np.ndarray([np.ndarray(t) for t in _rides['indexes']])
+
+    discounts_per_ride = np.zeros(_rides.loc[[len(t)==1 for t in _rides['indexes']]])
+    for ride in _rides['accepted_discount']:
+        #TODO amend for a sum
 
