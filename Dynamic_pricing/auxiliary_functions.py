@@ -2,13 +2,11 @@
 import secrets
 from typing import Callable, Tuple, Any
 import itertools
-from bisect import bisect_right
-from unittest.mock import inplace
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
+from numba import jit
 
 def prepare_samples(
         sample_size: int,
@@ -117,7 +115,7 @@ def row_maximise_profit_bayes(
     - revenue from the shared ride if accepted
     - vector of probabilities that individuals accept the shared ride
     - expected distance
-    - probability of acceptance when in certain class: [t1 \in C1, t1 \in C2,...], [t2 \in C1, t2 \in C2, ...]
+    - probability of acceptance when in certain class: [t1 in C1, t1 in C2,...], [t2 in C1, t2 in C2, ...]
     - max output function (by default, profitability)
     """
     if _fare > 1:
@@ -337,3 +335,77 @@ def aggregate_daily_results(
     results['ActualAcceptanceRate'] = actualAcceptanceRate/results['SharingTravellerOffer']
 
     return results
+
+
+def maximise_profit_bayes_optimised(
+        _rides: pd.DataFrame,
+        _class_membership: dict[dict],
+        _sample_size: int,
+        _fare: float = 0.0015,
+        _guaranteed_discount: float = 0.05,
+        _min_acceptance: float = 0
+):
+    """ Function to calculate the expected performance (or its derivatives)
+     of a precalculated exmas ride with hardcoded objective though optimised
+    --------
+    :param _rides: row of exmas rides (potential combination + characteristics)
+    :param _class_membership: probability for each agent to belong to a given class
+    :param _sample_size: number of samples of value of time for a class
+    :param _fare: per-kilometre fare
+    :param _guaranteed_discount: when traveller accepts a shared ride and any of the co-travellers
+    reject a ride, the traveller is offered
+    :param _min_acceptance: minimum acceptance probability
+    --------
+    :return vector comprising 6 main characteristics when applied discount maximising
+    the expected revenue:
+    - expected revenue
+    - vector of individual discounts
+    - revenue from the shared ride if accepted
+    - vector of probabilities that individuals accept the shared ride
+    - expected distance
+    - probability of acceptance when in certain class: [t1 in C1, t1 in C2,...], [t2 in C1, t2 in C2, ...]
+    - max output function (by default, profitability) """
+    if _fare > 1:
+        km_fare: float = _fare/1000
+    else:
+        km_fare: float = _fare
+
+    best_profit = []
+
+    rides_essentials = _rides[['indexes', 'individual_distances', 'accepted_discount', 'veh_dist']].to_numpy()
+
+    @jit
+    def row_calculations(
+            _indexes: np.ndarray,
+            _individual_distances: np.ndarray,
+            _discounts: np.ndarray,
+            _class_membership: np.ndarray,
+            _veh_dist: float,
+            _sample_size: int,
+            _fare_km: float,
+            _guaranteed_discount: float,
+            _min_acceptance: float
+    ):
+        if len(_indexes) == 1:
+            out = np.array([
+                _veh_dist*_fare_km*(1-_guaranteed_discount),
+                0,
+                _veh_dist,
+                np.array([1]),
+                _veh_dist/1000,
+                np.ones(_class_membership.shape[1], dtype=int)
+                ])
+            out = np.append(out, out[4] - out[0])
+
+            return out
+
+        base_revenues = np.array([a*_fare_km for a in _individual_distances])
+        best = np.zeros(7)
+
+        for discount in _discounts:
+            effective_price = np.ndarray([_fare_km*(1-a) for a in [t[0] for t in discount]])
+            revenue_shared = np.ndarray([a*b for a,b in zip(
+                _individual_distances, effective_price
+            )])
+
+
