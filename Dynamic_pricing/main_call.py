@@ -138,11 +138,13 @@ if computeSave[0]:
             times_ns=times_non_shared,
             bt_sample=votSample,
             bs_levels=[1, 1, 1.1, 1.2, 1.4, 2],
-            objective_func=lambda x: x[0] - run_config.mileage_sensitivity*x[4] - run_config.flat_fleet_cost,
+            objective_func=lambda x: x[0] - run_config['mileage_sensitivity']*x[4] -
+                                     run_config['flat_fleet_cost'],
             min_acceptance=run_config.minimum_acceptance_probability,
             guaranteed_discount=run_config.guaranteed_discount,
             fare=exmas_params['price'],
-            speed=exmas_params['avg_speed']
+            speed=exmas_params['avg_speed'],
+            max_discount=run_config['max_discount']
         )
 
         # Step IP3: Matching
@@ -197,20 +199,18 @@ if computeSave[0] & computeSave[3]:
     batch_prep.create_directory(run_config.partial_results + 'Step_1')
     folder = run_config.partial_results + 'Step_1/'
 
-    for variable, name in zip([actualClassMembership, classMembershipStability],
-                              ['actual_classes', 'tracked_classes']):
-        with open(folder + name + '.json', 'w') as _file:
-            json.dump(variable, _file)
+    with open(folder + 'tracked_classes' + '.json', 'w') as _file:
+        json.dump(classMembershipStability, _file)
 
     resultsDaily.to_csv(folder + 'results_daily' + '.csv', index=False)
 
 # Skip prior and load data
 if computeSave[2] - computeSave[1] == 1:
-    folder = run_config.partial_results + 'Step_1/'
+    folder = run_config.partial_results
 
-    with open(folder + 'actual_classes' + '.json', 'r') as _file:
+    with open(folder + 'Step_0/' + 'actual_classes' + '.json', 'r') as _file:
         actualClassMembership = json.load(_file)
-    with open(folder + 'tracked_classes' + '.json', 'r') as _file:
+    with open(folder + 'Step_1/' + 'tracked_classes' + '.json', 'r') as _file:
         classMembershipStability = json.load(_file)
 
     resultsDaily = pd.read_csv(folder + 'results_daily' + '.csv')

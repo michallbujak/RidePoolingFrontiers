@@ -91,7 +91,8 @@ def row_maximise_profit_bayes(
         _fare: float = 0.0015,
         _probability_single: float = 1,
         _guaranteed_discount: float = 0.05,
-        _min_acceptance: float = 0
+        _min_acceptance: float = 0,
+        _max_discount: float = 0.5
 ):
     """
     Function to calculate the expected performance (or its derivatives)
@@ -107,6 +108,7 @@ def row_maximise_profit_bayes(
     reject a ride, the traveller is offered
     @param _max_output_func: specify what is the maximisation objective
     @param _min_acceptance: minimum acceptance probability
+    @param _max_discount: maximum allowed sharing discount
     --------
     @return vector comprising 6 main characteristics when applied discount maximising
     the expected revenue:
@@ -149,6 +151,8 @@ def row_maximise_profit_bayes(
     for discount_indexes in discounts_indexes:
         # Start with the effectively shared ride
         discount = [discounts[_num][_t] for _num, _t in enumerate(discount_indexes)]
+        if any(t[0] > _max_discount for t in discount):
+            continue
         eff_price = [_kmFare * (1 - t[0]) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
@@ -205,7 +209,8 @@ def optimise_discounts(
         min_acceptance: float or None = None,
         guaranteed_discount: float = 0.1,
         fare: float = 0.0015,
-        speed: float = 6
+        speed: float = 6,
+        max_discount: float = 0.5
 ) -> pd.DataFrame:
 
     tqdm.pandas(desc="Accepted discount calculations")
@@ -223,6 +228,15 @@ def optimise_discounts(
 
     rides["veh_dist"] = rides["u_veh"] * speed
 
+    rides["best_profit"] = maximise_profit_bayes_optimised(
+        _rides=rides,
+        _class_membership=class_membership,
+        _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),
+        _fare=fare,
+        _guaranteed_discount=guaranteed_discount,
+        _min_acceptance=min_acceptance
+    )
+
     tqdm.pandas(desc="Discount optimisation")
     rides["best_profit"] = rides.progress_apply(row_maximise_profit_bayes,
                                                 axis=1,
@@ -231,7 +245,8 @@ def optimise_discounts(
                                                 _fare=fare,
                                                 _max_output_func=objective_func,
                                                 _guaranteed_discount=guaranteed_discount,
-                                                _min_acceptance=min_acceptance
+                                                _min_acceptance=min_acceptance,
+                                                _max_discount=max_discount
                                                 )
 
     rides["objective"] = rides['best_profit'].apply(lambda x: x[-1])
@@ -339,7 +354,7 @@ def aggregate_daily_results(
 
 def maximise_profit_bayes_optimised(
         _rides: pd.DataFrame,
-        _class_membership: dict[dict],
+        _class_membership: dict,
         _sample_size: int,
         _fare: float = 0.0015,
         _guaranteed_discount: float = 0.05,
@@ -368,9 +383,8 @@ def maximise_profit_bayes_optimised(
     @jit
     def row_calculations(
             _travellers_no: int,
-            _individual_distances: np.ndarray,
-            _discounts: np.ndarray,
-            _class_membership: np.ndarray,
+            _individual_distances: np.ndarray or list,
+            _discounts: np.ndarray or list,
             _veh_dist: float,
             _sample_size: int,
             _fare_km: float,
@@ -378,14 +392,14 @@ def maximise_profit_bayes_optimised(
             _min_acceptance: float
     ):
         if _travellers_no == 1:
-            out = np.array([
+            out = [
                 _veh_dist*_fare_km*(1-_guaranteed_discount),
                 0,
                 _veh_dist,
-                np.array([1]),
-                _veh_dist/1000
-                ])
-            out = np.append(out, out[4] - out[0])
+                [1],
+                _veh_dist/1000,
+                _veh_dist/1000 * (_fare_km-1) * (1 - _guaranteed_discount)
+                ]
 
             return out
 
@@ -393,10 +407,11 @@ def maximise_profit_bayes_optimised(
         best = np.zeros(7)
 
         for discount in _discounts:
-            effective_price = np.ndarray([_fare_km*(1-a) for a in [t[0] for t in discount]])
-            revenue_shared = np.ndarray([a*b for a,b in zip(
+            _ = [t[0] for t in discount]
+            effective_price = [_fare_km*(1-a) for a in _]
+            revenue_shared = [a*b for a,b in zip(
                 _individual_distances, effective_price
-            )])
+            )]
             probability_shared = np.prod([t[1] for t in discount])
 
             if probability_shared < _min_acceptance:
@@ -410,7 +425,7 @@ def maximise_profit_bayes_optimised(
                 # Then, P(X_j = 1, \pi X_i = 0)*r_j*(1-\lambda)
                 others_not = 1 - np.prod([t[1] for t in discount[:pax] + discount[(pax+1):]])
                 rev_discounted = base_revenues[pax] * (1 - _guaranteed_discount)
-                remaining_revenue += discount[pax][1]
+                remaining_revenue += discount[pax][1]*others_not*rev_discounted
 
             out = np.ndarray([
                 sum(revenue_shared) * probability_shared + remaining_revenue,
@@ -425,19 +440,60 @@ def maximise_profit_bayes_optimised(
             if out[-1] > best[-1]:
                 best = out.copy()
 
+        return best
+
+
+    def _amend_discounts(
+            _indexes: list,
+            _discounts_single: list,
+            _class_membership_prob: dict,
+            _sample_size: int
+    ):
+        if not _discounts_single:
+            return [0]
+
+        out = []
+        for pax, disc in enumerate(_discounts_single):
+            _ = [(t[0], _class_membership_prob[pax][t[1]]/_sample_size) for t in disc]
+            out.append([[d, p] for d, p in zip(
+                [t[0] for t in _],
+                np.cumsum([t[1] for t in _])
+            )])
+
+        return out
+
+
+
     if _fare > 1:
         km_fare: float = _fare/1000
     else:
         km_fare: float = _fare
 
-    best_profit = []
+    indexes = _rides['indexes'].to_numpy()
+    individual_distances = [np.ndarray(t) for t in _rides['indexes']]
 
-    rides_essentials = _rides[['indexes', 'individual_distances', 'accepted_discount', 'veh_dist']].to_numpy()
+    amended_discounts = _rides.apply(
+        lambda x: _amend_discounts(x['indexes'], x['accepted_discount'],
+                                   _class_membership, _sample_size),
+        axis=1
+    ).to_numpy()
 
-    indexes = np.ndarray([np.ndarray(t) for t in _rides['indexes']])
-    individual_distances = np.ndarray([np.ndarray(t) for t in _rides['indexes']])
+    vehicle_distances = _rides['veh_dist'].to_numpy()
 
-    discounts_per_ride = np.zeros(_rides.loc[[len(t)==1 for t in _rides['indexes']]])
-    for ride in _rides['accepted_discount']:
-        #TODO amend for a sum
+    optimal_discounts = [row_calculations(
+        _travellers_no=len(a),
+        _individual_distances=b,
+        _discounts=c,
+        _veh_dist=d,
+        _sample_size=_sample_size,
+        _fare_km=km_fare,
+        _guaranteed_discount=_guaranteed_discount,
+        _min_acceptance=_min_acceptance
+    ) for a, b, c, d in zip(indexes, individual_distances, amended_discounts, vehicle_distances)]
+
+    x = 0
+
+    return 0
+
+
 
