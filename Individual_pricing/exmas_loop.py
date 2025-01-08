@@ -24,6 +24,8 @@ def exmas_loop_func(
             _data = list_databanks[i]
         else:
             _data = list_databanks
+        if type(_data) == list:
+            _data = _data[0]
         temp = exmas_algorithm(_data,
                                exmas_params,
                                False)

@@ -20,6 +20,7 @@ from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_disco
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
 parser.add_argument("--save-partial", action="store_false")
+parser.add_argument("--full-run", action="store_false")
 parser.add_argument("--starting-step", type=int, default=0)
 parser.add_argument("--simulation-name", type=str or None, default=None)
 parser.add_argument("--seed", type=int, default=123)
@@ -60,9 +61,11 @@ if computeSave[0]:
 if computeSave[0]:
     demand, exmas_params = batch_prep.prepare_batches(
         exmas_params=batch_prep.get_parameters(run_config['initial_parameters']),
-        filter_function=lambda x: len(x.allRequests) == run_config['batch_size'],
-        quick_load=True,
-        batch_size=run_config['batch_size']
+        filter_function=lambda x: abs(len(x.allRequests) - run_config['batch_size']) < 5,
+        quick_load=args.full_run,
+        batch_size=run_config['batch_size'],
+        save_demand=args.save_partial,
+        no_requests=run_config['batch_size']
     )
 
 # Step PP3: Create a dense shareability graph & data manipulation
