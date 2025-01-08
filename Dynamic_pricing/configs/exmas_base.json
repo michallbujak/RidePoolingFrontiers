@@ -11,10 +11,10 @@
 	"horizon": 1200,
 	"profitability": false,
 	"paths": {
-		"main": "ExMAS",
 		"G": "ExMAS//data//graphs//Manhattan.graphml",
 		"skim": "ExMAS//data//graphs//Manhattan.csv",
-		"nyc_requests": "ExMAS/data/nyc_requests.csv"
+		"nyc_requests": "ExMAS/data/yellow_tripdata_2024-01.parquet",
+		"nyc_taxi_map": "ExMAS/data/NYC Taxi Zones.geojson"
 	},
 	"nP": 100,
 	"city": "Manhattan, New York County, New York, United States",
@@ -22,7 +22,7 @@
 	"dist_threshold": 100000,
 	"max_degree": 4,
 	"t0": "15:00",
-	"date": "20160101",
+	"date": "20170108",
 	"freq": "30min",
 	"logger_level": "INFO"
 }
