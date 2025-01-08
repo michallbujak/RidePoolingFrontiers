@@ -11,7 +11,7 @@ import pandas as pd
 import osmnx as ox
 import networkx as nx
 import numpy as np
-from osmnx.distance import get_nearest_node
+from osmnx.distance import nearest_nodes as get_nearest_node
 import matplotlib.pyplot as plt
 
 # DataFrame skeletons

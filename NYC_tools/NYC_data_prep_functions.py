@@ -1,16 +1,20 @@
-import pandas as pd
+""" Tools for amendments on the NYC TLC data """
+
+import os
+import sys
 import random
-from dotmap import DotMap
-import json
-import os, sys
-from tqdm import tqdm
-import ExMAS.utils
 import logging
 import warnings
-from ExMAS.main_prob_OLD import noise_generator as stochastic_noise
+import json
+
+import pandas as pd
+from dotmap import DotMap
+from tqdm import tqdm
 import multiprocessing as mp
-import numpy as np
-import copy
+
+import ExMAS.utils
+from ExMAS.main_prob_OLD import noise_generator as stochastic_noise
+
 
 
 def initialise_indata_dotmap():
