@@ -63,7 +63,11 @@ import platform
 import matplotlib.pyplot as plt
 
 pd.options.mode.chained_assignment = None
-np.warnings.filterwarnings('ignore')
+
+try:
+    np.warnings.filterwarnings('ignore')
+except AttributeError:
+    pass
 
 ##########
 # CONSTS #
