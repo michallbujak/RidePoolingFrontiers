@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import logging
 import warnings
 import logging
 
@@ -127,13 +126,19 @@ def nyc_pick_batch(batches, trips, inData, _params, batch_no, **kwargs):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         _inData = inData.copy()
-        batch = list(batches.groups.keys())[batch_no]
-        df = batches.get_group(batch)
+        # batch = list(batches.groups.keys())[batch_no]
+        # df = batches.get_group(batch)
+        df = list(batches)[batch_no][1]
+        if kwargs.get('no_requests', False):
+            if abs(len(df) - kwargs['no_requests']) > kwargs.get('tolerance', 5):
+                return None
         df['status'] = 0
         df.pos = df['origin']
         _inData.passengers = df
         requests = df
-        requests['dist'] = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)
+        requests['dist'] = requests.apply(lambda request:
+                                          _inData.skim.loc[request.origin, request.destination],
+                                          axis=1)
         requests['treq'] = (trips.pickup_datetime - trips.pickup_datetime.min())
         requests['ttrav'] = requests.apply(lambda request: pd.Timedelta(request.dist, 's').floor('s'), axis=1)
         requests.tarr = [request.pickup_datetime + request.ttrav for _, request in requests.iterrows()]
@@ -171,7 +176,7 @@ def prepare_batches(
         output_params: bool = True,
         **kwargs
 ) -> list[DotMap] or (list[DotMap], DotMap or dict):
-    """ Prepare batches from the NYC request file"""
+    """ Prepare batches from the NYC request .csv file"""
     databank_dotmap = initialise_input_dotmap()
 
     if no_replications == 1 & kwargs.get('quick_load'):
@@ -190,7 +195,7 @@ def prepare_batches(
 
 
     try:
-        databank_dotmap = load_G(databank_dotmap, exmas_params, stats=True)
+        databank_dotmap = load_G(databank_dotmap, exmas_params, stats=False)
     except FileNotFoundError:
         log_func(30, "'G', 'skim' and 'nyc_requests' not found. "
                      "Checking parent directory",
@@ -219,12 +224,18 @@ def prepare_batches(
 
     while counter < no_replications and batch_no < 8736:
         try:
-            temp = nyc_pick_batch(batches, trips, databank_dotmap, exmas_params, batch_no)
+            temp = nyc_pick_batch(batches, trips, databank_dotmap, exmas_params, batch_no,
+                                  no_requests=kwargs.get('no_requests', False))
+            if temp is None:
+                log_func(10, f'Batch no: {batch_no} skipped due to filter', logger)
+                continue
             if filter_function(temp):
                 out_temp = {k: temp[k] for k in ["requests", "skim"]}
                 out_data.append(out_temp)
                 pbar.update(1)
                 counter += 1
+                if kwargs.get('save_demand'):
+                    out_temp['requests'].to_csv('demand_' + str(len(out_temp['requests'])) + '.csv')
             else:
                 log_func(10, f'Batch no: {batch_no} skipped due to filter', logger)
 
@@ -233,6 +244,9 @@ def prepare_batches(
         except AttributeError:
             log_func(10, f'Impossible to attach batch number: {batch_no}', logger)
             batch_no += 1
+
+        if counter == len(batches) - 1:
+            raise Exception("No batch satisfies the criteria")
 
     pbar.close()
 
