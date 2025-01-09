@@ -10,6 +10,7 @@ import osmnx as ox
 from tqdm import tqdm
 from dotmap import DotMap
 
+
 def initial_nyc_sampling_amendment(
         taxi_map_path: str,
         original_requests_path: str,
@@ -86,6 +87,7 @@ def adjust_nyc_request_to_exmas(
         batch_size: int,
         start_time: pd.Timestamp = pd.Timestamp('2024-01-08 16-00'),
         interval_length_minutes: int = 30,
+        random_state: np.random._generator.Generator or None = None,
         **kwargs
 ) -> dict or DotMap:
     """
@@ -101,30 +103,42 @@ def adjust_nyc_request_to_exmas(
     :param start_time: starting time of the batch
     :param interval_length_minutes: in minutes the interval time on which
     the requests should be collected
+    :param random_state: numpy random number generator. Pass to
+    guarantee a replicable experiment
     :param kwargs: other parameters if required (e.g. seed)
     :return:
     """
-    # Load data
+    # load data
     requests = pd.read_parquet(nyc_requests_path)
     try:
-        skim_matrix = pd.read_csv(skim_matrix_path)
+        skim_matrix = pd.read_csv(skim_matrix_path, index_col='Unnamed: 0')
     except UnicodeDecodeError:
         skim_matrix = pd.read_parquet(skim_matrix_path)
+        skim_matrix = skim_matrix.set_index('Unnamed: 0')
+    skim_matrix.columns = [int(t) for t in skim_matrix.columns]
 
-    # Filter
+    # filter
     end_time = start_time + pd.Timedelta(minutes=interval_length_minutes)
     requests = requests.loc[
         [(t >= start_time)&(t<end_time) for t in requests['time_request']]
     ]
+    requests = requests.loc[
+        requests.apply(lambda req:
+                       (req['origin'] in skim_matrix.index) &
+                       (req['destination'] in skim_matrix.index),
+                       axis=1)
+    ]
+
+    # sample
     if len(requests) < batch_size:
         raise ValueError('The desired batch size is greater than number '
                          'of requests in the given interval.'
                          'Either change interval or lower "batch_size".')
+    if not random_state:
+        random_state = np.random.default_rng(secrets.randbits(kwargs.get('seed', 123)))
+    requests = requests.sample(n=batch_size, random_state=random_state)
 
-    # Sample
-    rng = np.random.default_rng(secrets.randbits(kwargs.get('seed', 123)))
-
-
+    # adjust requests to meet ExMAS standard
     requests['dist'] = requests.apply(
         lambda request: skim_matrix.loc[request.origin, request.destination],
         axis=1
@@ -136,4 +150,9 @@ def adjust_nyc_request_to_exmas(
     )
     requests['pax_id'] = requests.index.copy()
 
-    return {}
+    # prepare format accepted by ExMAS
+    out = DotMap()
+    out['skim'] = skim_matrix
+    out['requests'] = requests
+
+    return out

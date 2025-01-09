@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 
 import Individual_pricing.pricing_utils.batch_preparation as batch_prep
+from NYC_tools.nyc_data_load import adjust_nyc_request_to_exmas as import_nyc
 from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
@@ -41,6 +42,8 @@ computeSave: list[bool | int] = \
     [args.starting_step == 0, 0, args.starting_step, args.save_partial]
 
 """ Initial data processing """
+# Step 0: Initialise random generator
+global_rng = np.random.default_rng(secrets.randbits(args.seed))
 
 # Step PP1: Prepare behavioural samples (variable: value of time
 if computeSave[0]:
@@ -50,22 +53,22 @@ if computeSave[0]:
         st_devs=run_config.st_devs,
         seed=args.seed
     )
-    rng = np.random.default_rng(secrets.randbits(args.seed))
     actualClassMembership = {
-        t: rng.choice(a=list(range(len(run_config['class_probs']))), size=1,
+        t: global_rng.choice(a=list(range(len(run_config['class_probs']))), size=1,
                      replace=True, p=run_config['class_probs'])[0]
         for t in range(run_config['batch_size'])
     }
 
 # Step PP2: Obtain demand
 if computeSave[0]:
-    demand, exmas_params = batch_prep.prepare_batches(
-        exmas_params=batch_prep.get_parameters(run_config['initial_parameters']),
-        filter_function=lambda x: abs(len(x.allRequests) - run_config['batch_size']) < 5,
-        quick_load=args.full_run,
+    exmas_params = batch_prep.get_parameters(run_config['initial_parameters'])
+    demand = import_nyc(
+        nyc_requests_path=exmas_params['paths']['requests'],
+        skim_matrix_path=exmas_params['paths']['skim'],
         batch_size=run_config['batch_size'],
-        save_demand=args.save_partial,
-        no_requests=run_config['batch_size']
+        start_time=pd.Timestamp(exmas_params['start_time']),
+        interval_length_minutes=exmas_params['interval_length_minutes'],
+        random_state=global_rng
     )
 
 # Step PP3: Create a dense shareability graph & data manipulation
