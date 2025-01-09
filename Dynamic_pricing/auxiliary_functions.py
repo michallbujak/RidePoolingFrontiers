@@ -12,8 +12,9 @@ def prepare_samples(
         sample_size: int,
         means: list or tuple,
         st_devs: list or tuple,
-        seed: int = 123,
-        descending: bool = False
+        random_state: np.random._generator.Generator or None = None,
+        descending: bool = False,
+        **kwargs
 ):
     """
     Prepare behavioural samples to create a discrete distribution
@@ -21,15 +22,17 @@ def prepare_samples(
     :param sample_size: numer of samples per class
     :param means: means per each class
     :param st_devs: respective standard deviations
-    :param seed: seed for reproducibility
+    :param random_state: pass existing random state for reproducibility
     :param descending: return values in descending order
+    :param kwargs: additional parameters if required
     :return: discrete behavioural samples
     """
-    rng = np.random.default_rng(secrets.randbits(seed))
+    if random_state is None:
+        random_state = np.random.default_rng(secrets.randbits(kwargs.get('seed', 123)))
     out = []
 
     for subpop_num, mean in enumerate(means):
-        pop_sample = rng.normal(
+        pop_sample = random_state.normal(
             loc=mean,
             scale=st_devs[subpop_num],
             size=sample_size
@@ -212,9 +215,9 @@ def optimise_discounts(
         max_discount: float = 0.5
 ) -> pd.DataFrame:
 
-    tqdm.pandas(desc="Accepted discount calculations")
+    # tqdm.pandas(desc="Accepted discount calculations")
 
-    rides["accepted_discount"] = rides.progress_apply(
+    rides["accepted_discount"] = rides.apply(
         row_acceptable_discount_bayes,
         axis=1,
         _times_non_shared=times_ns,
@@ -236,8 +239,8 @@ def optimise_discounts(
     #     _min_acceptance=min_acceptance
     # )
 
-    tqdm.pandas(desc="Discount optimisation")
-    rides["best_profit"] = rides.progress_apply(row_maximise_profit_bayes,
+    # tqdm.pandas(desc="Discount optimisation")
+    rides["best_profit"] = rides.apply(row_maximise_profit_bayes,
                                                 axis=1,
                                                 _class_membership=class_membership,
                                                 _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),

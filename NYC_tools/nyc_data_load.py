@@ -148,7 +148,10 @@ def adjust_nyc_request_to_exmas(
         lambda request: pd.Timedelta(request.dist, 's').floor('s'),
         axis=1
     )
-    requests['pax_id'] = requests.index.copy()
+    requests['pax_id'] = range(len(requests))
+    requests['id'] = range(len(requests))
+    requests['pickup_datetime'] = requests['time_request']
+    requests = requests.reset_index(drop=True)
 
     # prepare format accepted by ExMAS
     out = DotMap()

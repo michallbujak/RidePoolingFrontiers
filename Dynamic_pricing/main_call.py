@@ -8,6 +8,7 @@ from typing import List, Any
 
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 import Individual_pricing.pricing_utils.batch_preparation as batch_prep
 from NYC_tools.nyc_data_load import adjust_nyc_request_to_exmas as import_nyc
@@ -21,7 +22,6 @@ from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_disco
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
 parser.add_argument("--save-partial", action="store_false")
-parser.add_argument("--full-run", action="store_false")
 parser.add_argument("--starting-step", type=int, default=0)
 parser.add_argument("--simulation-name", type=str or None, default=None)
 parser.add_argument("--seed", type=int, default=123)
@@ -51,7 +51,7 @@ if computeSave[0]:
         sample_size=run_config.sample_size,
         means=run_config.means,
         st_devs=run_config.st_devs,
-        seed=args.seed
+        random_state=global_rng
     )
     actualClassMembership = {
         t: global_rng.choice(a=list(range(len(run_config['class_probs']))), size=1,
@@ -82,8 +82,8 @@ if computeSave[0]:
 
 # Save data if requested
 if computeSave[0] & computeSave[3]:
-    batch_prep.create_directory(run_config.partial_results + 'Step_0')
-    folder = run_config.partial_results + 'Step_0/'
+    batch_prep.create_directory(run_config.path_results + 'Step_0')
+    folder = run_config.path_results + 'Step_0/'
     allRequests = demand['exmas']['requests']
     allRides = demand['exmas']['rides']
     allRequests.to_csv(folder + 'demand_sample_' + str(run_config.batch_size) + '.csv',
@@ -98,7 +98,7 @@ if computeSave[0] & computeSave[3]:
 # Skip steps PP1-PP3 and load data
 if computeSave[2] - computeSave[1] == 1:
     allRides, allRequests, votSample = None, None, None
-    folder = run_config.partial_results + 'Step_0/'
+    folder = run_config.path_results + 'Step_0/'
     allRequests = pd.read_csv(folder + 'demand_sample_' + str(run_config.batch_size) + '.csv')
     allRides = pd.read_csv(folder + 'rides' + '_' + str(run_config.batch_size) + '.csv',
                            converters={k: ast.literal_eval for k in
@@ -118,19 +118,19 @@ computeSave[0] = computeSave[2] <= computeSave[1]
 if computeSave[0]:
     users_per_day = {}
     class_membership_prob: dict = {u: {_: v for _, v in enumerate(run_config['class_probs'])}
-                             for u in range(150)}
+                             for u in range(run_config['batch_size'])}
     times_non_shared = dict(allRequests['ttrav'])
     resultsDaily = []
 
     classMembershipStability = {ko: {ki: [vi] for ki, vi in vo.items()}
                                 for ko, vo in class_membership_prob.items()}
 
+    progress_bar = tqdm(total=run_config.no_days)
     for day in range(run_config.no_days):
         # Step IP1: filter the shareability graph for a users on a current day
-        rng = np.random.default_rng(secrets.randbits(args.seed))
-        _ = int(rng.normal(run_config.daily_users, run_config.daily_users/100))
+        _ = int(global_rng.normal(run_config.daily_users, run_config.daily_users/100))
         no_users = _ if (_ > 0 & _ <= run_config.daily_users) else run_config.batch_size
-        users = sorted(rng.choice(range(run_config.batch_size), no_users))
+        users = sorted(global_rng.choice(range(run_config.batch_size), no_users))
         users_per_day[day] = users.copy()
         rides_day = allRides.loc[allRides['indexes'].apply(
             lambda _x: all(t in users for t in _x)
@@ -172,7 +172,7 @@ if computeSave[0]:
         sharingSchedule = dayResults['schedules']['objective'].copy()
         sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
         sharingSchedule = sharingSchedule.reset_index(inplace=False, drop=True)
-        sampledDecisionValues = rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
+        sampledDecisionValues = global_rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
 
         # Step B2: update class membership
         sampledDecisions = {}
@@ -199,20 +199,22 @@ if computeSave[0]:
             fare=exmas_params['price'],
             guaranteed_discount = run_config['guaranteed_discount']
         ))
+        progress_bar.update(1)
+
     resultsDaily = pd.concat(resultsDaily, axis=1)
 
 if computeSave[0] & computeSave[3]:
-    batch_prep.create_directory(run_config.partial_results + 'Step_1')
-    folder = run_config.partial_results + 'Step_1/'
+    batch_prep.create_directory(run_config.path_results + 'Step_1')
+    folder = run_config.path_results + 'Step_1/'
 
     with open(folder + 'tracked_classes' + '.json', 'w') as _file:
         json.dump(classMembershipStability, _file)
 
-    resultsDaily.to_csv(folder + 'results_daily' + '.csv', index=False)
+    resultsDaily.to_csv(folder + 'results_daily' + '.csv')
 
 # Skip prior and load data
 if computeSave[2] - computeSave[1] == 1:
-    folder = run_config.partial_results
+    folder = run_config.path_results
 
     with open(folder + 'Step_0/' + 'actual_classes' + '.json', 'r') as _file:
         actualClassMembership = json.load(_file)
