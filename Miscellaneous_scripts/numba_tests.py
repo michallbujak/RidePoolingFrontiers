@@ -1,16 +1,9 @@
+import numpy as np
 from numba import jit
 
 @jit
-def count_zeros(
-        some_list
-):
-    counter = 0
-    for t in some_list:
-        if t[0] == 0:
-            counter +=1
-    return counter
+def test_foo():
+    x = np.array([0.02, 0.01])
+    return [1]*len(x)
 
-
-some_list = [0, 0]*10
-
-print(count_zeros(some_list))
+print(test_foo())

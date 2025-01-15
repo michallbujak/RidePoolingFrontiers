@@ -260,7 +260,7 @@ if args.analysis_parts[2]:
                                   for a in b]
                      }
     fig, ax = plt.subplots()
-    plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['Shareability graph', 'Offer'],
+    plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['Shareability set', 'Offer'],
              weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())],
              bins=np.arange(0, 0.55, 0.05).tolist())
     plt.xticks([round(t, 2) for t in np.arange(0.05, 0.55, 0.05)])
@@ -544,7 +544,7 @@ if args.analysis_parts[6]:
         axis=1
     )
     fig, ax = plt.subplots()
-    plt.scatter(x=x, y=y, s=1, label='Shareability graph', alpha=0.7)
+    plt.scatter(x=x, y=y, s=1, label='Shareability set', alpha=0.7)
     plt.scatter(x=[t[0] for t in output_list_sel], y=[t[1] for t in output_list_sel],
                 s=5, label='Offer', color='red')
     # plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')

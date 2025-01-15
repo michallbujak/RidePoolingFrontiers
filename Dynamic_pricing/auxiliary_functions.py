@@ -230,14 +230,16 @@ def optimise_discounts(
 
     rides["veh_dist"] = rides["u_veh"] * speed
 
-    # rides["best_profit"] = maximise_profit_bayes_optimised(
-    #     _rides=rides,
-    #     _class_membership=class_membership,
-    #     _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),
-    #     _fare=fare,
-    #     _guaranteed_discount=guaranteed_discount,
-    #     _min_acceptance=min_acceptance
-    # )
+    rides["best_profit"] = maximise_profit_bayes_optimised(
+        _rides=rides,
+        _class_membership=class_membership,
+        _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),
+        _fare=fare,
+        _guaranteed_discount=guaranteed_discount,
+        _min_acceptance=min_acceptance
+    )
+
+    raise Exception('ee')
 
     # tqdm.pandas(desc="Discount optimisation")
     rides["best_profit"] = rides.apply(row_maximise_profit_bayes,
@@ -413,11 +415,15 @@ def maximise_profit_bayes_optimised(
         for pointer in range(len(_discounts_values)):
             discount_values = _discounts_values[pointer]
             discount_probs = _discounts_probs[pointer]
-            effective_price = [_fare_km*(1-a) for a in discount_values]
-            revenue_shared = [a*b for a,b in zip(
-                _individual_distances, effective_price
-            )]
-            probability_shared = np.prod(discount_probs)
+            effective_price = _fare_km*(1 - discount_values)
+            # revenue_shared = [a*b for a,b in zip(
+            #     _individual_distances, effective_price
+            # )]
+            revenue_shared = np.array(_individual_distances) * effective_price
+            probability_shared = 1
+            for discount_prob in discount_probs:
+                probability_shared *= discount_prob
+            # probability_shared = np.prod(discount_probs)
 
             if probability_shared < _min_acceptance:
                 continue

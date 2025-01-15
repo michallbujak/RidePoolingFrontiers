@@ -204,8 +204,8 @@ if computeSave[0]:
     resultsDaily = pd.concat(resultsDaily, axis=1)
 
 if computeSave[0] & computeSave[3]:
-    batch_prep.create_directory(run_config.path_results + 'Step_1')
-    folder = run_config.path_results + 'Step_1/'
+    batch_prep.create_directory(run_config.path_results + 'Results')
+    folder = run_config.path_results + 'Results/'
 
     with open(folder + 'tracked_classes' + '.json', 'w') as _file:
         json.dump(classMembershipStability, _file)
@@ -218,7 +218,7 @@ if computeSave[2] - computeSave[1] == 1:
 
     with open(folder + 'Step_0/' + 'actual_classes' + '.json', 'r') as _file:
         actualClassMembership = json.load(_file)
-    with open(folder + 'Step_1/' + 'tracked_classes' + '.json', 'r') as _file:
+    with open(folder + 'Results/' + 'tracked_classes' + '.json', 'r') as _file:
         classMembershipStability = json.load(_file)
 
     resultsDaily = pd.read_csv(folder + 'results_daily' + '.csv')
