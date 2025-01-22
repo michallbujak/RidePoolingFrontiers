@@ -1,9 +1,9 @@
 {
 	"avg_speed": 6,
-	"shared_discount": 0.5,
+	"shared_discount": 0.4,
 	"true_discount": 0.3,
-	"VoT": 0.00444,
-	"WtS": 1.14756,
+	"VoT": 0.00305,
+	"WtS": 1.18,
 	"delay_value": 1,
 	"price": 1.5,
 	"matching_obj": "u_veh",
@@ -21,11 +21,11 @@
 	"city": "Manhattan, New York County, New York, United States",
 	"simTime": 0.16666666666666667,
 	"dist_threshold": 100000,
-	"max_degree": 4,
+	"max_degree": 3,
 	"t0": "15:00",
 	"start_time": "2024-01-08 16:00", 
 	"interval_length_minutes": 30,
-	"date": "20170108",
+	"date": "20140108",
 	"freq": "30min",
 	"logger_level": "INFO"
 }

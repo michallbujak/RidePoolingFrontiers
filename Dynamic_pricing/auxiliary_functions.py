@@ -230,16 +230,16 @@ def optimise_discounts(
 
     rides["veh_dist"] = rides["u_veh"] * speed
 
-    rides["best_profit"] = maximise_profit_bayes_optimised(
-        _rides=rides,
-        _class_membership=class_membership,
-        _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),
-        _fare=fare,
-        _guaranteed_discount=guaranteed_discount,
-        _min_acceptance=min_acceptance
-    )
-
-    raise Exception('ee')
+    # rides["best_profit"] = maximise_profit_bayes_optimised(
+    #     _rides=rides,
+    #     _class_membership=class_membership,
+    #     _sample_size=int(len(bt_sample)/len(class_membership[0].keys())),
+    #     _fare=fare,
+    #     _guaranteed_discount=guaranteed_discount,
+    #     _min_acceptance=min_acceptance
+    # )
+    #
+    # raise Exception('ee')
 
     # tqdm.pandas(desc="Discount optimisation")
     rides["best_profit"] = rides.apply(row_maximise_profit_bayes,
@@ -507,9 +507,29 @@ def maximise_profit_bayes_optimised(
         _min_acceptance=_min_acceptance
     ) for a, b, c, d in zip(indexes, individual_distances, amended_discounts, vehicle_distances)]
 
-    x = 0
-
     return 0
 
 
+def check_if_stabilised(
+        day_results: dict,
+        last_schedule: pd.Series or list,
+        stabilised_archive: list
+):
+    """
+    Check if day by day now results present the same schedule
+    :param day_results:
+    :param last_schedule
+    :param stabilised_archive:
+    :return:
+    """
+    _indexes = day_results['schedules']['objective']['indexes']
+    if len(_indexes) != len(last_schedule):
+        stabilised_archive.append(False)
+    else:
+        if all(a == b for a, b in zip(_indexes, last_schedule)):
+            stabilised_archive.append(True)
+        else:
+            stabilised_archive.append(False)
+    last_schedule = day_results['schedules']['objective']['indexes'].copy()
 
+    return last_schedule, stabilised_archive

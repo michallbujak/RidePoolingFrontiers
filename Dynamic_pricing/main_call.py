@@ -6,18 +6,21 @@ import random
 import secrets
 from typing import List, Any
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
 import Individual_pricing.pricing_utils.batch_preparation as batch_prep
+from Individual_pricing.pricing_utils.batch_preparation import create_directory
 from NYC_tools.nyc_data_load import adjust_nyc_request_to_exmas as import_nyc
 from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
 from Individual_pricing.matching import matching_function
 from ExMAS.probabilistic_exmas import main as exmas_algo
 from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_discounts,
-                                                 bayesian_vot_updated, aggregate_daily_results)
+                                                 bayesian_vot_updated, aggregate_daily_results,
+                                                 check_if_stabilised)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
@@ -41,8 +44,8 @@ batch_prep.create_results_directory(
 computeSave: list[bool | int] = \
     [args.starting_step == 0, 0, args.starting_step, args.save_partial]
 
-""" Initial data processing """
-# Step 0: Initialise random generator
+""" Step 0: Initial data processing """
+# Initialise random generator
 global_rng = np.random.default_rng(secrets.randbits(args.seed))
 
 # Step PP1: Prepare behavioural samples (variable: value of time
@@ -90,9 +93,9 @@ if computeSave[0] & computeSave[3]:
                        index=False)
     allRides.to_csv(folder + 'rides' + '_' + str(run_config.batch_size) + '.csv', index=False)
     np.save(folder + 'sample' + '_' + str(run_config.sample_size), votSample)
-    with open(folder + 'exmas_config_' + str(run_config.sample_size) + '.json', 'w') as _file:
+    with open(folder + 'exmas_config.json', 'w') as _file:
         json.dump(exmas_params, _file)
-    with open(folder + 'class_memberships_' + str(run_config.sample_size) + '.json', 'w') as _file:
+    with open(folder + 'class_memberships.json', 'w') as _file:
         json.dump({k: str(v) for k, v in actualClassMembership.items()}, _file)
 
 # Skip steps PP1-PP3 and load data
@@ -104,23 +107,24 @@ if computeSave[2] - computeSave[1] == 1:
                            converters={k: ast.literal_eval for k in
                                     ['indexes', 'u_paxes', 'individual_times', 'individual_distances']})
     votSample = np.load(folder + 'sample' + '_' + str(run_config.sample_size) + '.npy')
-    with open(folder + 'exmas_config_' + str(run_config.sample_size) + '.json', 'r') as _file:
+    with open(folder + 'exmas_config.json', 'r') as _file:
         exmas_params = json.load(_file)
-    with open(folder + 'class_memberships_' + str(run_config.sample_size) + '.json', 'r') as _file:
+    with open(folder + 'class_memberships.json', 'r') as _file:
         actualClassMembership = json.load(_file)
     actualClassMembership = {int(k): int(v) for k, v in actualClassMembership.items()}
 
 computeSave[1] += 1
 computeSave[0] = computeSave[2] <= computeSave[1]
 
-""" Proceed to evolutionary part of the analysis """
-
+""" Step 1: Evolutionary analysis """
 if computeSave[0]:
     users_per_day = {}
     class_membership_prob: dict = {u: {_: v for _, v in enumerate(run_config['class_probs'])}
                              for u in range(run_config['batch_size'])}
     times_non_shared = dict(allRequests['ttrav'])
     resultsDaily = []
+    stabilised = []
+    last_schedule = [] # for stability analysis
 
     classMembershipStability = {ko: {ki: [vi] for ki, vi in vo.items()}
                                 for ko, vo in class_membership_prob.items()}
@@ -129,13 +133,13 @@ if computeSave[0]:
     for day in range(run_config.no_days):
         # Step IP1: filter the shareability graph for a users on a current day
         _ = int(global_rng.normal(run_config.daily_users, run_config.daily_users/100))
-        no_users = _ if (_ > 0 & _ <= run_config.daily_users) else run_config.batch_size
-        users = sorted(global_rng.choice(range(run_config.batch_size), no_users))
+        no_users = _ if ((_ > 0)&(_ <= run_config.batch_size)) else run_config.batch_size
+        users = sorted(global_rng.choice(range(run_config.batch_size), no_users, replace=False))
         users_per_day[day] = users.copy()
         rides_day = allRides.loc[allRides['indexes'].apply(
             lambda _x: all(t in users for t in _x)
         )]
-        requests_day = allRequests.loc[allRequests['index'].apply(lambda _x: _x in users)] # potentially useless
+        requests_day = allRequests.loc[[t in users for t in allRequests['index']]] # potentially useless
 
         # Step IP2: Optimal pricing
         rides_day = optimise_discounts(
@@ -143,7 +147,7 @@ if computeSave[0]:
             class_membership=class_membership_prob,
             times_ns=times_non_shared,
             bt_sample=votSample,
-            bs_levels=[1, 1, 1.1, 1.2, 1.4, 2],
+            bs_levels=[1, 1, 1.2, 1.3, 1.5, 2],
             objective_func=lambda x: x[0] - run_config['mileage_sensitivity']*x[4] -
                                      run_config['flat_fleet_cost'],
             min_acceptance=run_config.minimum_acceptance_probability,
@@ -199,6 +203,8 @@ if computeSave[0]:
             fare=exmas_params['price'],
             guaranteed_discount = run_config['guaranteed_discount']
         ))
+        # Step IA2: Check if the results stabilised
+        last_schedule, stabilised = check_if_stabilised(dayResults, last_schedule, stabilised)
         progress_bar.update(1)
 
     resultsDaily = pd.concat(resultsDaily, axis=1)
@@ -210,18 +216,43 @@ if computeSave[0] & computeSave[3]:
     with open(folder + 'tracked_classes' + '.json', 'w') as _file:
         json.dump(classMembershipStability, _file)
 
-    resultsDaily.to_csv(folder + 'results_daily' + '.csv')
+    resultsDaily.to_csv(folder + 'results_daily' + '.csv', index_labelstr='metric')
 
 # Skip prior and load data
 if computeSave[2] - computeSave[1] == 1:
     folder = run_config.path_results
 
-    with open(folder + 'Step_0/' + 'actual_classes' + '.json', 'r') as _file:
+    with open(folder + 'Step_0/' + 'class_memberships' + '.json', 'r') as _file:
         actualClassMembership = json.load(_file)
+        actualClassMembership = {int(k): int(v) for k, v in actualClassMembership.items()}
     with open(folder + 'Results/' + 'tracked_classes' + '.json', 'r') as _file:
         classMembershipStability = json.load(_file)
+        classMembershipStability = {int(pax): {int(cl): prob for cl, prob in probs.items()}
+                                    for pax, probs in classMembershipStability.items()}
 
-    resultsDaily = pd.read_csv(folder + 'results_daily' + '.csv')
+    resultsDaily = pd.read_csv(folder + 'Results/' + 'results_daily' + '.csv', index_col='metric')
 
 computeSave[1] += 1
 computeSave[0] = computeSave[2] <= computeSave[1]
+
+""" Step 2: Post-simulation analysis"""
+if computeSave[0]:
+    out_path = run_config.path_results + 'Results/figs_tables/'
+    create_directory(out_path)
+
+    # Class convergence
+    daily_error_pax = {pax: [1 - probs[actualClassMembership[pax]][day] for day in range(len(probs[0]))]
+                   for pax, probs in classMembershipStability.items()}
+    error_by_day = [[] for day in range(max(len(err_pax) for err_pax in daily_error_pax.values()))]
+    for pax_error in daily_error_pax.values():
+        for day, prob in enumerate(pax_error):
+            error_by_day[day].append(prob)
+
+    plt.errorbar(x=range(len(error_by_day)),
+                 y=[np.mean(day) for day in error_by_day],
+                 yerr=[np.std(day) for day in error_by_day])
+    plt.savefig(out_path + 'class_error', dpi=args.__dict__.get('dpi', 200))
+
+    # Economic and stability results
+    x = 0
+
