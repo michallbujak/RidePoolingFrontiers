@@ -216,7 +216,7 @@ if computeSave[0] & computeSave[3]:
     with open(folder + 'tracked_classes' + '.json', 'w') as _file:
         json.dump(classMembershipStability, _file)
 
-    resultsDaily.to_csv(folder + 'results_daily' + '.csv', index_labelstr='metric')
+    resultsDaily.to_csv(folder + 'results_daily' + '.csv', index_label='metric')
 
 # Skip prior and load data
 if computeSave[2] - computeSave[1] == 1:
@@ -230,7 +230,7 @@ if computeSave[2] - computeSave[1] == 1:
         classMembershipStability = {int(pax): {int(cl): prob for cl, prob in probs.items()}
                                     for pax, probs in classMembershipStability.items()}
 
-    resultsDaily = pd.read_csv(folder + 'Results/' + 'results_daily' + '.csv', index_col='metric')
+    resultsDaily = pd.read_csv(folder + 'Results/' + 'results_daily' + '.csv')
 
 computeSave[1] += 1
 computeSave[0] = computeSave[2] <= computeSave[1]
