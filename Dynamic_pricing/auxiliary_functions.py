@@ -287,8 +287,8 @@ def bayesian_vot_updated(
                                     zip(apriori_distribution[pax_id].keys(), posteriori_probability)}
 
     if distribution_history:
-        for _num, key in enumerate(distribution_history[pax_id].keys()):
-            distribution_history[pax_id][key].append(posteriori_probability[_num])
+        for _num, key in enumerate(distribution_history['updated'][pax_id].keys()):
+            distribution_history['updated'][pax_id][key].append(posteriori_probability[_num])
 
     return apriori_distribution
 
@@ -533,3 +533,16 @@ def check_if_stabilised(
     last_schedule = day_results['schedules']['objective']['indexes'].copy()
 
     return last_schedule, stabilised_archive
+
+
+def all_class_tracking(
+        distribution_history: dict,
+        updated_travellers: list,
+        all_travellers: list
+):
+    for traveller in all_travellers:
+        if traveller not in updated_travellers:
+            for class_id, prob in distribution_history['all'][traveller].items():
+                distribution_history['all'][traveller][class_id].append(distribution_history['all'][traveller][class_id][-1])
+
+    return distribution_history
