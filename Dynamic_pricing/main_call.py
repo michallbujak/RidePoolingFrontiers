@@ -251,6 +251,9 @@ if computeSave[2] - computeSave[1] == 1:
             for data_type, data in class_membership_stability.items()
         }
 
+    with open(folder + 'daily_data.pickle', 'rb') as _file:
+        day_results = pickle.load(_file)
+
     results_daily = pd.read_csv(folder + 'Results/' + 'results_daily' + '.csv')
 
 computeSave[1] += 1
