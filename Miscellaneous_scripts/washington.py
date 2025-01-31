@@ -174,7 +174,7 @@ pbar = tqdm(total=len(grouped_requests.groups.keys()))
 for key in grouped_requests.groups.keys():
     requests_batch = grouped_requests.get_group(key)
 
-    requests_batch = requests_batch.votSample(frac=0.3)
+    requests_batch = requests_batch.vot_sample(frac=0.3)
 
     try:
         dotmap_data, params_chicago = create_input_dotmap(requests_batch, params_chicago)

@@ -1,8 +1,7 @@
 {
 	"avg_speed": 6,
-	"shared_discount": 0.4,
-	"true_discount": 0.3,
-	"VoT": 0.00305,
+	"shared_discount": 0.3,
+	"VoT": 0.002,
 	"WtS": 1.18,
 	"delay_value": 1,
 	"price": 1.5,

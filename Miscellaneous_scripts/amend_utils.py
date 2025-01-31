@@ -217,9 +217,9 @@ def add_noise_to_data(
             node_dict[node] = list(df_node.index)
 
     requests['origin'] = \
-        requests['origin'].apply(lambda x: random.votSample(node_dict[x], 1)[0])
+        requests['origin'].apply(lambda x: random.vot_sample(node_dict[x], 1)[0])
     requests['destination'] = \
-        requests['destination'].apply(lambda x: random.votSample(node_dict[x], 1)[0])
+        requests['destination'].apply(lambda x: random.vot_sample(node_dict[x], 1)[0])
 
     if kwargs.get('hours', 0) > 0:
         kwargs['minutes'] = 60

@@ -51,16 +51,16 @@ def amended_generate_demand(_inData, _params, avg_speed=False):
                                 _params.nP)  # apply normal distribution on request times
     requests.treq = [_params.t0 + pd.Timedelta(int(_), 's') for _ in treq]
     requests.origin = list(
-        distances.votSample(_params.nP, weights='p_origin', replace=True).index)  # sample origin nodes from a distribution
-    requests.destination = list(distances.votSample(_params.nP, weights='p_destination',
-                                                    replace=True).index)  # sample destination nodes from a distribution
+        distances.vot_sample(_params.nP, weights='p_origin', replace=True).index)  # sample origin nodes from a distribution
+    requests.destination = list(distances.vot_sample(_params.nP, weights='p_destination',
+                                                     replace=True).index)  # sample destination nodes from a distribution
 
     requests['dist'] = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)
     while len(requests[requests.dist >= _params.dist_threshold]) > 0:
-        requests.origin = requests.apply(lambda request: (distances.votSample(1, weights='p_origin').index[0]
+        requests.origin = requests.apply(lambda request: (distances.vot_sample(1, weights='p_origin').index[0]
                                                           if request.dist >= _params.dist_threshold else request.origin),
                                          axis=1)
-        requests.destination = requests.apply(lambda request: (distances.votSample(1, weights='p_destination').index[0]
+        requests.destination = requests.apply(lambda request: (distances.vot_sample(1, weights='p_destination').index[0]
                                                                if request.dist >= _params.dist_threshold else request.destination),
                                               axis=1)
         requests.dist = requests.apply(lambda request: _inData.skim.loc[request.origin, request.destination], axis=1)

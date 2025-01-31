@@ -3,16 +3,17 @@
 	"path_results": "Dynamic_pricing/data/",
 	"means1": [16.98, 14.02, 26.25, 7.78],
 	"st_devs1": [0.318, 0.201, 5.577, 1],
-	"means": [18, 15, 12, 25],
+	"means": [8, 12, 16, 20],
 	"st_devs": [1, 1, 1, 1],
-	"class_probs": [0.29, 0.28, 0.24, 0.19],
-	"batch_size": 120,
+	"class_probs": [0.25, 0.25, 0.25, 0.25],
+	"batch_size": 80,
 	"daily_users": 1000,
 	"sample_size": 5,
 	"no_days": 5,
 	"mileage_sensitivity": 1,
-	"flat_fleet_cost": 0,
+	"flat_fleet_cost": 0.4,
 	"minimum_acceptance_probability": 0.2,
 	"guaranteed_discount": 0.05,
-	"max_discount": 0.4
+	"max_discount": 0.4,
+	"starting_satisfaction": 0
 }
