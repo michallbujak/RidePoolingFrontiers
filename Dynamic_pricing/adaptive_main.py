@@ -17,7 +17,7 @@ from Individual_pricing.pricing_utils.batch_preparation import create_directory
 from NYC_tools.nyc_data_load import adjust_nyc_request_to_exmas as import_nyc
 from Individual_pricing.pricing_functions import expand_rides
 from Individual_pricing.exmas_loop import exmas_loop_func
-from Individual_pricing.matching import matching_function
+from Individual_pricing.matching import matching_function, matching_function_light
 from ExMAS.probabilistic_exmas import main as exmas_algo
 from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_discounts_future,
                                                  bayesian_vot_updated, aggregate_daily_results,
@@ -179,7 +179,9 @@ if computeSave[0]:
         )
 
         # Step IP3: Matching
-        day_results = matching_function(
+        day_results = matching_function_light(
+            _rides=rides_day,
+            _requests=requests_day,
             databank={'rides': rides_day, 'requests': requests_day},
             params=exmas_params,
             objectives=['objective'],
@@ -189,6 +191,8 @@ if computeSave[0]:
             rides_requests=True,
             requestsErrorIndex=True
         )
+        schedule_indexes = day_results['schedules']['objective']['indexes']
+
         # We concluded probabilistic analysis
         # We proceed to sampling decisions and Bayesian estimation
 
@@ -227,6 +231,8 @@ if computeSave[0]:
             # Update actual satisfaction
             predicted_travellers_satisfaction[day+1], actual_travellers_satisfaction[day+1] \
                 = update_satisfaction(
+                predicted_travellers_satisfaction_day=predicted_travellers_satisfaction[day+1],
+                actual_travellers_satisfaction_day=actual_travellers_satisfaction[day+1],
                 rides_row=row,
                 predicted_class_distribution=class_membership_prob,
                 actual_class_distribution=actual_class_membership,
@@ -290,7 +296,7 @@ if computeSave[2] - computeSave[1] == 1:
             for data_type, data in class_membership_stability.items()
         }
 
-    with open(folder + 'daily_data.pickle', 'rb') as _file:
+    with open(folder + 'Results/' + 'daily_data.pickle', 'rb') as _file:
         day_results = pickle.load(_file)
 
     results_daily = pd.read_csv(folder + 'Results/' + 'results_daily' + '.csv')

@@ -1,7 +1,9 @@
+import numpy as np
 import pandas as pd
 from dotmap import DotMap
+import pulp
 
-from ExMAS.probabilistic_exmas import match
+from ExMAS.probabilistic_exmas import match, solver_for_pulp
 
 
 def matching_function(
@@ -29,6 +31,15 @@ def matching_function(
 
     if filter_rides:
         rides.loc[[not t for t in rides[filter_rides]], 'u_veh'] += 10000
+
+    # TODO: this attempt
+    if kwargs.get('reindex', False):
+        rides['org_index'] = rides['indexes'].copy()
+        requests['org_index'] = requests['index'].copy()
+        travellers_reindex = {pax_id: new_id for pax_id, new_id in
+                              zip(requests['index'], range(len(requests)))}
+        rides['temp_index'] = rides['indexes'].apply(
+            lambda x: [travellers_reindex[t] for t in x])  # assign new indexes
 
     schedules = {}
 
@@ -97,3 +108,51 @@ def matching_function(
         return {'rides': rides,
                 'requests': requests,
                 'schedules': schedules}
+
+
+def matching_function_light(
+        _rides: pd.DataFrame,
+        _requests: pd.DataFrame,
+        _objective: str = "objective",
+        _min_max: str = "max",
+        **kwargs
+):
+    _rides['PassHourTrav_ns'] = _rides.apply(lambda x: sum([_requests.loc[_].ttrav for _ in x.indexes]), axis=1)
+
+    if _min_max == "min":
+        prob = pulp.LpProblem("Matching problem", pulp.LpMinimize)  # problem
+    else:
+        prob = pulp.LpProblem("Matching problem", pulp.LpMaximize)
+
+    variables = pulp.LpVariable.dicts("r", range(len(_rides)), cat='Binary')  # decision variables
+    costs = _rides[_objective] # cost
+    prob += pulp.lpSum([variables[i] * costs[i] for i in variables]), 'ObjectiveFun' # add to the problem
+
+    # constrains
+    travellers_reindex = {pax_id: new_id for pax_id, new_id in
+                          zip(_requests['index'], range(len(_requests)))}
+    _rides['temp_index'] = _rides['indexes'].apply(lambda x: [travellers_reindex[t] for t in x]) # assign new indexes
+
+    def _binary_row(_row, _total_len):
+        out = np.zeros(_total_len)
+        for new_id in _row['temp_index']:
+            out[new_id] = 1
+        return out
+
+    constraint_array = np.vstack(
+        _rides.apply(_binary_row, _total_len=len(travellers_reindex.keys()), axis=1)
+    ).T
+
+    for _num, _travellers_ride in enumerate(constraint_array):
+        prob += pulp.lpSum([_travellers_ride[i] * variables[i] for i in variables
+                            if _travellers_ride[i] > 0]) == 1, 'c' + str(_num)
+
+    # back to the problem
+    prob.solve(pulp.getSolver(solver_for_pulp()))
+
+    _selected = []
+    for variable in prob.variables():
+        _selected.append(int(variable.varValue))
+
+    x = 0
+

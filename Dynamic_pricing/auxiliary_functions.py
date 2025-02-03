@@ -292,6 +292,7 @@ def bayesian_vot_updated(
     if distribution_history:
         for _num, key in enumerate(distribution_history['updated'][pax_id].keys()):
             distribution_history['updated'][pax_id][key].append(posteriori_probability[_num])
+            distribution_history['all'][pax_id][key].append(posteriori_probability[_num])
 
     return apriori_distribution
 
@@ -781,6 +782,8 @@ def _sigmoid(x):
 
 
 def update_satisfaction(
+        predicted_travellers_satisfaction_day: dict,
+        actual_travellers_satisfaction_day: dict,
         rides_row: pd.Series,
         predicted_class_distribution: dict,
         actual_class_distribution: dict,
@@ -811,15 +814,13 @@ def update_satisfaction(
                                for num in range(len(rides_row['indexes']))]
     delta_utilities = [a - b for a, b in zip(monetary_savings, expected_time_utilities)]
 
-    new_predicted_satisfaction = {}
     for num, pax in enumerate(rides_row['indexes']):
-        new_predicted_satisfaction[pax] = delta_utilities[num] + predicted_satisfaction[pax]
+        predicted_travellers_satisfaction_day[pax] = delta_utilities[num] + predicted_satisfaction[pax]
 
     # Second, actual satisfaction
-    new_actual_satisfaction = {}
     for num, pax in enumerate(rides_row['indexes']):
         actual_avg_vot = np.mean([t[0] for t in vot_sample if t[1] == actual_class_distribution[pax]])
         expected_time_utility = actual_avg_vot/3600*delta_perceived_times[num]
-        new_actual_satisfaction[pax] = monetary_savings[num] - expected_time_utility + actual_satisfaction[pax]
+        actual_travellers_satisfaction_day[pax] = monetary_savings[num] - expected_time_utility + actual_satisfaction[pax]
 
-    return new_predicted_satisfaction, new_actual_satisfaction
+    return predicted_travellers_satisfaction_day, actual_travellers_satisfaction_day
