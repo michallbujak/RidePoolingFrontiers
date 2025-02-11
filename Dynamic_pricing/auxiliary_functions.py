@@ -300,16 +300,19 @@ def bayesian_vot_updated(
 def aggregate_daily_results(
         day_results: dict,
         decisions: list,
+        predicted_satisfaction: dict,
+        actual_satisfaction: dict,
         fare: float,
-        guaranteed_discount: float = 0.05
+        run_config: dict,
 ):
     """
     Aggregate results after each day to track system's evolution.
     :param day_results: results from a daily run
     :param decisions: list of decisions: whether a shared ride is realised or not
+    :param predicted_satisfaction: prediction of travellers' satisfaction
+    :param actual_satisfaction: tracked, actual travellers satisfaction
     :param fare: per-kilometre price
-    :param guaranteed_discount: discount for traveller who accepted sharing mode
-    and their co-traveller rejected
+    :param run_config: configuration for objective calculation
     :return: table with results
     """
     results = pd.Series()
@@ -327,6 +330,7 @@ def aggregate_daily_results(
     results['ExpectedSharingRevenue'] = sum(schedule_sharing['best_profit'].apply(lambda x: x[0]))
     results['ExpectedSharingDistance'] = sum(schedule_sharing['best_profit'].apply(lambda x: x[4]))
 
+    actual_rides_no = len(schedule_non_sharing)
 
     actual_sharing_revenue: float = 0
     actual_sharing_distance: float = 0
@@ -341,26 +345,38 @@ def aggregate_daily_results(
             actual_sharing_distance += shared_ride['veh_dist']/1000
             actual_acceptance_rate += len(shared_ride['indexes'])
             realised_shared_rides += 1
+            actual_rides_no += 1
         else:
             actual_rejected_sharing_distance += sum(shared_ride['individual_distances'])/1000
             for pax_no, pax in enumerate(shared_ride['indexes']):
+                actual_rides_no += 1
                 decision = decisions[decision_indicator][pax_no]
                 if decision:
                     actual_acceptance_rate += 1
                     actual_rejected_sharing_revenue += (shared_ride['individual_distances'][pax_no]*
-                                             fare*(1-guaranteed_discount)/1000)
+                                             fare*(1-run_config['guaranteed_discount'])/1000)
                 else:
                     actual_rejected_sharing_revenue += fare*shared_ride['individual_distances'][pax_no]/1000
     results['ActualSharingRevenue'] = actual_sharing_revenue
     results['ActualRejectedSharingRevenue'] = actual_rejected_sharing_revenue
     results['ActualRevenue'] = (actual_sharing_revenue + actual_rejected_sharing_revenue
-                                + (1-guaranteed_discount)*fare*sum(schedule_non_sharing['veh_dist'])/1000)
+                                + (1-run_config['guaranteed_discount'])*fare*sum(schedule_non_sharing['veh_dist'])/1000)
     results['ActualSharingDistance'] = actual_sharing_distance
     results['ActualRejectedSharingDistance'] = actual_rejected_sharing_distance
     results['ActualDistance'] = (actual_sharing_distance + actual_rejected_sharing_distance
                                  + sum(schedule_non_sharing['veh_dist'])/1000)
     results['RealisedSharedRides'] = realised_shared_rides
     results['ActualAcceptanceRate'] = actual_acceptance_rate/results['SharingTravellerOffer']
+
+    results['MeanPredictedSatisfaction'] = np.mean(list(predicted_satisfaction.values()))
+    results['MeanActualSatisfaction'] = np.mean(list(actual_satisfaction.values()))
+    results['MeanPredictedParticipationProbability'] = _sigmoid(results['MeanPredictedSatisfaction'])
+    results['MeanActualParticipationProbability'] = _sigmoid(results['MeanActualSatisfaction'])
+
+    results['ActualRidesNo'] = actual_rides_no
+    results['ActualObjectiveValue'] = results['ActualRevenue']
+    results['ActualObjectiveValue'] -= run_config['mileage_sensitivity']*results['ActualDistance']
+    results['ActualObjectiveValue'] -= results['ActualRidesNo']*run_config['flat_fleet_cost']
 
     return results
 
@@ -652,22 +668,25 @@ def row_maximise_profit_future(
     - vector of probabilities that individuals accept the shared ride [3]
     - expected distance [4]
     - future value [5]
-    - probability of acceptance when in certain class: [t1 in C1, t1 in C2,...], [t2 in C1, t2 in C2, ...] [6]
-    - max output function (by default, profitability) [7]
+    - expected vehicle number [6]
+    - probability of acceptance when in certain class: [t1 in C1, t1 in C2,...], [t2 in C1, t2 in C2, ...] [7]
+    - max output function value [8]
     """
     if _fare > 1:
-        _kmFare: float = _fare/1000
+        _fare_meter: float = _fare/1000
     else:
-        _kmFare: float = _fare
+        _fare_meter: float = _fare
 
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        out = [_probability_single * _rides_row["veh_dist"] * _kmFare * (1 - _guaranteed_discount),
-               0,
-               _rides_row["veh_dist"] * _kmFare * (1 - _guaranteed_discount),
+        out = [_probability_single * _rides_row["veh_dist"] * _fare_meter * (1 - _guaranteed_discount),
+               _guaranteed_discount,
+               _rides_row["veh_dist"] * _fare_meter * (1 - _guaranteed_discount),
                [_probability_single],
                _rides_row["veh_dist"] / 1000 * _probability_single,
-               [1]*len(_class_membership[0])
+               0,
+               1,
+               [list(_class_membership[_rides_row['indexes'][0]].values())]
                ]
         out += [_max_output_func(out)]
         return out
@@ -676,18 +695,20 @@ def row_maximise_profit_future(
         non_shared_values = []
         for pax_no in range(no_travellers):
             out = [_probability_single * _rides_row["individual_distances"][pax_no]
-                 * _kmFare * (1 - _guaranteed_discount),
-                 0,
-                 _rides_row["individual_distances"][pax_no] * _kmFare * (1 - _guaranteed_discount),
-                 [_probability_single],
-                 _rides_row["individual_distances"][pax_no] / 1000 * _probability_single,
-                 [1] * len(_class_membership[0])
+                   * _fare_meter * (1 - _guaranteed_discount),
+                   _guaranteed_discount,
+                   _rides_row["individual_distances"][pax_no] * _fare_meter * (1 - _guaranteed_discount),
+                   [_probability_single],
+                   _rides_row["individual_distances"][pax_no] / 1000 * _probability_single,
+                   0,
+                   1,
+                   [list(_class_membership[_rides_row['indexes'][pax_no]].values())]
                  ]
             non_shared_values.append(_max_output_func(out))
 
     # Extract features
     travellers = _rides_row["indexes"]
-    base_revenues = {num: _rides_row["individual_distances"][num] * _kmFare for num, pax in
+    base_revenues = {num: _rides_row["individual_distances"][num] * _fare_meter for num, pax in
                      enumerate(_rides_row['indexes'])}
     _sample_size = int(len(_sample_vot) / len(_class_membership[0].keys()))
     avg_vot = {num: sum(_class_membership[pax][vot_class]*vot for vot, vot_class in _sample_vot)/_sample_size
@@ -714,7 +735,7 @@ def row_maximise_profit_future(
         discount = [discounts[_num][_t] for _num, _t in enumerate(discount_indexes)]
         if any(t[0] > _max_discount for t in discount):
             continue
-        eff_price = [_kmFare * (1 - t[0]) for t in discount]
+        eff_price = [_fare_meter * (1 - t[0]) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
         probability_shared = 1
@@ -744,25 +765,28 @@ def row_maximise_profit_future(
                sum(revenue_shared),
                prob_individual,
                (_rides_row["veh_dist"] * probability_shared +
-                sum(_rides_row["individual_distances"]) * (1 - probability_shared)) / 1000]
+                sum(_rides_row["individual_distances"]) * (1 - probability_shared)) / 1000,
+               0,
+               probability_shared + (1-probability_shared)*no_travellers]
 
         max_out = _max_output_func(out)
 
         # Value of the future. First, shared option
-        monetary_savings = [disc*dist*_kmFare/1000 for disc, dist in
+        monetary_savings = [disc*dist*_fare_meter for disc, dist in
                             zip(out[1], _rides_row["individual_distances"])]
         delta_utilities = [a - b for a, b in zip(monetary_savings, expected_time_utilities)]
         probability_potential = [_sigmoid(new + cur)
                                 for new, cur in zip(delta_utilities, travellers_satisfaction)]
+        probability_increase = [c - _sigmoid(d) for c, d in zip(probability_potential,travellers_satisfaction)]
+        probability_not_others = [probability_increase[j] * (1 - np.prod(
+            probability_potential[:j] + probability_potential[(j+1):]))
+                                  for j in range(len(probability_potential))]
         future_value = ((np.prod(probability_potential) -
                         np.prod([_sigmoid(s) for s in travellers_satisfaction])) *
-                        max_out) # shared rides
-        future_value += sum(a*b for a, b in zip(
-            [c - _sigmoid(d) for c, d in zip(probability_potential,travellers_satisfaction)],
-            non_shared_values
-        )) # single rides
+                        max_out) # shared ride
+        future_value += sum(a*b for a, b in zip(probability_not_others, non_shared_values)) # single rides
 
-        out += [future_value]
+        out[5] = [future_value]
         out += [max_out + future_value]
 
         if max_out > best[-1]:
@@ -796,15 +820,15 @@ def update_satisfaction(
 ):
     _sample_size = int(len(vot_sample) / len(predicted_class_distribution[0].keys()))
     if fare > 1:
-        km_fare: float = fare/1000
+        fare_metres: float = fare/1000
     else:
-        km_fare: float = fare
+        fare_metres: float = fare
 
     delta_perceived_times = [bs_levels[len(rides_row['indexes'])]*rides_row['individual_times'][num] -
                    rides_row['individual_distances'][num] / speed
                    for num in range(len(rides_row['indexes']))]
 
-    monetary_savings = [disc * dist * km_fare / 1000 for disc, dist in
+    monetary_savings = [disc * dist * fare_metres for disc, dist in
                         zip(rides_row['best_profit'][1], rides_row["individual_distances"])]
     # First, the expected satisfaction
     avg_vot = [sum(predicted_class_distribution[pax][vot_class] * vot
@@ -824,3 +848,13 @@ def update_satisfaction(
         actual_travellers_satisfaction_day[pax] = monetary_savings[num] - expected_time_utility + actual_satisfaction[pax]
 
     return predicted_travellers_satisfaction_day, actual_travellers_satisfaction_day
+
+
+def reliability_performance_analysis(
+        schedules: list
+):
+    """
+    Check the stability of results if travellers choose differently (accept/reject)
+    :param schedules:
+    :return:
+    """

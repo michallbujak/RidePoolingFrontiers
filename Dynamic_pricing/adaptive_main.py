@@ -30,6 +30,8 @@ parser.add_argument("--save-partial", action="store_false")
 parser.add_argument("--starting-step", type=int, default=0)
 parser.add_argument("--simulation-name", type=str or None, default=None)
 parser.add_argument("--seed", type=int, default=123)
+parser.add_argument("--plot-format", type=str, default="png")
+parser.add_argument("--plot-dpi", type=int, default=200)
 args = parser.parse_args()
 print(args)
 
@@ -122,7 +124,7 @@ computeSave[0] = computeSave[2] <= computeSave[1]
 if computeSave[0]:
     # A basic filter applied to the shareability set
     all_rides = all_rides.loc[
-        [t['u_veh']*exmas_params['avg_speed'] < sum(t['individual_distances'])
+        [t['u_veh']*exmas_params['avg_speed'] < sum(t['individual_distances']) + 5 # 5 is a buffer for wrong rounding
          for num, t in all_rides.iterrows()]]
 
     # Extract features for easier implementation
@@ -166,11 +168,11 @@ if computeSave[0]:
             class_membership=class_membership_prob,
             times_ns=times_non_shared,
             bt_sample=vot_sample,
-            bs_levels=[1, 1, 1.2, 1.3, 1.5, 2],
+            bs_levels=[1, 1, 1.1, 1.2, 1.5, 2],
             travellers_satisfaction=predicted_travellers_satisfaction,
             ns_utilities=ns_utilities_all,
             objective_func=lambda x: x[0] - run_config['mileage_sensitivity']*x[4] -
-                                     run_config['flat_fleet_cost'],
+                                     run_config['flat_fleet_cost']*x[6],
             min_acceptance=run_config.minimum_acceptance_probability,
             guaranteed_discount=run_config.guaranteed_discount,
             fare=exmas_params['price'],
@@ -179,9 +181,7 @@ if computeSave[0]:
         )
 
         # Step IP3: Matching
-        day_results = matching_function_light(
-            _rides=rides_day,
-            _requests=requests_day,
+        day_results = matching_function(
             databank={'rides': rides_day, 'requests': requests_day},
             params=exmas_params,
             objectives=['objective'],
@@ -214,7 +214,7 @@ if computeSave[0]:
         sharingScheduleDecisions = [[]]*len(sharingSchedule)
         updated_travellers = []
         for num, row in sharingSchedule.iterrows():
-            for pax, prob, cond_prob in zip(row['indexes'], row['best_profit'][3], row['best_profit'][6]):
+            for pax, prob, cond_prob in zip(row['indexes'], row['best_profit'][3], row['best_profit'][7]):
                 pax_class = actual_class_membership[pax]
                 decision = cond_prob[pax_class] > sampledDecisionValues[decisionValueIndicator]
                 decisionValueIndicator += 1
@@ -260,8 +260,10 @@ if computeSave[0]:
         results_daily.append(aggregate_daily_results(
             day_results=day_results,
             decisions=sharingScheduleDecisions,
+            predicted_satisfaction=predicted_travellers_satisfaction[day+1],
+            actual_satisfaction=actual_travellers_satisfaction[day+1],
             fare=exmas_params['price'],
-            guaranteed_discount = run_config['guaranteed_discount']
+            run_config = run_config
         ))
         # Step IA2: Check if the results stabilised
         last_schedule, stabilised = check_if_stabilised(day_results, last_schedule, stabilised)
@@ -278,8 +280,15 @@ if computeSave[0] & computeSave[3]:
 
     results_daily.to_csv(folder + 'results_daily' + '.csv', index_label='metric')
 
-    with open(folder + 'daily_data.pickle', 'wb') as _file:
-        pickle.dump(day_results, _file)
+    with open(folder + 'all_results_aggregated.pickle', 'wb') as _file:
+        pickle.dump(all_results_aggregated, _file)
+
+    with open(folder + 'predicted_travellers_satisfaction.json', 'w') as _file:
+        json.dump(predicted_travellers_satisfaction, _file)
+
+    with open(folder + 'actual_travellers_satisfaction.json', 'w') as _file:
+        json.dump(actual_travellers_satisfaction, _file)
+
 
 # Skip prior and load data
 if computeSave[2] - computeSave[1] == 1:
@@ -288,7 +297,10 @@ if computeSave[2] - computeSave[1] == 1:
     with open(folder + 'Step_0/' + 'class_memberships' + '.json', 'r') as _file:
         actual_class_membership = json.load(_file)
         actual_class_membership = {int(k): int(v) for k, v in actual_class_membership.items()}
-    with (open(folder + 'Results/' + 'tracked_classes' + '.json', 'r') as _file):
+
+    folder += 'Results/'
+
+    with (open(folder + 'tracked_classes' + '.json', 'r') as _file):
         class_membership_stability = json.load(_file)
         class_membership_stability = {
             data_type: {int(pax): {int(cl): prob for cl, prob in probs.items()}
@@ -296,10 +308,16 @@ if computeSave[2] - computeSave[1] == 1:
             for data_type, data in class_membership_stability.items()
         }
 
-    with open(folder + 'Results/' + 'daily_data.pickle', 'rb') as _file:
-        day_results = pickle.load(_file)
+    with open(folder + 'all_results_aggregated.pickle', 'rb') as _file:
+        all_results_aggregated = pickle.load(_file)
 
-    results_daily = pd.read_csv(folder + 'Results/' + 'results_daily' + '.csv')
+    with open(folder + 'predicted_travellers_satisfaction.json', 'r') as _file:
+        predicted_travellers_satisfaction = json.load(_file)
+
+    with open(folder + 'actual_travellers_satisfaction.json', 'r') as _file:
+        actual_travellers_satisfaction = json.load(_file)
+
+    results_daily = pd.read_csv(folder + 'results_daily' + '.csv')
 
 computeSave[1] += 1
 computeSave[0] = computeSave[2] <= computeSave[1]
@@ -320,9 +338,23 @@ if computeSave[0]:
     plt.errorbar(x=range(len(error_by_day)),
                  y=[np.mean(day) for day in error_by_day],
                  yerr=[np.std(day) for day in error_by_day])
-    plt.savefig(out_path + 'class_error', dpi=args.__dict__.get('dpi', 200))
+    plt.savefig(out_path + 'class_error.' + args.plot_format, dpi=args.plot_dpi)
+    plt.close()
 
     # Average class probability
     actual_sampled_freq = {class_id: sum(1 for t in actual_class_membership
                                          if t == class_id)
                       for class_id in range(len(run_config['class_probs']))}
+
+    results_daily = results_daily.rename(columns={'metric': 'day'}).set_index('day').T
+
+    # Actual profit
+    plt.plot(results_daily['ActualObjectiveValue'].to_list(), label='Profit')
+    plt.savefig(out_path + 'profit.' + args.plot_format, dpi=args.plot_dpi)
+    plt.close()
+
+    # Reliability of performance prediction
+    schedules = [t['schedules']['objective'] for t in all_results_aggregated]
+
+
+
