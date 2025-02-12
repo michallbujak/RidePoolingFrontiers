@@ -22,7 +22,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_discounts_future,
                                                  bayesian_vot_updated, aggregate_daily_results,
                                                  check_if_stabilised, all_class_tracking,
-                                                 update_satisfaction)
+                                                 update_satisfaction, reliability_performance_analysis)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
@@ -294,6 +294,9 @@ if computeSave[0] & computeSave[3]:
 if computeSave[2] - computeSave[1] == 1:
     folder = run_config.path_results
 
+    with open(folder + 'Step_0/' + 'exmas_config.json', 'r') as _file:
+        exmas_params = json.load(_file)
+
     with open(folder + 'Step_0/' + 'class_memberships' + '.json', 'r') as _file:
         actual_class_membership = json.load(_file)
         actual_class_membership = {int(k): int(v) for k, v in actual_class_membership.items()}
@@ -354,7 +357,13 @@ if computeSave[0]:
     plt.close()
 
     # Reliability of performance prediction
-    schedules = [t['schedules']['objective'] for t in all_results_aggregated]
+
+
+    m, v = reliability_performance_analysis(
+        schedules=[t['schedules']['objective'] for t in all_results_aggregated],
+        run_config=run_config,
+        exmas_config=exmas_params
+    )
 
 
 

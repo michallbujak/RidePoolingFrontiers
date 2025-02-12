@@ -851,10 +851,80 @@ def update_satisfaction(
 
 
 def reliability_performance_analysis(
-        schedules: list
+        schedules: list,
+        run_config: dict,
+        exmas_config: dict
 ):
     """
     Check the stability of results if travellers choose differently (accept/reject)
     :param schedules:
+    :param run_config
+    :param exmas_config
     :return:
     """
+    def _extract_scenarios(_ride_row):
+        def _func(_d, _p):
+            _prob = 1
+            for _dd, _pp in zip(_d, _p):
+                if _dd == 1:
+                    _prob *= _pp
+                else:
+                    _prob *= (1 - _pp)
+            return _d, _prob
+
+        decisions = list(itertools.product(range(2), repeat=len(_ride_row['indexes'])))
+        scenarios = []
+        for decision_vect in decisions:
+            scenarios.append(_func(decision_vect, _ride_row['best_profit'][3]))
+
+        return scenarios
+
+
+    def _calculate_mean_and_variance(realisations):
+        EX = sum(p * x for p, x in realisations)
+        EX2 = sum(p * np.power(x, 2) for p, x in realisations)
+        EX_2 = np.power(sum(p * x for p, x in realisations), 2)
+        return EX, EX2 - EX_2
+
+    if exmas_config['price'] > 1:
+        fare_metres: float = exmas_config['price']/1000
+    else:
+        fare_metres: float = exmas_config['price']
+
+    daily_mean = []
+    daily_variance = []
+
+    for schedule in schedules:
+        day_mean = sum(schedule.loc[[len(t) > 1 for t in schedule['indexes']], 'objective'])
+        day_variance = 0
+
+        schedule_sh = schedule.loc[[len(t) > 1 for t in schedule['indexes']]]
+
+        for num, ride in schedule_sh.iterrows():
+            ride_realisations = []
+            decision_scenarios = _extract_scenarios(ride)
+            for decision in decision_scenarios:
+                if all(decision[0]):
+                    ride_realisations += [(decision[1],
+                                          ride['best_profit'][2] -
+                                          run_config['mileage_sensitivity']*ride['veh_dist'] -
+                                          run_config['flat_fleet_cost'])]
+                else:
+                    _revenues = [fare_metres * (1 - run_config['guaranteed_discount']) * dist
+                              if ind_decision else fare_metres * dist
+                              for dist, ind_decision in zip(ride['individual_distances'], decision[0])]
+                    ride_realisations += [(decision[1],
+                                          sum(_revenues) -
+                                          run_config['mileage_sensitivity']*sum(ride['individual_distances'])/1000 -
+                                          run_config['flat_fleet_cost']*len(decision[0]))]
+            mean, var = _calculate_mean_and_variance(ride_realisations)
+
+            day_mean += mean
+            day_variance += var
+
+        daily_mean.append(day_mean)
+        daily_variance.append(day_variance)
+
+        return daily_mean, daily_variance
+
+
