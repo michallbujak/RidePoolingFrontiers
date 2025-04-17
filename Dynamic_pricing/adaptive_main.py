@@ -7,7 +7,6 @@ import random
 import secrets
 from typing import List, Any
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -22,7 +21,7 @@ from ExMAS.probabilistic_exmas import main as exmas_algo
 from Dynamic_pricing.auxiliary_functions import (prepare_samples, optimise_discounts_future,
                                                  bayesian_vot_updated, aggregate_daily_results,
                                                  check_if_stabilised, all_class_tracking,
-                                                 update_satisfaction, reliability_performance_analysis)
+                                                 update_satisfaction, post_run_analysis, benchmarks)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
@@ -142,6 +141,7 @@ if computeSave[0]:
     results_daily = []
     stabilised = []
     last_schedule = [] # for stability analysis
+    all_sampled_decisions = {}
 
     class_membership_stability = {
         'updated': {ko: {ki: [vi] for ki, vi in vo.items()}
@@ -202,6 +202,7 @@ if computeSave[0]:
         individualProbability = {}
         sharingSchedule = day_results['schedules']['objective'].copy()
         sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
+        sharing_decisions = [[True]] * (len(day_results['schedules']['objective']) - len(sharingSchedule))
         sharingSchedule = sharingSchedule.reset_index(inplace=False, drop=True)
         sampledDecisionValues = global_rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
 
@@ -228,6 +229,8 @@ if computeSave[0]:
                 sharingScheduleDecisions[num] = sharingScheduleDecisions[num] + [decision]
                 updated_travellers += [pax]
 
+            sharing_decisions += [sharingScheduleDecisions[num]]
+
             # Update actual satisfaction
             predicted_travellers_satisfaction[day+1], actual_travellers_satisfaction[day+1] \
                 = update_satisfaction(
@@ -238,6 +241,7 @@ if computeSave[0]:
                 actual_class_distribution=actual_class_membership,
                 predicted_satisfaction=predicted_travellers_satisfaction[day],
                 actual_satisfaction=actual_travellers_satisfaction[day],
+                sharing_decisions=sharingScheduleDecisions[num],
                 vot_sample=vot_sample,
                 bs_levels=[1, 1, 1.2, 1.3, 1.5, 2],
                 speed=exmas_params['avg_speed'],
@@ -249,6 +253,7 @@ if computeSave[0]:
         actual_travellers_satisfaction[day+1] = (
                 actual_travellers_satisfaction[day].copy() | actual_travellers_satisfaction[day+1])
 
+        day_results['schedules']['objective']['decisions'] = sharing_decisions
 
         # Step IA1: collect data after each run to compare system performance
         class_membership_stability = all_class_tracking(
@@ -330,40 +335,26 @@ if computeSave[0]:
     out_path = run_config.path_results + 'Results/figs_tables/'
     create_directory(out_path)
 
-    # Class convergence
-    daily_error_pax = {pax: [1 - probs[actual_class_membership[pax]][day] for day in range(len(probs[0]))]
-                       for pax, probs in class_membership_stability['updated'].items()}
-    error_by_day = [[] for day in range(max(len(err_pax) for err_pax in daily_error_pax.values()))]
-    for pax_error in daily_error_pax.values():
-        for day, prob in enumerate(pax_error):
-            error_by_day[day].append(prob)
-
-    plt.errorbar(x=range(len(error_by_day)),
-                 y=[np.mean(day) for day in error_by_day],
-                 yerr=[np.std(day) for day in error_by_day])
-    plt.savefig(out_path + 'class_error.' + args.plot_format, dpi=args.plot_dpi)
-    plt.close()
-
-    # Average class probability
-    actual_sampled_freq = {class_id: sum(1 for t in actual_class_membership
-                                         if t == class_id)
-                      for class_id in range(len(run_config['class_probs']))}
-
-    results_daily = results_daily.rename(columns={'metric': 'day'}).set_index('day').T
-
-    # Actual profit
-    plt.plot(results_daily['ActualObjectiveValue'].to_list(), label='Profit')
-    plt.savefig(out_path + 'profit.' + args.plot_format, dpi=args.plot_dpi)
-    plt.close()
-
-    # Reliability of performance prediction
-
-
-    m, v = reliability_performance_analysis(
-        schedules=[t['schedules']['objective'] for t in all_results_aggregated],
+    post_run_analysis(
+        class_membership_stability=class_membership_stability,
+        actual_class_membership=actual_class_membership,
+        results_daily=results_daily,
+        all_results_aggregated=all_results_aggregated,
+        predicted_travellers_satisfaction=predicted_travellers_satisfaction,
+        actual_travellers_satisfaction=actual_travellers_satisfaction,
         run_config=run_config,
-        exmas_config=exmas_params
+        exmas_params=exmas_params,
+        out_path=out_path,
+        args=args,
+        x_ticks=[t - 1 for t in [1, 5, 10, 15, 20]],
+        x_ticks_labels=[str(t) for t in [1, 5, 10, 15, 20]]
     )
 
-
+    benchmarks(
+        all_results_aggregated=all_results_aggregated,
+        _results_daily=results_daily,
+        _run_config=run_config,
+        _fare=exmas_params['price'],
+        _flat_discount=0.2
+    )
 

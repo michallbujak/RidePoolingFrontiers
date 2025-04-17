@@ -150,9 +150,9 @@ def matching_function_light(
     # back to the problem
     prob.solve(pulp.getSolver(solver_for_pulp()))
 
-    _selected = []
+    _selected = [0]*constraint_array.shape[1]
     for variable in prob.variables():
-        _selected.append(int(variable.varValue))
+        _selected[int(str(variable)[2:])] = variable.varValue
 
-    x = 0
+    return _rides.loc[[bool(t) for t in _selected]]
 
