@@ -1223,22 +1223,10 @@ def benchmarks(
     rides0['exmas_obj'] = rides0.apply(exmas_obj, axis=1)
 
     requests_copy = all_results_aggregated[0]['requests'].copy()
-    # rides0['org_index'] = rides0['indexes'].copy()
-    # requests_copy['org_index'] = requests_copy['index'].copy()
-    # travellers_reindex = {pax_id: new_id for pax_id, new_id in
-    #                       zip(requests_copy['index'], range(len(requests_copy)))}
-    # rides0['indexes'] = rides0['indexes'].apply(
-    #     lambda x: [travellers_reindex[t] for t in x])
-    # requests_copy['index'] = requests_copy['index'].apply(
-    #     lambda x: travellers_reindex[x])
-    # requests_copy = requests_copy.set_index('index', drop=False)
-    requests_copy.index = requests_copy['index']
 
     schedule_exmas = matching_function_light(
         rides0, requests_copy, 'exmas_obj', 'max'
     )
-
-    schedule_exmas = rides0.loc[[bool(t) for t in list(schedule_exmas.values())]]
 
     def sample_decisions(r_row):
         if len(r_row['indexes']) == 1:

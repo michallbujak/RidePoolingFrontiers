@@ -116,7 +116,7 @@ def matching_function_light(
         _objective: str = "objective",
         _min_max: str = "max",
         **kwargs
-):
+) -> pd.DataFrame:
     _rides['PassHourTrav_ns'] = _rides.apply(lambda x: sum([_requests.loc[_].ttrav for _ in x.indexes]), axis=1)
 
     if _min_max == "min":
@@ -148,7 +148,9 @@ def matching_function_light(
                             if _travellers_ride[i] > 0]) == 1, 'c' + str(_num)
 
     # back to the problem
-    prob.solve(pulp.getSolver(solver_for_pulp()))
+    solver = pulp.getSolver(solver_for_pulp())
+    solver.msg = False
+    prob.solve(solver)
 
     _selected = [0]*constraint_array.shape[1]
     for variable in prob.variables():
