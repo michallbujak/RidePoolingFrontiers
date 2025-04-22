@@ -1146,6 +1146,8 @@ class AnyObjectHandler(HandlerBase):
 def benchmarks(
         all_results_aggregated: list,
         _results_daily: pd.DataFrame,
+        _actual_satisfaction: dict,
+        _actual_classes: dict,
         _run_config: dict,
         _fare: float = 1.5,
         _flat_discount: float = 0.2
@@ -1161,15 +1163,18 @@ def benchmarks(
     output_dict['hetero'] = pd.Series({
         'Profit': _results_daily.loc['ActualObjectiveValue'][0],
         'Occupancy': _results_daily.loc['TravellersNo'][0]/_results_daily.loc['ActualRidesNo'][0],
-        'DistanceSaved': _results_daily.loc['ActualDistance'][0] - total_distance0,
-        'AcceptanceRate': _results_daily.loc['ActualAcceptanceRate'][0]
+        'DistanceSaved': total_distance0 - _results_daily.loc['ActualDistance'][0],
+        'AcceptanceRate': _results_daily.loc['ActualAcceptanceRate'][0],
+        'MeanSatisfaction': _results_daily.loc['MeanActualSatisfaction'][0]
     })
 
     output_dict['full'] = pd.Series({
         'Profit': _results_daily.loc['ActualObjectiveValue'][19],
         'Occupancy': _results_daily.loc['TravellersNo'][19]/_results_daily.loc['ActualRidesNo'][19],
-        'DistanceSaved': _results_daily.loc['ActualDistance'][19] - total_distance19,
-        'AcceptanceRate': _results_daily.loc['ActualAcceptanceRate'][19]
+        'DistanceSaved': total_distance19 - _results_daily.loc['ActualDistance'][19],
+        'AcceptanceRate': _results_daily.loc['ActualAcceptanceRate'][19],
+        'MeanSatisfaction': _results_daily.loc['MeanActualSatisfaction'][19] -
+                            _results_daily.loc['MeanActualSatisfaction'][18]
     })
 
     from ExMAS.probabilistic_exmas import match
@@ -1228,19 +1233,38 @@ def benchmarks(
         rides0, requests_copy, 'exmas_obj', 'max'
     )
 
-    def sample_decisions(r_row):
+    folder = _run_config['path_results'] + 'Step_0/'
+    vot_sample = np.load(folder + 'sample' + '_' + str(_run_config['sample_size']) + '.npy')
+
+    def sampled_vot(_indexes, _vot_sample, _config):
+        if len(_indexes) == 1:
+            return [0]
+        out = []
+        for pax in _indexes:
+            _vt = _vot_sample[[t[1] == _actual_classes[pax] for t in _vot_sample]]
+            _vtt = _vt[np.random.randint(0, _config['sample_size'])]
+            _xx = list([list(t) for t in vot_sample])
+            _vtt_index = _xx.index(list(_vtt))
+            out.append((_vtt[0], _vtt[1], _vtt_index))
+        return out
+
+    schedule_exmas['sampled_vot'] = schedule_exmas['indexes'].apply(
+        sampled_vot, _vot_sample=vot_sample, _config=_run_config
+    )
+
+    def get_decisions(r_row, _flat_discount):
         if len(r_row['indexes']) == 1:
             return [True]
 
         out = []
-        for pax in range(len(r_row['indexes'])):
-            acc_pr = r_row['acc_prob'][pax]
-            sampled_value = np.random.random()
-            out.append(acc_pr > sampled_value)
+        for _pax, (_vot, _cl, _id) in enumerate(r_row['sampled_vot']):
+            actual_accepted_disc = r_row['accepted_discount'][_pax][_id][0]
+            ot = True if actual_accepted_disc < _flat_discount else False
+            out.append(ot)
 
         return out
 
-    schedule_exmas['decisions'] = schedule_exmas.apply(sample_decisions, axis=1)
+    schedule_exmas['decisions'] = schedule_exmas.apply(get_decisions, _flat_discount=_flat_discount, axis=1)
     schedule_exmas['decision'] = schedule_exmas['decisions'].apply(all)
 
     def actual_profit(r_row):
@@ -1282,4 +1306,4 @@ def benchmarks(
         'AcceptanceRate': len(schedule_exmas_sh.loc[schedule_exmas_sh['decision']])/len(schedule_exmas_sh)
     })
 
-    x = 0
+

@@ -295,6 +295,7 @@ if computeSave[0] & computeSave[3]:
         json.dump(actual_travellers_satisfaction, _file)
 
 
+""" Step 2: Post-simulation analysis"""
 # Skip prior and load data
 if computeSave[2] - computeSave[1] == 1:
     folder = run_config.path_results
@@ -330,7 +331,6 @@ if computeSave[2] - computeSave[1] == 1:
 computeSave[1] += 1
 computeSave[0] = computeSave[2] <= computeSave[1]
 
-""" Step 2: Post-simulation analysis"""
 if computeSave[0]:
     out_path = run_config.path_results + 'Results/figs_tables/'
     create_directory(out_path)
@@ -353,6 +353,8 @@ if computeSave[0]:
     benchmarks(
         all_results_aggregated=all_results_aggregated,
         _results_daily=results_daily,
+        _actual_satisfaction=actual_travellers_satisfaction,
+        _actual_classes=actual_class_membership,
         _run_config=run_config,
         _fare=exmas_params['price'],
         _flat_discount=0.2
