@@ -27,7 +27,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
 parser.add_argument("--save-partial", action="store_false")
 parser.add_argument("--starting-step", type=int, default=0)
-parser.add_argument("--simulation-name", type=str or None, default=None)
 parser.add_argument("--seed", type=int, default=123)
 parser.add_argument("--plot-format", type=str, default="png")
 parser.add_argument("--plot-dpi", type=int, default=200)
@@ -45,7 +44,7 @@ batch_prep.create_results_directory(
 
 # Prepare a save/load variable to run following blocks
 computeSave: list[bool | int] = \
-    [args.starting_step == 0, 0, args.starting_step, args.save_partial]
+    [args.starting_step == 0, 0, args.starting_step, args.save_partial] # whether to compute at this step, current step, ...
 
 """ Step 0: Initial data processing """
 # Initialise random generator
@@ -86,6 +85,7 @@ if computeSave[0]:
     )
     demand = expand_rides(demand[0])
 
+
 # Save data if requested
 if computeSave[0] & computeSave[3]:
     batch_prep.create_directory(run_config.path_results + 'Step_0')
@@ -101,9 +101,10 @@ if computeSave[0] & computeSave[3]:
     with open(folder + 'class_memberships.json', 'w') as _file:
         json.dump({k: str(v) for k, v in actual_class_membership.items()}, _file)
 
+    vot_sample_dict = {k: [t[0] for t in vot_sample if t[1] == k] for k in set(vot_sample[:, 1])}
+
 # Skip steps PP1-PP3 and load data
 if computeSave[2] - computeSave[1] == 1:
-    all_rides, all_requests, vot_sample = None, None, None
     folder = run_config.path_results + 'Step_0/'
     all_requests = pd.read_csv(folder + 'demand_sample_' + str(run_config.batch_size) + '.csv')
     all_rides = pd.read_csv(folder + 'rides' + '_' + str(run_config.batch_size) + '.csv',
@@ -116,6 +117,8 @@ if computeSave[2] - computeSave[1] == 1:
         actual_class_membership = json.load(_file)
     actual_class_membership = {int(k): int(v) for k, v in actual_class_membership.items()}
 
+    vot_sample_dict = {k: [t[0] for t in vot_sample if t[1]==k] for k in set(vot_sample[:,1])}
+
 computeSave[1] += 1
 computeSave[0] = computeSave[2] <= computeSave[1]
 
@@ -127,8 +130,6 @@ if computeSave[0]:
          for num, t in all_rides.iterrows()]]
 
     # Extract features for easier implementation
-    times_non_shared = dict(all_requests['ttrav'])
-    ns_utilities_all = {pax: utility for pax, utility in zip(all_requests['index'], all_requests['u'])}
     predicted_travellers_satisfaction = {0: {k: run_config['starting_satisfaction']
                                              for k in range(run_config['batch_size'])}}
     actual_travellers_satisfaction = {0: {k: run_config['starting_satisfaction']
@@ -166,59 +167,62 @@ if computeSave[0]:
         rides_day = optimise_discounts_future(
             rides=rides_day,
             class_membership=class_membership_prob,
-            times_ns=times_non_shared,
-            bt_sample=vot_sample,
-            bs_levels=[1, 1, 1.1, 1.2, 1.5, 2],
+            vot_sample=vot_sample,
+            bs_levels=run_config['pfs_levels'],
             travellers_satisfaction=predicted_travellers_satisfaction,
-            ns_utilities=ns_utilities_all,
             objective_func=lambda x: x[0] - run_config['mileage_sensitivity']*x[4] -
                                      run_config['flat_fleet_cost']*x[6],
             min_acceptance=run_config.minimum_acceptance_probability,
             guaranteed_discount=run_config.guaranteed_discount,
             fare=exmas_params['price'],
             speed=exmas_params['avg_speed'],
-            max_discount=run_config['max_discount']
+            max_discount=run_config['max_discount'],
+            attraction_sensitivity=run_config['run_config']
         )
 
         # Step IP3: Matching
-        day_results = matching_function(
-            databank={'rides': rides_day, 'requests': requests_day},
-            params=exmas_params,
-            objectives=['objective'],
-            min_max='max',
-            filter_rides=False,
-            opt_flag='',
-            rides_requests=True,
-            requestsErrorIndex=True
+        day_results = matching_function_light(
+            _rides=rides_day,
+            _requests=requests_day,
+            _objective='objective',
+            _min_max='max',
+            rrs_output=True
         )
-        schedule_indexes = day_results['schedules']['objective']['indexes']
 
         # We concluded probabilistic analysis
         # We proceed to sampling decisions and Bayesian estimation
 
+        # Step B1: Sample decisions
+        day_results['schedules']['objective']['sampled_vot'] = (
+            day_results['schedules']['objective']['indexes'].apply(
+                lambda x: [global_rng.choice(vot_sample_dict[actual_class_membership[t]]) for t in x]
+        ))
+        day_results['schedules']['objective']['decisions'] = (
+            day_results['schedules']['objective'].apply(
+                lambda x: [x['sampled_vot'][t] <= x['best_profit'][8][t] + 0.001
+                           for t in range(len(x['indexes']))],
+                axis=1
+            )
+        )
+        day_results['schedules']['objective']['decision'] = (
+            day_results['schedules']['objective']['decisions'].apply(all))
+
         all_results_aggregated.append(day_results.copy())
 
-        # Step B1: extracting probability
-        individualProbability = {}
         sharingSchedule = day_results['schedules']['objective'].copy()
         sharingSchedule = sharingSchedule.loc[[len(t)>1 for t in sharingSchedule['indexes']]]
-        sharing_decisions = [[True]] * (len(day_results['schedules']['objective']) - len(sharingSchedule))
         sharingSchedule = sharingSchedule.reset_index(inplace=False, drop=True)
-        sampledDecisionValues = global_rng.random(size=sum(len(t) for t in sharingSchedule['indexes']))
 
         # Step B2: update class membership
         predicted_travellers_satisfaction[day+1] = {}
         actual_travellers_satisfaction[day+1] = {}
-        sampledDecisions = {}
 
-        decisionValueIndicator: int = 0
-        sharingScheduleDecisions = [[]]*len(sharingSchedule)
         updated_travellers = []
         for num, row in sharingSchedule.iterrows():
-            for pax, prob, cond_prob in zip(row['indexes'], row['best_profit'][3], row['best_profit'][7]):
+            for pax, prob, cond_prob, decision in (
+                    zip(row['indexes'], row['best_profit'][3],
+                        row['best_profit'][7], row['decisions'])):
                 pax_class = actual_class_membership[pax]
-                decision = cond_prob[pax_class] > sampledDecisionValues[decisionValueIndicator]
-                decisionValueIndicator += 1
                 class_membership_prob = bayesian_vot_updated(
                     decision=decision,
                     pax_id=pax,
@@ -226,24 +230,19 @@ if computeSave[0]:
                     conditional_probs=cond_prob,
                     distribution_history=class_membership_stability
                 )
-                sharingScheduleDecisions[num] = sharingScheduleDecisions[num] + [decision]
                 updated_travellers += [pax]
-
-            sharing_decisions += [sharingScheduleDecisions[num]]
 
             # Update actual satisfaction
             predicted_travellers_satisfaction[day+1], actual_travellers_satisfaction[day+1] \
                 = update_satisfaction(
                 predicted_travellers_satisfaction_day=predicted_travellers_satisfaction[day+1],
                 actual_travellers_satisfaction_day=actual_travellers_satisfaction[day+1],
-                rides_row=row,
+                schedule_row=row,
                 predicted_class_distribution=class_membership_prob,
-                actual_class_distribution=actual_class_membership,
                 predicted_satisfaction=predicted_travellers_satisfaction[day],
                 actual_satisfaction=actual_travellers_satisfaction[day],
-                sharing_decisions=sharingScheduleDecisions[num],
                 vot_sample=vot_sample,
-                bs_levels=[1, 1, 1.2, 1.3, 1.5, 2],
+                bs_levels=run_config['pfs_levels'],
                 speed=exmas_params['avg_speed'],
                 fare=exmas_params['price']
             )
@@ -252,8 +251,6 @@ if computeSave[0]:
                 predicted_travellers_satisfaction[day].copy() | predicted_travellers_satisfaction[day+1])
         actual_travellers_satisfaction[day+1] = (
                 actual_travellers_satisfaction[day].copy() | actual_travellers_satisfaction[day+1])
-
-        day_results['schedules']['objective']['decisions'] = sharing_decisions
 
         # Step IA1: collect data after each run to compare system performance
         class_membership_stability = all_class_tracking(
@@ -264,7 +261,6 @@ if computeSave[0]:
 
         results_daily.append(aggregate_daily_results(
             day_results=day_results,
-            decisions=sharingScheduleDecisions,
             predicted_satisfaction=predicted_travellers_satisfaction[day+1],
             actual_satisfaction=actual_travellers_satisfaction[day+1],
             fare=exmas_params['price'],
@@ -306,6 +302,8 @@ if computeSave[2] - computeSave[1] == 1:
     with open(folder + 'Step_0/' + 'class_memberships' + '.json', 'r') as _file:
         actual_class_membership = json.load(_file)
         actual_class_membership = {int(k): int(v) for k, v in actual_class_membership.items()}
+
+    vot_sample = np.load(folder + 'Step_0/' + 'sample' + '_' + str(run_config.sample_size) + '.npy')
 
     folder += 'Results/'
 
@@ -350,13 +348,14 @@ if computeSave[0]:
         x_ticks_labels=[str(t) for t in [1, 5, 10, 15, 20]]
     )
 
+    run_config.update(exmas_params)
+
     benchmarks(
         all_results_aggregated=all_results_aggregated,
         _results_daily=results_daily,
         _actual_satisfaction=actual_travellers_satisfaction,
         _actual_classes=actual_class_membership,
         _run_config=run_config,
-        _fare=exmas_params['price'],
         _flat_discount=0.2
     )
 

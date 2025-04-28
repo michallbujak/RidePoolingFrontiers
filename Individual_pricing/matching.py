@@ -116,8 +116,8 @@ def matching_function_light(
         _objective: str = "objective",
         _min_max: str = "max",
         **kwargs
-) -> pd.DataFrame:
-    _rides['PassHourTrav_ns'] = _rides.apply(lambda x: sum([_requests.loc[_].ttrav for _ in x.indexes]), axis=1)
+) -> pd.DataFrame or dict:
+    # _rides['PassHourTrav_ns'] = _rides.apply(lambda x: sum([_requests.loc[_].ttrav for _ in x.indexes]), axis=1)
 
     if _min_max == "min":
         prob = pulp.LpProblem("Matching problem", pulp.LpMinimize)  # problem
@@ -152,9 +152,16 @@ def matching_function_light(
     solver.msg = False
     prob.solve(solver)
 
+    _rides = _rides.drop(columns=['temp_index'])
+
     _selected = [0]*constraint_array.shape[1]
     for variable in prob.variables():
         _selected[int(str(variable)[2:])] = variable.varValue
+
+    if kwargs.get('rrs_output', False):
+        return {'rides': _rides,
+                'requests': _requests,
+                'schedules': {'objective': _rides.loc[[bool(t) for t in _selected]]}}
 
     return _rides.loc[[bool(t) for t in _selected]]
 
