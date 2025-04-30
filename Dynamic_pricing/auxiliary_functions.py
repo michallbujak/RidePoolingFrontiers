@@ -1161,6 +1161,7 @@ def benchmarks(
         _flat_discount: float = 0.2
 ) -> pd.DataFrame():
     _fare = _run_config['price']
+    _actual_satisfaction = {int(k): v for k,v in _actual_satisfaction.items()}
 
     if 'metric' in _results_daily.columns:
         _results_daily = _results_daily.set_index('metric')
@@ -1172,46 +1173,43 @@ def benchmarks(
     total_distance_l = sum(all_results_aggregated[-1]['requests']['dist'])/1000
 
     output_dict['hetero'] = pd.Series({
+        'ExpectedProfit': _results_daily.loc['Objective'][0],
         'Profit': _results_daily.loc['ActualObjectiveValue'][0],
         'Occupancy': _results_daily.loc['TravellersNo'][0]/_results_daily.loc['ActualRidesNo'][0],
         'DistanceSaved': total_distance0 - _results_daily.loc['ActualDistance'][0],
         'AcceptanceRate': _results_daily.loc['ActualAcceptanceRate'][0],
-        'MeanSatisfaction': _results_daily.loc['MeanActualSatisfaction'][0]
+        'MeanParticipationProbabilityChange':
+            np.mean([_sigmoid(t) - 0.5 for t in _actual_satisfaction[1].values() if t!=0])
     })
 
     output_dict['full'] = pd.Series({
+        'ExpectedProfit': _results_daily.loc['Objective'][last_day],
         'Profit': _results_daily.loc['ActualObjectiveValue'][last_day],
         'Occupancy': _results_daily.loc['TravellersNo'][last_day]/_results_daily.loc['ActualRidesNo'][last_day],
         'DistanceSaved': total_distance_l - _results_daily.loc['ActualDistance'][last_day],
         'AcceptanceRate': _results_daily.loc['ActualAcceptanceRate'][last_day],
-        'MeanSatisfaction': _results_daily.loc['MeanActualSatisfaction'][last_day] -
-                            _results_daily.loc['MeanActualSatisfaction'][last_day-1]
+        'MeanParticipationProbabilityChange':
+            np.mean([_sigmoid(t) - 0.5 for t in _actual_satisfaction[last_day].values() if t != 0])
     })
 
     from ExMAS.probabilistic_exmas import match
     rides0 = all_results_aggregated[0]['rides'].copy()
 
-    def acc_flat_prob(r_row):
+    def acc_flat_prob(r_row, _config):
         if len(r_row['indexes']) == 1:
             return 1
-
-        cl_mm = {
-            0: 0.29,
-            1: 0.28,
-            2: 0.24,
-            3: 0.19
-        }
 
         prob_individual = [.0] * len(r_row['indexes'])
 
         for num, pax in enumerate(r_row['indexes']):
             acc_disc_place = bisect_right([t[0] for t in r_row['accepted_discount'][num]], _flat_discount)
-            prob_individual[num] = (sum(cl_mm[t[1]]
-                                        for t in r_row['accepted_discount'][num][:(acc_disc_place + 1)]) /10)
+            prob_individual[num] = (sum(_config['class_probs'][int(t[1])]
+                                        for t in r_row['accepted_discount'][num][:(acc_disc_place + 1)])
+                                    /_config['sample_size'])
 
         return prob_individual
 
-    rides0['acc_prob'] = rides0.apply(acc_flat_prob, axis=1)
+    rides0['acc_prob'] = rides0.apply(acc_flat_prob, _config=_run_config, axis=1)
 
     def exmas_obj(r_row):
         if len(r_row['indexes']) == 1:
@@ -1245,45 +1243,29 @@ def benchmarks(
     )
 
     folder = _run_config['path_results'] + 'Step_0/'
-    vot_sample = np.load(folder + 'sample' + '_' + str(_run_config['sample_size']) + '.npy')
-
-    def sampled_vot(_indexes, _vot_sample, _config):
-        if len(_indexes) == 1:
-            return [0]
-        out = []
-        for pax in _indexes:
-            _vt = _vot_sample[[t[1] == _actual_classes[pax] for t in _vot_sample]]
-            _vtt = _vt[np.random.randint(0, _config['sample_size'])]
-            _xx = list([list(t) for t in vot_sample])
-            _vtt_index = _xx.index(list(_vtt))
-            out.append((_vtt[0], _vtt[1], _vtt_index))
-        return out
+    sampled_vot = all_results_aggregated[0]['schedules']['objective'].apply(
+        lambda x: [(t, k) for t, k in zip(x['indexes'], x['sampled_vot'])], axis=1)
+    sampled_vot = [a for b in sampled_vot for a in b]
+    sampled_vot = {k: v for k, v in sampled_vot}
 
     schedule_exmas['sampled_vot'] = schedule_exmas['indexes'].apply(
-        sampled_vot, _vot_sample=vot_sample, _config=_run_config
+        lambda x: [sampled_vot[t] for t in x]
     )
 
-    def get_decisions(r_row, _flat_discount):
-        if len(r_row['indexes']) == 1:
-            return [True]
-
-        out = []
-        for _pax, (_vot, _cl, _id) in enumerate(r_row['sampled_vot']):
-            actual_accepted_disc = r_row['accepted_discount'][_pax][_id][0]
-            ot = True if actual_accepted_disc < _flat_discount else False
-            out.append(ot)
-
-        return out
+    schedule_exmas['decisions'] = schedule_exmas['sampled_vot'].apply(
+        lambda x: [t <= _flat_discount if len(x)>1 else True for t in x ]
+    )
+    schedule_exmas['decision'] = schedule_exmas['decisions'].apply(all)
 
     def actual_utility_flat(r_row, _flat_disc, _config, _fare):
         if len(r_row['indexes']) == 1:
             return [0]
-        wts = [1, 1, 1.1, 1.2, 1.5]
+        pfs = _config['pfs_levels'][len(r_row['indexes'])]
         out = [0]*len(r_row['indexes'])
         for n_pax, pax in enumerate(r_row['indexes']):
             out[n_pax] = _flat_disc*r_row['individual_distances'][n_pax]/1000*_fare
-            out[n_pax] -= r_row['sampled_vot'][n_pax][0]/3600*(
-                r_row['individual_times'][n_pax]*wts[len(r_row['indexes'])] -
+            out[n_pax] -= r_row['sampled_vot'][n_pax]/3600*(
+                r_row['individual_times'][n_pax]*pfs -
                 r_row['individual_distances'][n_pax]/_run_config['avg_speed'])
 
         return out
@@ -1292,16 +1274,14 @@ def benchmarks(
         actual_utility_flat, _config=_run_config, _flat_disc=_flat_discount,
         _fare=_fare, axis=1)
 
-    schedule_exmas['decisions'] = schedule_exmas.apply(get_decisions, _flat_discount=_flat_discount, axis=1)
-    schedule_exmas['decision'] = schedule_exmas['decisions'].apply(all)
-
     def actual_profit(r_row):
         if len(r_row['indexes']) == 1:
             return r_row['exmas_obj']
 
         if r_row['decision']:
             out = sum(r_row['individual_distances'])*_fare*(1-_flat_discount)/1000
-            out -= _run_config['mileage_sensitivity'] - _run_config['flat_fleet_cost']
+            out -= _run_config['mileage_sensitivity']*sum(r_row['individual_distances'])/1000
+            out -= _run_config['flat_fleet_cost']
         else:
             out = 0
             for num, decision in enumerate(r_row['decisions']):
@@ -1328,10 +1308,17 @@ def benchmarks(
     schedule_exmas_sh = schedule_exmas.loc[[len(t) > 1 for t in schedule_exmas['indexes']]]
 
     output_dict['exmas'] = pd.Series({
+        'ExpectedProfit': sum(schedule_exmas['exmas_obj']),
         'Profit': sum(schedule_exmas['actual_profit']),
         'Occupancy': _results_daily.loc['TravellersNo'][0]/sum(schedule_exmas['no_rides']),
         'DistanceSaved': sum(schedule_exmas['distance_saved']),
-        'AcceptanceRate': len(schedule_exmas_sh.loc[schedule_exmas_sh['decision']])/len(schedule_exmas_sh)
+        'AcceptanceRate': len(schedule_exmas_sh.loc[schedule_exmas_sh['decision']])/len(schedule_exmas_sh),
+        'MeanParticipationProbabilityChange':
+            np.mean([_sigmoid(t) - 0.5
+                     for t in [a for b in schedule_exmas['actual_utility'] for a in b]
+                     if t != 0])
     })
+
+    print(output_dict)
 
 
