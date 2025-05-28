@@ -1,4 +1,4 @@
-""" Wrapper for dynamic pricing algorithm """
+""" In progress: cleaned version of the adaptive pricing algorithm """
 import argparse
 import ast
 import json

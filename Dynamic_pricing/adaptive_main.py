@@ -1,4 +1,4 @@
-""" Wrapper for dynamic pricing algorithm """
+""" Main file for the Adaptive pricing algorithm """
 import argparse
 import ast
 import json
@@ -349,12 +349,13 @@ if computeSave[0]:
     )
 
     run_config.update(exmas_params)
-
+    raise Exception('stop')
     benchmarks(
         all_results_aggregated=all_results_aggregated,
         _results_daily=results_daily,
         _actual_satisfaction=actual_travellers_satisfaction,
         _actual_classes=actual_class_membership,
+        class_membership_stability=class_membership_stability,
         _run_config=run_config,
         _flat_discount=0.2
     )
