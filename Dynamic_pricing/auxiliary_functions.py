@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
 from matplotlib.legend_handler import HandlerTuple, HandlerBase
+from matplotlib import ticker
 
 from Individual_pricing.matching import matching_function_light
 
@@ -795,8 +796,8 @@ def row_maximise_profit_future(
                             max_out) # shared ride
         attraction_value += sum(a*b for a, b in zip(probability_not_others, non_shared_values)) # single rides
 
-        out[5] = [attraction_value]
-        out += [max_out + attraction_value]
+        out[5] = attraction_value
+        out += [max_out + _attraction_sensitivity*attraction_value]
 
         if max_out > best[-1]:
             membership_class_probability: list[list] = [[] for _ in range(len(travellers))]
@@ -1042,6 +1043,8 @@ def post_run_analysis(
                  label='Expected Profit')
     plt.xticks(x_ticks,
                labels=x_ticks_labels)
+    plt.xlabel('Day')
+    plt.ylabel('Profit in $')
     plt.legend(loc='lower right')
     plt.tight_layout()
     plt.savefig(out_path + 'service_performance.' + args.plot_format, dpi=args.plot_dpi)
@@ -1100,11 +1103,13 @@ def post_run_analysis(
     ax1.set_ylabel('Travellers offered shared rides', color='black')
     ax1.plot(range(len(y1)), y1, color='black', lw=1)
     # ax1.scatter(range(len(y1)), y1, color='black')
+    ax1.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.2f}"))
     ax2 = ax1.twinx()
     ax2.set_ylabel('Accepted shared rides (fraction)', color='darkorange')
     ax2.plot(range(len(y1)), y2, color='darkorange', lw=1)
     # ax2.scatter(range(len(y1)), y2, color='darkorange')
     ax2.tick_params(axis='y', labelcolor='darkorange')
+    ax2.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.2f}"))
     plt.xticks(x_ticks,
                labels=x_ticks_labels)
     plt.tight_layout()
@@ -1157,6 +1162,7 @@ def benchmarks(
         _results_daily: pd.DataFrame,
         _actual_satisfaction: dict,
         _actual_classes: dict,
+        class_membership_stability: dict,
         _run_config: dict,
         _flat_discount: float = 0.2
 ) -> pd.DataFrame():
@@ -1192,7 +1198,7 @@ def benchmarks(
             np.mean([_sigmoid(t) - 0.5 for t in _actual_satisfaction[last_day].values() if t != 0])
     })
 
-    from ExMAS.probabilistic_exmas import match
+
     rides0 = all_results_aggregated[0]['rides'].copy()
 
     def acc_flat_prob(r_row, _config):
@@ -1242,7 +1248,6 @@ def benchmarks(
         rides0, requests_copy, 'exmas_obj', 'max'
     )
 
-    folder = _run_config['path_results'] + 'Step_0/'
     sampled_vot = all_results_aggregated[0]['schedules']['objective'].apply(
         lambda x: [(t, k) for t, k in zip(x['indexes'], x['sampled_vot'])], axis=1)
     sampled_vot = [a for b in sampled_vot for a in b]
@@ -1252,18 +1257,14 @@ def benchmarks(
         lambda x: [sampled_vot[t] for t in x]
     )
 
-    schedule_exmas['decisions'] = schedule_exmas['sampled_vot'].apply(
-        lambda x: [t <= _flat_discount if len(x)>1 else True for t in x ]
-    )
-    schedule_exmas['decision'] = schedule_exmas['decisions'].apply(all)
-
-    def actual_utility_flat(r_row, _flat_disc, _config, _fare):
+    def actual_utility(r_row, _config, **kwargs):
         if len(r_row['indexes']) == 1:
             return [0]
         pfs = _config['pfs_levels'][len(r_row['indexes'])]
         out = [0]*len(r_row['indexes'])
         for n_pax, pax in enumerate(r_row['indexes']):
-            out[n_pax] = _flat_disc*r_row['individual_distances'][n_pax]/1000*_fare
+            disc = kwargs.get('flat_disc', 0.2) if kwargs.get('flat', True) else r_row['best_profit'][1][n_pax]
+            out[n_pax] = disc*r_row['individual_distances'][n_pax]/1000*_config['price']
             out[n_pax] -= r_row['sampled_vot'][n_pax]/3600*(
                 r_row['individual_times'][n_pax]*pfs -
                 r_row['individual_distances'][n_pax]/_run_config['avg_speed'])
@@ -1271,16 +1272,34 @@ def benchmarks(
         return out
 
     schedule_exmas['actual_utility'] = schedule_exmas.apply(
-        actual_utility_flat, _config=_run_config, _flat_disc=_flat_discount,
-        _fare=_fare, axis=1)
+        actual_utility, _config=_run_config, flat_disc=_flat_discount, axis=1)
 
-    def actual_profit(r_row):
+    schedule_exmas['decisions'] = schedule_exmas['actual_utility'].apply(
+        lambda x: [t >= 0 if len(x)>1 else True for t in x]
+    )
+    schedule_exmas['decision'] = schedule_exmas['decisions'].apply(all)
+
+    def utility_mask(r_row):
+        if r_row['decision']:
+            return r_row['actual_utility']
+        else:
+            return [t if t <=0 else 0 for t in r_row['actual_utility']]
+
+    schedule_exmas['actual_utility'] = schedule_exmas.apply(utility_mask, axis=1)
+
+    def actual_profit(r_row, _flat_discount):
         if len(r_row['indexes']) == 1:
-            return r_row['exmas_obj']
+            if _flat_discount:
+                return r_row['exmas_obj']
+            else:
+                return r_row['objective']
 
         if r_row['decision']:
-            out = sum(r_row['individual_distances'])*_fare*(1-_flat_discount)/1000
-            out -= _run_config['mileage_sensitivity']*sum(r_row['individual_distances'])/1000
+            if _flat_discount:
+                out = sum(r_row['individual_distances'])*_fare*(1-_flat_discount)/1000
+            else:
+                out = r_row['best_profit'][2]
+            out -= _run_config['mileage_sensitivity']*r_row['veh_dist']/1000
             out -= _run_config['flat_fleet_cost']
         else:
             out = 0
@@ -1296,7 +1315,8 @@ def benchmarks(
 
         return out
 
-    schedule_exmas['actual_profit'] = schedule_exmas.apply(actual_profit, axis=1)
+    schedule_exmas['actual_profit'] = schedule_exmas.apply(actual_profit,
+                                                           _flat_discount=_flat_discount, axis=1)
 
     schedule_exmas['no_rides'] = schedule_exmas['decisions'].apply(lambda x: 1 if all(x) else len(x))
 
@@ -1315,10 +1335,74 @@ def benchmarks(
         'AcceptanceRate': len(schedule_exmas_sh.loc[schedule_exmas_sh['decision']])/len(schedule_exmas_sh),
         'MeanParticipationProbabilityChange':
             np.mean([_sigmoid(t) - 0.5
-                     for t in [a for b in schedule_exmas['actual_utility'] for a in b]
-                     if t != 0])
+                     for t in [a for b in schedule_exmas['actual_utility'] for a in b]])
     })
 
-    print(output_dict)
+    # Lastly, the personalised pricing without future and with/without knowledge
+    vot_sample = np.load(_run_config['path_results'] + 'Step_0/sample_' +
+                         str(_run_config['sample_size']) +'.npy')
 
+    for attr_sens, label in zip([0, 1], ['nf', 'f']):
+        rides0_opt = optimise_discounts_future(
+            rides=all_results_aggregated[0]['rides'].copy(),
+            class_membership={k1: {k2: round(v2[last_day+1], 5) for k2, v2 in v1.items()}
+                              for k1, v1 in class_membership_stability['all'].items()},
+            vot_sample=vot_sample,
+            bs_levels=_run_config['pfs_levels'],
+            travellers_satisfaction={0: {pax: 0 for pax in range(_run_config['batch_size'])}},
+            objective_func=lambda x: x[0] - _run_config['mileage_sensitivity'] * x[4] -
+                                     _run_config['flat_fleet_cost'] * x[6],
+            min_acceptance=_run_config['minimum_acceptance_probability'],
+            guaranteed_discount=_run_config['guaranteed_discount'],
+            fare=_run_config['price'],
+            speed=_run_config['avg_speed'],
+            max_discount=_run_config['max_discount'],
+            attraction_sensitivity=attr_sens
+        )
+
+        rides0_opt['sampled_vot'] = rides0_opt['indexes'].apply(
+            lambda x: [sampled_vot[t] for t in x]
+        )
+
+        schedule_opt = matching_function_light(
+            rides0_opt, requests_copy, 'objective', 'max'
+        )
+
+        schedule_opt['decisions'] = (schedule_opt.apply(
+                lambda x: [x['sampled_vot'][t] <= x['best_profit'][8][t] + 0.001
+                           for t in range(len(x['indexes']))],
+                axis=1))
+        schedule_opt['decision'] = schedule_opt['decisions'].apply(all)
+
+        schedule_opt['actual_profit'] = schedule_opt.apply(actual_profit, _flat_discount=False, axis=1)
+        schedule_opt['occ'] = schedule_opt['decisions'].apply(
+            lambda x: 1 if all(x) else len(x))
+
+        schedule_opt['actual_distance'] = schedule_opt.apply(
+            lambda x: x['u_veh']*_run_config['avg_speed']
+            if x['decision'] else sum(x['individual_distances']),
+            axis=1)
+
+        schedule_opt['actual_utility'] = schedule_opt.apply(
+        actual_utility, _config=_run_config, flat_disc=_flat_discount, flat=False, axis=1)
+
+        schedule_opt['actual_utility'] = schedule_opt.apply(utility_mask, axis=1)
+
+        ex_profit = sum(schedule_opt['objective']) if label == 'nf' \
+            else (sum(schedule_opt['objective']) -
+                  sum(schedule_opt['best_profit'].apply(lambda x: x[5])))
+
+        output_dict['hetero_k_' + label] = pd.Series({
+            'ExpectedProfit': ex_profit,
+            'Profit': sum(schedule_opt['actual_profit']),
+            'Occupancy': _results_daily.loc['TravellersNo'][0]/sum(schedule_opt['occ']),
+            'DistanceSaved': total_distance0 - sum(schedule_opt['actual_distance'])/1000,
+            'AcceptanceRate': sum([sum(t) for t in schedule_opt['decisions']])/_results_daily.loc['TravellersNo'][0],
+            'MeanParticipationProbabilityChange':
+                np.mean([_sigmoid(t) - 0.5
+                         for t in [a for b in schedule_opt['actual_utility'] for a in b]])
+        })
+
+
+    pd.DataFrame(output_dict).to_csv(_run_config['path_results'] + 'benchmarks.csv')
 
