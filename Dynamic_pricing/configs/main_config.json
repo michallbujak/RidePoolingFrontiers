@@ -5,14 +5,15 @@
 	"st_devs": [0.318, 0.201, 5.577, 1],
 	"class_probs": [0.29, 0.28, 0.24, 0.19], 
 	"pfs_levels": [1, 1, 1.148, 1.4, 2],
-	"batch_size": 300,
-	"sample_size": 10,
-	"no_days": 20,
+	"batch_size": 100,
+	"sample_size": 5,
+	"no_days": 2,
 	"mileage_sensitivity": 1,
 	"flat_fleet_cost": 0.4,
 	"minimum_acceptance_probability": 0.2,
 	"guaranteed_discount": 0.05,
 	"max_discount": 0.4,
 	"starting_satisfaction": 0,
-	"future_value_sensitivity": 1
+	"future_value_sensitivity": 1,
+	"attraction_sensitivity": 1
 }

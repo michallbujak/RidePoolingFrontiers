@@ -255,7 +255,7 @@ def row_acceptable_discount(
         _bs_samples: dict,
         _bt_sample: list,
         _interval: int,
-        _price: float
+        _fare: float
 ) -> list:
     """
     Samples discounts for which clients accept rides
@@ -271,6 +271,11 @@ def row_acceptable_discount(
     @param _price: price per metre
     @return: acceptable discount levels (progressive with probability)
     """
+    if _fare > 1:
+        _mFare: float = _fare/1000
+    else:
+        _mFare: float = _fare
+
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
         return []
@@ -286,7 +291,7 @@ def row_acceptable_discount(
         while j < len(out1):
             out3 = out1[j] if out1[j] >= 0 else 0
             out2.append(out3 /
-                        (_price * _rides_row["individual_distances"][no]))
+                        (_fare * _rides_row["individual_distances"][no]))
             j += _interval
         out.append(out2)
 
@@ -297,7 +302,7 @@ def row_maximise_profit(
         _rides_row: pd.Series,
         _one_shot: bool,
         _max_output_func: Callable[[list], float],
-        _price: float = 0.0015,
+        _fare: float = 0.0015,
         _probability_single: float = 1,
         _guaranteed_discount: float = 0.05,
         _min_acceptance: float = 0
@@ -326,14 +331,16 @@ def row_maximise_profit(
     - expected distance
     - max output function (by default, profitability)
     """
+
+
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        out = [_probability_single * _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
-                0,
-                _rides_row["veh_dist"] * _price * (1 - _guaranteed_discount),
-                [_probability_single],
-                _rides_row["veh_dist"] / 1000 * _probability_single
-        ]
+        out = [_probability_single * _rides_row["veh_dist"] * _fare * (1 - _guaranteed_discount),
+               0,
+               _rides_row["veh_dist"] * _fare * (1 - _guaranteed_discount),
+               [_probability_single],
+               _rides_row["veh_dist"] / 1000 * _probability_single
+               ]
         out += [_max_output_func(out)]
         return out
 
@@ -345,14 +352,14 @@ def row_maximise_profit(
     discounts = [[t if t > _guaranteed_discount else _guaranteed_discount
                   for t in discount] for discount in discounts]
     discounts = list(set(tuple(discount) for discount in discounts))
-    base_revenues = {num: _rides_row["individual_distances"][num] * _price for num, t in
+    base_revenues = {num: _rides_row["individual_distances"][num] * _fare for num, t in
                      enumerate(_rides_row['indexes'])}
     best = [0, 0, 0, 0, 0, 0]
     # if _rides_row['indexes'] == [142, 133]:
     #     print('ee')
     for discount in discounts:
         """ For effectively shared ride """
-        eff_price = [_price * (1 - t) for t in discount]
+        eff_price = [_fare * (1 - t) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
         probability_shared = 1

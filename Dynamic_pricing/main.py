@@ -1,6 +1,5 @@
 """ In progress: cleaned version of the adaptive pricing algorithm """
 import argparse
-import ast
 import json
 import pickle
 import secrets
@@ -95,6 +94,7 @@ if compute_save['starting_step'] == 0:
             step=0,
             save_load='save',
             run_config=run_config,
+            vot_sample=vot_sample,
             demand=demand,
             exmas_params=exmas_params,
             actual_class_membership=actual_class_membership
@@ -108,6 +108,7 @@ if compute_save['starting_step'] == 1:
         run_config=run_config
     )
 
+if compute_save['starting_step'] <= 1:
     # A basic filter applied to the shareability set
     all_rides = demand['rides'].loc[
         [t['u_veh']*exmas_params['avg_speed'] < sum(t['individual_distances']) + 5 # 5 is a buffer for wrong rounding
@@ -163,7 +164,7 @@ if compute_save['starting_step'] == 1:
             fare=exmas_params['price'],
             speed=exmas_params['avg_speed'],
             max_discount=run_config['max_discount'],
-            attraction_sensitivity=run_config['run_config']
+            attraction_sensitivity=run_config['attraction_sensitivity']
         )
 
         # Step IP3: Matching
@@ -258,66 +259,31 @@ if compute_save['starting_step'] == 1:
 
     results_daily = pd.concat(results_daily, axis=1)
 
-if computeSave[0] & computeSave[3]:
-    batch_prep.create_directory(run_config.path_results + 'Results')
-    folder = run_config.path_results + 'Results/'
+    if compute_save['save_partial']:
+        save_load_data(
+            step=1,
+            save_load='save',
+            run_config=run_config,
+            class_membership_stability=class_membership_stability,
+            results_daily=results_daily,
+            all_results_aggregated=all_results_aggregated,
+            predicted_travellers_satisfaction=predicted_travellers_satisfaction,
+            actual_travellers_satisfaction=actual_travellers_satisfaction
+        )
 
-    with open(folder + 'tracked_classes' + '.json', 'w') as _file:
-        json.dump(class_membership_stability, _file)
-
-    results_daily.to_csv(folder + 'results_daily' + '.csv', index_label='metric')
-
-    with open(folder + 'all_results_aggregated.pickle', 'wb') as _file:
-        pickle.dump(all_results_aggregated, _file)
-
-    with open(folder + 'predicted_travellers_satisfaction.json', 'w') as _file:
-        json.dump(predicted_travellers_satisfaction, _file)
-
-    with open(folder + 'actual_travellers_satisfaction.json', 'w') as _file:
-        json.dump(actual_travellers_satisfaction, _file)
-
+if compute_save['starting_step'] == 2:
+    (vot_sample, exmas_params, actual_class_membership,
+     class_membership_stability, results_daily, all_results_aggregated,
+     predicted_travellers_satisfaction, actual_travellers_satisfaction) = save_load_data(
+        step=1,
+        save_load='load',
+        run_config=run_config
+    )
 
 """ Step 2: Post-simulation analysis"""
-# Skip prior and load data
-if computeSave[2] - computeSave[1] == 1:
-    folder = run_config.path_results
-
-    with open(folder + 'Step_0/' + 'exmas_config.json', 'r') as _file:
-        exmas_params = json.load(_file)
-
-    with open(folder + 'Step_0/' + 'class_memberships' + '.json', 'r') as _file:
-        actual_class_membership = json.load(_file)
-        actual_class_membership = {int(k): int(v) for k, v in actual_class_membership.items()}
-
-    vot_sample = np.load(folder + 'Step_0/' + 'sample' + '_' + str(run_config.sample_size) + '.npy')
-
-    folder += 'Results/'
-
-    with (open(folder + 'tracked_classes' + '.json', 'r') as _file):
-        class_membership_stability = json.load(_file)
-        class_membership_stability = {
-            data_type: {int(pax): {int(cl): prob for cl, prob in probs.items()}
-                                    for pax, probs in data.items()}
-            for data_type, data in class_membership_stability.items()
-        }
-
-    with open(folder + 'all_results_aggregated.pickle', 'rb') as _file:
-        all_results_aggregated = pickle.load(_file)
-
-    with open(folder + 'predicted_travellers_satisfaction.json', 'r') as _file:
-        predicted_travellers_satisfaction = json.load(_file)
-
-    with open(folder + 'actual_travellers_satisfaction.json', 'r') as _file:
-        actual_travellers_satisfaction = json.load(_file)
-
-    results_daily = pd.read_csv(folder + 'results_daily' + '.csv')
-
-computeSave[1] += 1
-computeSave[0] = computeSave[2] <= computeSave[1]
-
-if computeSave[0]:
+if compute_save['starting_step'] <= 2:
     out_path = run_config.path_results + 'Results/figs_tables/'
-    create_directory(out_path)
+    batch_prep.create_directory(out_path)
 
     post_run_analysis(
         class_membership_stability=class_membership_stability,
@@ -341,6 +307,7 @@ if computeSave[0]:
         _results_daily=results_daily,
         _actual_satisfaction=actual_travellers_satisfaction,
         _actual_classes=actual_class_membership,
+        class_membership_stability=class_membership_stability,
         _run_config=run_config,
         _flat_discount=0.2
     )
