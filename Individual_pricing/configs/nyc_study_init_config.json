@@ -16,9 +16,10 @@
 		"data": "ExMAS\\data",
 		"params": "ExMAS\\data\\configs",
 		"G": "ExMAS\\data\\graphs\\Manhattan.graphml",
-		"skim": "ExMAS\\data\\graphs\\Manhattan.csv",
+		"skim": "ExMAS//data//graphs//Manhattan.parquet",
 		"nyc_trips": "ExMAS/data/nyc.csv",
-		"nyc_requests": "ExMAS/data/nyc_requests.csv"
+		"nyc_requests": "ExMAS/data/nyc_requests.csv",
+		"requests": "ExMAS/data/nyc_202401_requests.parquet"
 	},
 	"nP": 100,
 	"city": "Manhattan, New York County, New York, United States",
@@ -38,5 +39,7 @@
 	"speeds": {
 		"ride": {}
 	},
-	"logger_level": "INFO"
+	"logger_level": "INFO",
+	"start_time": "2024-01-08 16:00",
+	"interval_length_minutes": 30
 }

@@ -11,6 +11,7 @@ from tqdm import tqdm
 import datetime
 
 from ExMAS.utils import load_G, download_G
+from NYC_tools.nyc_data_load import adjust_nyc_request_to_exmas
 
 up = os.path.dirname
 sys.path.append(up(up(up(__file__))))
@@ -174,7 +175,7 @@ def prepare_batches(
     """ Prepare batches from the NYC request .csv file"""
     databank_dotmap = initialise_input_dotmap()
 
-    if no_replications == 1 & kwargs.get('quick_load'):
+    if (no_replications == 1) & kwargs.get('quick_load', False):
         req_name = 'nyc_demand_' + str(kwargs['batch_size']) + '.csv'
         try:
             databank_dotmap['requests'] = pd.read_csv(
