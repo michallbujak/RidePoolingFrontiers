@@ -152,6 +152,11 @@ def baseline_karaenke(
     vot_end_points: list = [find_percentile(p) for p in percentiles]
     vot_points: list = np.linspace(*vot_end_points, 5).tolist()
 
+    # Calculate discounts based on a 5% utility gain:
+    # U^{ns} = -\rho d - \beta_t t^{ns}
+    # U^s = -(1 - \lambda) \rho d - \beta_t \beta_s t^s
+    # U^s = 0.95 U^{ns}
+    # \lambda = (0.05 \rho d - \beta_t(t^{ns} - \beta_s t^s))/(\rho d)
     discounts = [0, 0]
     for vot1, vot2 in product(vot_points, vot_points):
         vot_vector = [vot1/3600, vot2/3600]
