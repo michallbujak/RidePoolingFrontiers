@@ -272,9 +272,9 @@ def row_acceptable_discount(
     @return: acceptable discount levels (progressive with probability)
     """
     if _fare > 1:
-        _mFare: float = _fare/1000
+        _fare_meter: float = _fare/1000
     else:
-        _mFare: float = _fare
+        _fare_meter: float = _fare
 
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
@@ -291,7 +291,7 @@ def row_acceptable_discount(
         while j < len(out1):
             out3 = out1[j] if out1[j] >= 0 else 0
             out2.append(out3 /
-                        (_mFare * _rides_row["individual_distances"][no]))
+                        (_fare_meter * _rides_row["individual_distances"][no]))
             j += _interval
         out.append(out2)
 
@@ -332,15 +332,15 @@ def row_maximise_profit(
     - max output function (by default, profitability)
     """
     if _fare > 1:
-        _mFare: float = _fare/1000
+        _fare_meter: float = _fare/1000
     else:
-        _mFare: float = _fare
+        _fare_meter: float = _fare
 
     no_travellers = len(_rides_row["indexes"])
     if no_travellers == 1:
-        out = [_probability_single * _rides_row["veh_dist"] * _mFare * (1 - _guaranteed_discount),
+        out = [_probability_single * _rides_row["veh_dist"] * _fare_meter * (1 - _guaranteed_discount),
                0,
-               _rides_row["veh_dist"] * _mFare * (1 - _guaranteed_discount),
+               _rides_row["veh_dist"] * _fare_meter * (1 - _guaranteed_discount),
                [_probability_single],
                _rides_row["veh_dist"] / 1000 * _probability_single
                ]
@@ -355,14 +355,14 @@ def row_maximise_profit(
     discounts = [[t if t > _guaranteed_discount else _guaranteed_discount
                   for t in discount] for discount in discounts]
     discounts = list(set(tuple(discount) for discount in discounts))
-    base_revenues = {num: _rides_row["individual_distances"][num] * _mFare for num, t in
+    base_revenues = {num: _rides_row["individual_distances"][num] * _fare_meter for num, t in
                      enumerate(_rides_row['indexes'])}
     best = [0, 0, 0, 0, 0, 0]
     # if _rides_row['indexes'] == [142, 133]:
     #     print('ee')
     for discount in discounts:
         """ For effectively shared ride """
-        eff_price = [_mFare * (1 - t) for t in discount]
+        eff_price = [_fare_meter * (1 - t) for t in discount]
         revenue_shared = [a * b for a, b in
                           zip(_rides_row["individual_distances"], eff_price)]
         probability_shared = 1
