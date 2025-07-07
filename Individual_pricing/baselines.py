@@ -167,6 +167,8 @@ def baseline_karaenke(
             denominator = m_fare*row_rides['individual_distances'][pax]
             discounts[pax] += nominator/denominator
     discounts = [t/(len(vot_points)*len(vot_points)) for t in discounts]
+    discounts = [t if t >= guaranteed_discount else guaranteed_discount for t in discounts]
+    discounts = [t if t <= max_discount else max_discount for t in discounts]
 
     shared_prices = [(1 - _l) * _d * m_fare for _l, _d in zip(discounts, row_rides['individual_distances'])]
     forced_prices = [(1 - guaranteed_discount) * _d * m_fare for _d in row_rides['individual_distances']]
