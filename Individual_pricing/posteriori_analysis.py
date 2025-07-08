@@ -20,6 +20,7 @@ from auxiliary_functions import extract_selected_discounts, extract_selected_pro
 parser = argparse.ArgumentParser()
 parser.add_argument("--no-requests", type=int, required=True)
 parser.add_argument("--sample-size", type=int, required=True)
+parser.add_argument("--old-version", action="store_true")
 parser.add_argument("--profitability", action="store_false")
 parser.add_argument("--min-accept", type=float, default=0.1)
 parser.add_argument("--operating-cost", type=float, default=0.5)
@@ -44,13 +45,15 @@ else:
 path = path_joiner(path, 'data')
 path = path_joiner(path, str(_num) + '_' + str(_sample))
 
-
-if args.profitability:
-    path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample))
+if args.version:
+    if args.profitability:
+        path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample))
+    else:
+        res_name = 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample)
+        res_name += "_" + str(args.operating_cost) + "_" + str(args.min_accept)
+        path = path_joiner(path, res_name)
 else:
-    res_name = 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample)
-    res_name += "_" + str(args.operating_cost) + "_" + str(args.min_accept)
-    path = path_joiner(path, res_name)
+    path = path_joiner(path, 'results_' + str(_num) + '_' + str(_sample))
 
 try:
     with open(path + '_amended.pickle', "rb") as file:
@@ -77,7 +80,10 @@ if not args.profitability:
         os.mkdir(res_path)
         os.chdir(res_path)
 
-rr = data["exmas"]["recalibrated_rides"]
+if args.old_version:
+    rr = data["exmas"]["recalibrated_rides"]
+else:
+    rr = data["exmas"]["rides"]
 schedule_profit = data['exmas']['schedules']['profitability']
 schedule_profit_sh = schedule_profit.loc[[len(t) > 1 for t in schedule_profit['indexes']]]
 

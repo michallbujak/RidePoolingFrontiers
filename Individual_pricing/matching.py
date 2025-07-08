@@ -23,7 +23,7 @@ def matching_function(
         rides = databank['rides']
         requests = databank['requests']
     else:
-        rides = databank["exmas"]["recalibrated_rides"]
+        rides = databank["exmas"]["rides"]
         requests = databank["exmas"]["requests"]
 
     if kwargs.get('requestsErrorIndex', False):
@@ -94,7 +94,7 @@ def matching_function(
         schedules[objective + opt_flag]['degree'] = schedules[objective + opt_flag].apply(lambda x: len(x.indexes), axis=1)
 
     if not rides_requests:
-        databank['exmas']['recalibrated_rides'] = rides
+        databank['exmas']['rides'] = rides
         if len(databank['exmas'].get('schedules', [])) > 0:
             for objective in objectives:
                 databank['exmas']['schedules'][objective + opt_flag] = schedules[objective + opt_flag]

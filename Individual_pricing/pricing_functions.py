@@ -140,9 +140,6 @@ def calculate_min_discount(
     rides["min_discount"] = rides.apply(lambda x:
                                         [max(t, 0) for t in discount_row_func(x, travellers_characteristics)],
                                         axis=1)
-
-    databank["exmas"]["recalibrated_rides"] = rides
-
     return databank
 
 
@@ -180,7 +177,7 @@ def calculate_profitability(
             out += row["individual_distances"][no] * params["price"] * (1 - disc)
         return out
 
-    rides = databank["exmas"]["recalibrated_rides"]
+    rides = databank["exmas"]["rides"]
     rides["cost"] = rides.apply(lambda x: _row_cost(x), axis=1)
 
     rides["revenue_base"] = rides.apply(lambda x: _base_row_revenue(x), axis=1)
@@ -475,8 +472,6 @@ def profitability_measures(
             lambda x: int(1000 * x))
         objectives += ["expected_profit_int_" + str(int(100 * op_cost))]
 
-    databank["exmas"]["recalibrated_rides"] = rides.copy()
-    databank["exmas"]["rides"] = rides
     databank["exmas"]["objectives"] = objectives
 
     return databank

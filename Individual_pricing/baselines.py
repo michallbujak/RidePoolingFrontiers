@@ -1,5 +1,6 @@
 """ Pricing baselines """
 import argparse
+from pathlib import Path
 import pickle
 from typing import Callable
 from itertools import product
@@ -200,13 +201,78 @@ def baseline_karaenke(
     return performance_vector
 
 
+def baseline_distance(
+        row_rides: pd.Series,
+        sample_size: int,
+        max_func: Callable[[list], float] = lambda x: x[0] / x[4] if x[4] != 0 else 0,
+        m_fare: float = 0.0015,
+        guaranteed_discount: float = 0.05,
+        max_discount: float = 0.4,
+        discount_interval: float = 0.05,
+        mean_vot: float = 0.0046,
+        mean_pfs: float = 1.1246,
+        avg_speed: float = 6
+):
+    """
+    A natural baseline, where travellers get a discount
+    proportional to the additional distance they experience with pooling
+    """
+    if len(row_rides['indexes']) == 1:
+        out = [row_rides["veh_dist"] * m_fare * (1 - guaranteed_discount),
+               0,
+               row_rides["veh_dist"] * m_fare * (1 - guaranteed_discount),
+               [1],
+               row_rides["veh_dist"] / 1000 * 1
+               ]
+        out += [max_func(out)]
+        return out
+
+    additional_distance = [a - b/avg_speed for a, b in
+                           zip(row_rides['individual_distances'], row_rides['individual_times'])]
+    relative_add_distance = [a/b for a, b in
+                             zip(additional_distance, row_rides['individual_distances'])]
+    relative_add_distance = [t if t < 0.25 else 0.25 for t in relative_add_distance]
+    discounts = [guaranteed_discount + (max_discount-guaranteed_discount)*4*t
+                 for t in relative_add_distance]
+
+    actual_probs = [bisect(t, _l) / sample_size for t, _l
+                    in zip(row_rides['accepted_discount'], discounts)]
+
+    shared_prices = [(1 - _l) * _d * m_fare for _l, _d in zip(discounts, row_rides['individual_distances'])]
+    forced_prices = [(1 - guaranteed_discount) * _d * m_fare for _d in row_rides['individual_distances']]
+    rejected_prices = [_d * m_fare for _d in row_rides['individual_distances']]
+
+    ex_revenue = np.prod(actual_probs) * sum(shared_prices)
+    ex_revenue += (1 - actual_probs[0]) * actual_probs[1] * (actual_probs[0] + actual_probs[1])
+    ex_revenue += (1 - actual_probs[1]) * actual_probs[0] * (rejected_prices[1] + forced_prices[0])
+    ex_revenue += (1 - actual_probs[0]) * (1 - actual_probs[0]) * sum(rejected_prices)
+
+    ex_dist = np.prod(actual_probs) * row_rides['veh_dist']
+    ex_dist += (1 - actual_probs[0]) * actual_probs[1] * sum(row_rides['individual_distances'])
+    ex_dist += (1 - actual_probs[1]) * actual_probs[0] * sum(row_rides['individual_distances'])
+    ex_dist += (1 - actual_probs[0]) * (1 - actual_probs[0]) * sum(row_rides['individual_distances'])
+    ex_dist /= 1000
+
+    performance_vector = [
+        ex_revenue,
+        discounts,
+        sum(shared_prices),
+        actual_probs,
+        ex_dist
+    ]
+    performance_vector += [max_func(performance_vector)]
+
+    return performance_vector
+
+
 
 with open(args.data_pickle, 'rb') as _f:
     data = pickle.load(_f)[0]
 
-rides = data['exmas']['recalibrated_rides']
+rides = data['exmas']['rides']
 
-for baseline_name, baseline_method in zip(['jiao', 'karaenke'], [baseline_jiao, baseline_karaenke]):
+for baseline_name, baseline_method in zip(['jiao', 'karaenke', 'distance'],
+                                          [baseline_jiao, baseline_karaenke, baseline_distance]):
     rides['baseline_' + baseline_name] = rides.apply(
         baseline_method,
         sample_size=args.sample_size,
@@ -229,4 +295,8 @@ for baseline_name, baseline_method in zip(['jiao', 'karaenke'], [baseline_jiao, 
             lambda x: x[0] * len(x[3]) / x[4] if x[4] != 0 else 0
         )
     )
-    x = 0
+
+path = Path(args.data_pickle)
+with open(str(path.parent) + '/' + path.name.split('.')[0] + '_baselines.pickle', 'wb') as _file:
+    pickle.dump(data, _file)
+
