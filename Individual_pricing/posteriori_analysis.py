@@ -1,26 +1,29 @@
 import pickle
 import os
 import argparse
+from pathlib import Path
+from collections import Counter
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-from collections import Counter
 import matplotlib.pylab as pylab
 from matplotlib.markers import MarkerStyle
 from matplotlib.ticker import PercentFormatter
 from matplotlib.collections import PathCollection
+import seaborn as sns
 
 from pricing_functions import _expected_flat_measures
 from pricing_functions import *
 from matching import matching_function
 from auxiliary_functions import extract_selected_discounts, extract_selected_profitability, bracket
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--no-requests", type=int, required=True)
 parser.add_argument("--sample-size", type=int, required=True)
-parser.add_argument("--old-version", action="store_true")
+parser.add_argument("--legacy-version", action="store_true")
+parser.add_argument("--baselines", action="store_false")
 parser.add_argument("--profitability", action="store_false")
 parser.add_argument("--min-accept", type=float, default=0.1)
 parser.add_argument("--operating-cost", type=float, default=0.5)
@@ -45,7 +48,7 @@ else:
 path = path_joiner(path, 'data')
 path = path_joiner(path, str(_num) + '_' + str(_sample))
 
-if args.version:
+if args.legacy_version:
     if args.profitability:
         path = path_joiner(path, 'results_[' + str(_num) + ', ' + str(_num) + ']_' + str(_sample))
     else:
@@ -55,12 +58,26 @@ if args.version:
 else:
     path = path_joiner(path, 'results_' + str(_num) + '_' + str(_sample))
 
-try:
-    with open(path + '_amended.pickle', "rb") as file:
-        data = pd.read_pickle(file)
-except FileNotFoundError:
-    with open(path + '.pickle', "rb") as file:
-        data = pd.read_pickle(file)[0]
+
+if args.legacy_version:
+    try:
+        with open(path + '_amended.pickle', "rb") as file:
+            data = pd.read_pickle(file)
+    except FileNotFoundError:
+        with open(path + '.pickle', "rb") as file:
+            data = pd.read_pickle(file)[0]
+else:
+    if args.baselines:
+        path += '_baselines'
+    if Path(path+'_amended.pickle').is_file():
+        with open(path + '_amended.pickle', "rb") as file:
+            data = pd.read_pickle(file)
+    else:
+        with open(path + '.pickle', "rb") as file:
+            if args.baselines:
+                data = pd.read_pickle(file)
+            else:
+                data = pd.read_pickle(file)[0]
 
 os.chdir(os.path.join(os.getcwd(), "results"))
 res_path = os.path.join(os.getcwd(), str(_num) + "_" + str(_sample))
@@ -80,7 +97,7 @@ if not args.profitability:
         os.mkdir(res_path)
         os.chdir(res_path)
 
-if args.old_version:
+if args.legacy_version:
     rr = data["exmas"]["recalibrated_rides"]
 else:
     rr = data["exmas"]["rides"]
@@ -94,7 +111,7 @@ avg_discount = round(avg_discount, 2)
 
 discounts = [avg_discount] + args.discounts
 discounts_names = ['0' + str(int(100 * disc)) for disc in discounts]
-discounts_labels = ['Personalised'] + ['Flat discount ' + str(d) for d in discounts]
+discounts_labels = ['Personalised'] + ['Flat ' + str(d) for d in discounts]
 
 # Conduct analysis for flat discount if not conducted yet
 if data.get('flat_analysis') == discounts:
@@ -163,6 +180,12 @@ else:
     raise Warning("Please, rerun the project to ensure the data integrity")
 
 # Now analysis
+if args.baselines:
+    for baseline_name in ['jiao', 'karaenke', 'detour']:
+        rr['prod_prob_' + baseline_name] = rr['baseline_' + baseline_name].apply(lambda x: np.prod(x[3]))
+        rr['selected_' + baseline_name] = (
+            rr['indexes'].apply(lambda x: x in data['exmas']['schedules'][baseline_name]['indexes'].tolist()))
+
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
 shared = rr.loc[[len(t) > 1 for t in rr['indexes']]].copy()
 
@@ -185,8 +208,10 @@ if args.analysis_parts[0]:
 
 if args.analysis_parts[1]:
     objectives_to_plot = ['profitability'] + [t + "_profitability" for t in discounts_names]
+    if args.baselines:
+        objectives_to_plot += ['jiao', 'karaenke', 'detour']
     _d = {}
-    for obj in data['exmas']['schedules'].keys():
+    for obj in objectives_to_plot:
         _d[obj] = [len(t) for t in data['exmas']['schedules'][obj]["indexes"]]
 
     max_deg = max(max(j for j in tt) for tt in _d.values())
@@ -214,8 +239,13 @@ if args.analysis_parts[1]:
         ax.bar_label(rects, padding=0)
         multiplier += 1
 
+    if args.baselines:
+        _labels = discounts_labels + ['Jiao', 'Karaenke', 'Detour']
+    else:
+        _labels = discounts_labels
+
     ax.set_ylabel('Number of rides')
-    ax.set_xticks(x + width, discounts_labels)
+    ax.set_xticks(x + width, _labels)
     lgd = ax.legend(title='Degree', bbox_to_anchor=(1.02, 1), borderaxespad=0, ncols=2, loc='upper left')
     ax.set_ylim(0, max(max(t) for t in _df.values()) + 5)
     plt.savefig('degrees_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
@@ -223,37 +253,37 @@ if args.analysis_parts[1]:
     plt.close()
 
     _df3 = pd.DataFrame(_df2)
-    _df3['kind'] = discounts_labels
+    _df3['kind'] = _labels
     for num in [2, 3, 4]:
         _df3[num] = _df3[num].apply(lambda x: num*x)
     _df4 = pd.DataFrame(columns=['degree', 'kind'])
     for out_lab, (lab, row) in enumerate(_df3.iterrows()):
-        cur_kind = discounts_labels[out_lab]
+        cur_kind = _labels[out_lab]
         for deg in range(1, 5):
             for en in range(row[deg]):
                 _df4 = pd.concat([_df4, pd.DataFrame({'degree': [str(deg)], 'kind': [cur_kind]})])
     _df4 = _df4.reset_index(drop=True)
     fig, ax = plt.subplots()
     graph = sns.histplot(x='kind', data=_df4, hue='degree', multiple='stack', shrink=0.9,
-                 hue_order=[str(t) for t in range(3, 0, -1)])
-    respective_height = [[0], [0], [0]]
+                 hue_order=[str(t) for t in range(4, 0, -1)])
+    respective_height = [[0] for j in range(len(_labels))]
     for num, rect in enumerate(graph.patches):
         count = rect.get_height()
-        respective_height[num%3] += [count]
-        tmp = respective_height[num%3]
-        graph.text(rect.get_x()+rect.get_width()/2-0.05, sum(tmp[:-1]) + tmp[-1]/2-1, str(int(count)),
+        respective_height[num%len(_labels)] += [count]
+        tmp = respective_height[num%len(_labels)]
+        graph.text(rect.get_x()+rect.get_width()/2-0.05, sum(tmp[:-1]) + tmp[-1]/2-2.5, str(int(count)),
                    color='white')
-        if num >= len(graph.patches) - 3:
-            graph.text(rect.get_x() + rect.get_width() / 2 - 0.2, sum(tmp)+0.5,
-                       'avg. ' + str(round((tmp[1] + tmp[2]*2 + tmp[3]*3)/150, 2)),
+        if num >= len(graph.patches) - len(_labels):
+            graph.text(rect.get_x() + rect.get_width() / 2 - 0.4, sum(tmp)+0.5,
+                       'avg. ' + str(round((tmp[1] + tmp[2]*2 + tmp[3]*3 + tmp[4]*4)/150, 2)),
                        color='black')
 
-    lgd = ax.legend(title='Degree', labels=range(1, 4), title_fontsize='x-large',
+    lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize='x-large',
                     bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
     plt.xlabel(None)
     plt.ylabel(None)
     plt.yticks(np.arange(0, args.no_requests + 30, 30))
-    # plt.tight_layout()
+    ax.tick_params(axis='x', which='major', labelsize=10)
     plt.savefig('degrees_stacked_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
@@ -292,13 +322,21 @@ if args.analysis_parts[2]:
 if args.analysis_parts[3] + args.analysis_parts[4] >= 1:
     selected_objectives = ['selected_profitability']
     selected_objectives += ['selected_' + t + '_profitability' for t in discounts_names]
+    if args.baselines:
+        selected_objectives += ['selected_' + t for t in ['jiao', 'karaenke', 'detour']]
+        _labels = discounts_labels  + ['Jiao', 'Karaenke', 'Detour']
+    else:
+        _labels = discounts_labels
     selected = {
         objective: (shared.loc[rr[objective] == 1], name)
-        for objective, name in zip(selected_objectives, discounts_labels)
+        for objective, name in zip(selected_objectives, _labels)
     }
 
 if args.analysis_parts[3]:
-    col_labels = ["prob"] + ["prod_prob_" + t for t in discounts_names]
+    if args.baselines:
+        col_labels = ["prob"] + ["prod_prob_" + t for t in discounts_names+['jiao', 'karaenke', 'detour']]
+    else:
+        col_labels = ["prob"] + ["prod_prob_" + t for t in discounts_names]
     dat = []
     labels = []
     for num, (sel, name) in enumerate(selected.values()):
@@ -328,7 +366,7 @@ if args.analysis_parts[3]:
 
     dat = []
     labels = []
-    for obj, label in zip(col_labels, discounts_labels):
+    for obj, label in zip(col_labels, _labels):
         r_s = rr.loc[[len(t) != 1 for t in rr["indexes"]]]
         dat += [list(r_s[obj])]
         labels += [label]
@@ -356,28 +394,6 @@ if args.analysis_parts[3]:
     plt.close()
 
 if args.analysis_parts[4]:
-    temp_data = rr.loc[rr['selected_profitability'] == 1]
-    results = {
-        'profitability': [np.mean(temp_data['profitability'])],
-        'e_dist': [sum(temp_data['best_profit'].apply(lambda x: x[4]))]
-    }
-    for flat_disc in discounts_names:
-        temp_data = rr.loc[rr['selected_' + flat_disc + '_profitability'] == 1]
-        results['profitability'] += [np.mean(temp_data[flat_disc + '_profitability'])]
-        results['e_dist'] += [sum(temp_data.apply(
-            lambda x: (x['veh_dist'] * x["prod_prob_" + flat_disc] +
-                       sum(x['individual_distances']) * (1 - x["prod_prob_" + flat_disc])) / 1000,
-            axis=1
-        ))]
-    results['profitability'] += [1.5]
-    results['e_dist'] += [sum(singles['veh_dist']) / 1000]
-
-    results = pd.DataFrame(results)
-    results.index = discounts_labels + ['Private only']
-    results = results.round(2)
-    print(results.to_latex())
-
-if args.analysis_parts[5]:
     results, results_list = extract_selected_discounts(rr, discounts_names)
 
     fig, ax = plt.subplots()
@@ -403,7 +419,7 @@ if args.analysis_parts[5]:
     plt.savefig("profitability_" + str(_sample) + "_sel_hist." + args.pic_format, dpi=args.dpi)
     plt.close()
 
-if args.analysis_parts[6]:
+if args.analysis_parts[5]:
     profitability_scatter = [(x, num) for num, x in enumerate(list(shared['profitability']))]
     profitability_scatter.sort(reverse=False)
     profitability_scatter, permutation = zip(*profitability_scatter)
@@ -449,6 +465,12 @@ if args.analysis_parts[6]:
             lambda row: row[disc_name + '_profitability'] / len(row['indexes']),
             axis=1
         )
+    if args.baselines:
+        for baseline_name in ['jiao', 'karaenke', 'detour']:
+            shared[baseline_name + '_profitability_unbalanced'] = shared.apply(
+                lambda row: row['profitability_' + baseline_name + '_actual'] / len(row['indexes']),
+                axis=1
+            )
 
     shared_reordered = shared.copy()
     shared_reordered = shared_reordered.reset_index(drop=True)
@@ -460,9 +482,15 @@ if args.analysis_parts[6]:
     new_order = [t[0] for t in unbalanced[0]]
     shared_reordered = shared_reordered.reindex(new_order)
 
-    for disc_name, label in zip(discounts_names, discounts_labels[1:]):
+    if args.baselines:
+        iterable_labels = zip(discounts_names + ['jiao', 'karaenke', 'detour'],
+                              discounts_labels[1:] + ['Jiao', 'Karaenke', 'Detour'])
+    else:
+        iterable_labels = zip(discounts_names, discounts_labels[1:])
+
+    for _name, label in iterable_labels:
         unbalanced += [shared_reordered.apply(
-            lambda row: (row.name, label, len(row['indexes']), row[disc_name + '_profitability_unbalanced']),
+            lambda row: (row.name, label, len(row['indexes']), row[_name + '_profitability_unbalanced']),
             axis=1
         ).to_list()]
 
@@ -477,7 +505,11 @@ if args.analysis_parts[6]:
         else:
             temp_data = unbalanced
         fig, ax = plt.subplots(figsize=(8,14))
-        for num, cur_label in enumerate(discounts_labels):
+        if args.baselines:
+            iterable_labels = enumerate(discounts_labels + ['Jiao', 'Karaenke', 'Detour'])
+        else:
+            iterable_labels = enumerate(discounts_labels)
+        for num, cur_label in iterable_labels:
             if num == 0:
                 size = 12
             else:
@@ -491,7 +523,7 @@ if args.analysis_parts[6]:
                         linekw={'color': "black", 'lw': 1}, textkw={'size': 12})
 
         ax.set_xticks([])
-        plt.ylim(1.1, 2.3)
+        plt.ylim(0.6, 2.8)
         plt.axhline(1.425, lw=2, ls='solid', color='red', label='Private ride')
         plt.xlabel('Individual shared rides', fontsize=20)
         if _deg != list(_range)[0]:
@@ -656,8 +688,9 @@ if args.analysis_parts[6]:
         )
         _data_all2 = []
         for el in _data_all:
-            for j in range(len(el[1])):
-                _data_all2 += [[el[0], el[1][j], el[2]]]
+            _data_all2 += [[el[0], np.prod(el[1]), el[2]]]
+            # for j in range(len(el[1])):
+            #     _data_all2 += [[el[0], el[1][j], el[2]]]
 
         _data_map = [[_bins_x[temp_foo(t[0], _bins_x)],
                       _bins_y[temp_foo(t[1], _bins_y)],
@@ -672,7 +705,7 @@ if args.analysis_parts[6]:
                                       columns='Expected profitability',
                                       values='Acceptance probability',
                                       aggfunc='mean')
-        for ex_prof in [round(t, 1) for t in np.arange(1.2, 2.4, 0.1)]:
+        for ex_prof in [round(t, 1) for t in np.arange(1, 3.1, 0.1)]:
             if ex_prof not in _table.columns:
                 _table[ex_prof] = np.NaN
         _table = _table[sorted(_table.columns)]
@@ -690,7 +723,106 @@ if args.analysis_parts[6]:
         if _num == len(discounts_labels) - 1:
             cbar = ax.collections[0].colorbar
             cbar.ax.tick_params(labelsize=25)
-        plt.xticks(fontsize=20)
+        plt.xticks(fontsize=15)
         plt.xlabel('Expected Profitability', fontsize=25)
         plt.tight_layout()
         plt.savefig('heatmap' + disc_name + "_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
+
+    shared['dist_prop'] = shared.apply(
+        lambda row: 1 - row['u_veh'] * args.avg_speed / sum(row['individual_distances']),
+        axis=1
+    )
+    for baseline_name in ['jiao', 'karaenke', 'detour']:
+        shared['unbalanced_profitability_' + baseline_name] = shared.apply(
+            lambda x: x['profitability_' + baseline_name + '_actual']/len(x['indexes']),
+            axis=1
+        )
+        _data_all = shared.apply(
+            lambda row: [row['dist_prop'], row['prod_prob_' + baseline_name],
+                         row['unbalanced_profitability_' + baseline_name]],
+            axis=1
+        )
+        _data_map = [[_bins_x[temp_foo(t[0], _bins_x)],
+                      _bins_y[temp_foo(t[1], _bins_y)],
+                      _bins_z[temp_foo(t[2], _bins_z)]] for t in _data_all]
+
+        _heatmap = pd.DataFrame(
+            {'Relative mileage reduction': [t[0] for t in _data_map],
+             'Acceptance probability': [t[1] for t in _data_map],
+             'Expected profitability': [t[2] for t in _data_map]}
+        ).reset_index(drop=True)
+        _table = _heatmap.pivot_table(index='Relative mileage reduction',
+                                      columns='Expected profitability',
+                                      values='Acceptance probability',
+                                      aggfunc='mean')
+        for ex_prof in [round(t, 1) for t in np.arange(1, 3.1, 0.1)]:
+            if ex_prof not in _table.columns:
+                _table[ex_prof] = np.NaN
+        _table = _table[sorted(_table.columns)]
+        fig, ax = plt.subplots(figsize=(8, 8))
+        sns.heatmap(_table, yticklabels=[str(round(100 * t, 0))[:-2] + '%' for t in _table.index],
+                    cbar=True if baseline_name=='detour' else False,
+                    cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True))
+        if baseline_name != 'jiao':
+            plt.ylabel(None)
+            plt.yticks([])
+            plt.xlabel(None)
+        else:
+            plt.ylabel('Relative mileage reduction', fontsize=25)
+            plt.yticks(fontsize=25)
+        if baseline_name == 'detour':
+            cbar = ax.collections[0].colorbar
+            cbar.ax.tick_params(labelsize=25)
+        plt.xticks(fontsize=15)
+        plt.xlabel('Expected Profitability', fontsize=25)
+        plt.tight_layout()
+        plt.savefig('heatmap_' + baseline_name + "." + args.pic_format, dpi=args.dpi)
+
+
+if args.analysis_parts[6]:
+    rr['profitability_unbalanced'] = rr.apply(
+        lambda row: row['profitability'] / len(row['indexes']),
+        axis=1
+    )
+    for disc_name in discounts_names:
+        rr[disc_name + '_profitability_unbalanced'] = rr.apply(
+            lambda row: row[disc_name + '_profitability'] / len(row['indexes']),
+            axis=1
+        )
+    if args.baselines:
+        for baseline_name in ['jiao', 'karaenke', 'detour']:
+            rr[baseline_name + '_profitability_unbalanced'] = rr.apply(
+                lambda row: row['profitability_' + baseline_name + '_actual'] / len(row['indexes']),
+                axis=1
+            )
+
+    temp_data = rr.loc[rr['selected_profitability'] == 1]
+    results = {
+        'profitability': [np.mean(temp_data['profitability_unbalanced'])],
+        'e_dist': [sum(temp_data['best_profit'].apply(lambda x: x[4]))]
+    }
+    for flat_disc in discounts_names:
+        temp_data = rr.loc[rr['selected_' + flat_disc + '_profitability'] == 1]
+        results['profitability'] += [np.mean(temp_data[flat_disc + '_profitability_unbalanced'])]
+        results['e_dist'] += [sum(temp_data.apply(
+            lambda x: (x['veh_dist'] * x["prod_prob_" + flat_disc] +
+                       sum(x['individual_distances']) * (1 - x["prod_prob_" + flat_disc])) / 1000,
+            axis=1
+        ))]
+    if args.baselines:
+        for baseline_name in ['jiao', 'karaenke', 'detour']:
+            temp_data = rr.loc[rr['selected_' + baseline_name] == 1]
+            results['profitability'] += [np.mean(temp_data[baseline_name + '_profitability_unbalanced'])]
+            results['e_dist'] += [sum(temp_data['baseline_' + baseline_name].apply(lambda x: x[4]))]
+
+    results['profitability'] += [1.5]
+    results['e_dist'] += [sum(singles['veh_dist']) / 1000]
+
+    results = pd.DataFrame(results)
+    if args.baselines:
+        results.index = discounts_labels + ['Jiao', 'Karaenke', 'Detour'] + ['Private only']
+    else:
+        results.index = discounts_labels + ['Private only']
+    results = results.round(2)
+    print(results.to_latex(float_format="%.2f"))
+

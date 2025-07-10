@@ -268,14 +268,14 @@ def row_acceptable_discount(
     @param _price: price per metre
     @return: acceptable discount levels (progressive with probability)
     """
+    no_travellers = len(_rides_row["indexes"])
+    if no_travellers == 1:
+        return []
+
     if _fare > 1:
         _fare_meter: float = _fare/1000
     else:
         _fare_meter: float = _fare
-
-    no_travellers = len(_rides_row["indexes"])
-    if no_travellers == 1:
-        return []
 
     _bs = _bs_samples[no_travellers if no_travellers <= 5 else 5]
     out = []

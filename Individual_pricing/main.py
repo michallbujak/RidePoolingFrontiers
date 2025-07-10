@@ -15,8 +15,8 @@ parser.add_argument("--profitability", action="store_false")
 parser.add_argument("--min-accept", type=float, default=0.1)
 parser.add_argument("--operating-cost", type=float, default=0.5)
 # parser.add_argument("--batch-size", nargs='+', type=int, default=[100, 200])
-parser.add_argument("--batch-size", type=int, default=100)
-parser.add_argument("--sample-size", type=int, default=20)
+parser.add_argument("--batch-size", type=int, default=150)
+parser.add_argument("--sample-size", type=int, default=5)
 parser.add_argument("--save-partial", action="store_false")
 parser.add_argument("--load-partial", nargs='+', type=int, default=[0, 0, 0])
 parser.add_argument("--simulation-name", type=str or None, default=None)
@@ -65,6 +65,11 @@ if not sum(args.load_partial):
         with open(directories.partial_results + "initial_exmas_" +
                   str(args.batch_size) + ".pickle", "wb") as file:
             pickle.dump((databanks_list, exmas_params), file)
+
+if sum(args.load_partial) >= 1:
+    directories.partial_results = (directories.partial_results
+                                   + str(args.batch_size)
+                                   + "_" + str(args.sample_size) + '/')
 
 if args.load_partial[0]:
     with open(directories.partial_results + "initial_exmas_" +

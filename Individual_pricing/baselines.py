@@ -201,7 +201,7 @@ def baseline_karaenke(
     return performance_vector
 
 
-def baseline_distance(
+def baseline_detour(
         row_rides: pd.Series,
         sample_size: int,
         max_func: Callable[[list], float] = lambda x: x[0] / x[4] if x[4] != 0 else 0,
@@ -271,8 +271,8 @@ with open(args.data_pickle, 'rb') as _f:
 
 rides = data['exmas']['rides']
 
-for baseline_name, baseline_method in zip(['jiao', 'karaenke', 'distance'],
-                                          [baseline_jiao, baseline_karaenke, baseline_distance]):
+for baseline_name, baseline_method in zip(['jiao', 'karaenke', 'detour'],
+                                          [baseline_jiao, baseline_karaenke, baseline_detour]):
     rides['baseline_' + baseline_name] = rides.apply(
         baseline_method,
         sample_size=args.sample_size,
@@ -282,6 +282,10 @@ for baseline_name, baseline_method in zip(['jiao', 'karaenke', 'distance'],
     rides['profitability_' + baseline_name + '_est'] = rides.apply(
         lambda x: x['baseline_' + baseline_name][-1]*len(x['indexes']),
         axis=1
+    )
+
+    rides['profitability_' + baseline_name + '_actual'] = rides['baseline_' + baseline_name].apply(
+        lambda x: x[0] * len(x[3]) / x[4] if x[4] != 0 else 0
     )
 
     data['exmas']['schedules'][baseline_name] = matching_function_light(
