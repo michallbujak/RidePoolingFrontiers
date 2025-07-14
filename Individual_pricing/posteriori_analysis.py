@@ -183,8 +183,11 @@ else:
 if args.baselines:
     for baseline_name in ['jiao', 'karaenke', 'detour']:
         rr['prod_prob_' + baseline_name] = rr['baseline_' + baseline_name].apply(lambda x: np.prod(x[3]))
-        rr['selected_' + baseline_name] = (
-            rr['indexes'].apply(lambda x: x in data['exmas']['schedules'][baseline_name]['indexes'].tolist()))
+        schedule_trio = data['exmas']['schedules'][baseline_name].apply(
+            lambda y: (tuple(y['indexes']), y['u_pax'], y['u_veh']), axis=1)
+        rr_trio = rr.apply(lambda x: (tuple(x['indexes']), x['u_pax'], x['u_veh']), axis=1)
+        rr['selected_' + baseline_name] = [any(outer == inner for inner in schedule_trio) for outer in rr_trio]
+        rr['ex_distance'] = rr['baseline_' + baseline_name].apply(lambda x: x[4])
 
 singles = rr.loc[[len(t) == 1 for t in rr['indexes']]].copy()
 shared = rr.loc[[len(t) > 1 for t in rr['indexes']]].copy()
@@ -254,18 +257,18 @@ if args.analysis_parts[1]:
 
     _df3 = pd.DataFrame(_df2)
     _df3['kind'] = _labels
-    for num in [2, 3, 4]:
+    for num in range(2, max_deg + 1):
         _df3[num] = _df3[num].apply(lambda x: num*x)
     _df4 = pd.DataFrame(columns=['degree', 'kind'])
     for out_lab, (lab, row) in enumerate(_df3.iterrows()):
         cur_kind = _labels[out_lab]
-        for deg in range(1, 5):
+        for deg in range(1, max_deg + 1):
             for en in range(row[deg]):
                 _df4 = pd.concat([_df4, pd.DataFrame({'degree': [str(deg)], 'kind': [cur_kind]})])
     _df4 = _df4.reset_index(drop=True)
     fig, ax = plt.subplots()
     graph = sns.histplot(x='kind', data=_df4, hue='degree', multiple='stack', shrink=0.9,
-                 hue_order=[str(t) for t in range(4, 0, -1)])
+                 hue_order=[str(t) for t in range(max_deg, 0, -1)])
     respective_height = [[0] for j in range(len(_labels))]
     for num, rect in enumerate(graph.patches):
         count = rect.get_height()
@@ -274,8 +277,9 @@ if args.analysis_parts[1]:
         graph.text(rect.get_x()+rect.get_width()/2-0.05, sum(tmp[:-1]) + tmp[-1]/2-2.5, str(int(count)),
                    color='white')
         if num >= len(graph.patches) - len(_labels):
+            temp_val = sum(_deg*tmp[_deg] for _deg in range(1, max_deg+1))
             graph.text(rect.get_x() + rect.get_width() / 2 - 0.4, sum(tmp)+0.5,
-                       'avg. ' + str(round((tmp[1] + tmp[2]*2 + tmp[3]*3 + tmp[4]*4)/150, 2)),
+                       'avg. ' + str(round(temp_val/150, 2)),
                        color='black')
 
     lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize='x-large',
