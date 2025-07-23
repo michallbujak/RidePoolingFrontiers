@@ -3,6 +3,7 @@ import os
 import argparse
 from pathlib import Path
 from collections import Counter
+from bisect import bisect
 
 import pandas as pd
 import numpy as np
@@ -35,6 +36,7 @@ parser.add_argument("--guaranteed-discount", type=float, default=0.05)
 parser.add_argument("--separate", action='store_false')
 parser.add_argument("--dpi", type=int, default=300)
 parser.add_argument("--pic-format", type=str, default='png')
+parser.add_argument("--ad-hoc-add-ons", action="store_true")
 args = parser.parse_args()
 print(args)
 
@@ -112,6 +114,23 @@ avg_discount = round(avg_discount, 2)
 discounts = [avg_discount] + args.discounts
 discounts_names = ['0' + str(int(100 * disc)) for disc in discounts]
 discounts_labels = ['Personalised'] + ['Flat ' + str(d) for d in discounts]
+
+# For a quick input to the paper, a single chosen ride, do not replicate
+if args.ad_hoc_add_ons:
+    _dat = rr.iloc[526]['accepted_discount']
+    def foo1(_point):
+        return bisect(_dat[0], _point)/len(_dat[0])
+    def foo2(_point):
+        return bisect(_dat[1], _point)/len(_dat[1])
+
+    fig, ax = plt.subplots()
+    x = np.arange(0, 0.25, 0.001)
+    l1 = ax.plot(x, np.vectorize(foo1)(x), label='Traveller A', color='blue')
+    ax2 = ax.twinx()
+    l2 = ax2.plot(x, np.vectorize(foo2)(x), label='Traveller B', color='red')
+    ax.legend(l1+l2, [l.get_label() for l in l1 + l2], loc='upper left')
+    plt.savefig('acceptance_example.' + args.pic_format, dpi=args.dpi)
+
 
 # Conduct analysis for flat discount if not conducted yet
 if data.get('flat_analysis') == discounts:
@@ -300,15 +319,15 @@ if args.analysis_parts[2]:
                                   for a in b]
                      }
     fig, ax = plt.subplots()
-    plt.hist(list(obj_discounts.values()), stacked=False, density=True, label=['Shareability set', 'Offer'],
-             weights=[[1 / max(t)] * len(t) for t in list(obj_discounts.values())],
+    plt.hist(list(obj_discounts.values()), stacked=False, label=['Shareability set', 'Offer'],
+             weights=[[1 / len(t)] * len(t) for t in list(obj_discounts.values())],
              bins=np.arange(0, 0.55, 0.05).tolist())
     plt.xticks([round(t, 2) for t in np.arange(0.05, 0.55, 0.05)])
     plt.xlabel('Discount level')
     plt.ylabel('Density')
     ax.legend()
     ax.set_xlim(0.05, 0.55)
-    plt.yticks([])
+    # plt.yticks([])
     plt.tight_layout()
     plt.savefig('discounts_density_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi)
     plt.close()
