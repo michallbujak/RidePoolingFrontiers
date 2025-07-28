@@ -730,7 +730,7 @@ if args.analysis_parts[5]:
                                       aggfunc='mean')
         for ex_prof in [round(t, 1) for t in np.arange(1, 3.1, 0.1)]:
             if ex_prof not in _table.columns:
-                _table[ex_prof] = np.NaN
+                _table[ex_prof] = np.nan
         _table = _table[sorted(_table.columns)]
         fig, ax = plt.subplots(figsize=(8,8))
         sns.heatmap(_table, yticklabels=[str(round(100*t, 0))[:-2] + '%' for t in _table.index],
@@ -780,7 +780,7 @@ if args.analysis_parts[5]:
                                       aggfunc='mean')
         for ex_prof in [round(t, 1) for t in np.arange(1, 3.1, 0.1)]:
             if ex_prof not in _table.columns:
-                _table[ex_prof] = np.NaN
+                _table[ex_prof] = np.nan
         _table = _table[sorted(_table.columns)]
         fig, ax = plt.subplots(figsize=(8, 8))
         sns.heatmap(_table, yticklabels=[str(round(100 * t, 0))[:-2] + '%' for t in _table.index],

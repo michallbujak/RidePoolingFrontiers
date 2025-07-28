@@ -14,8 +14,8 @@ from scipy.optimize import brentq
 from Individual_pricing.matching import matching_function_light
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data-pickle", type=str, required=True)
-parser.add_argument("--sample-size", type=int, default=10)
+parser.add_argument("--batch-size", type=str, required=True)
+parser.add_argument("--sample-size", type=int, required=True)
 args = parser.parse_args()
 print(args)
 
@@ -265,8 +265,11 @@ def baseline_detour(
     return performance_vector
 
 
+_file_name = 'Individual_pricing/data/' + str(args.batch_size) + '_'
+_file_name += str(args.sample_size) + '/results_' + str(args.batch_size) + '_'
+_file_name += str(args.sample_size) + '.pickle'
 
-with open(args.data_pickle, 'rb') as _f:
+with open(_file_name, 'rb') as _f:
     data = pickle.load(_f)[0]
 
 rides = data['exmas']['rides']
@@ -300,7 +303,7 @@ for baseline_name, baseline_method in zip(['jiao', 'karaenke', 'detour'],
         )
     )
 
-path = Path(args.data_pickle)
+path = Path(_file_name)
 with open(str(path.parent) + '/' + path.name.split('.')[0] + '_baselines.pickle', 'wb') as _file:
     pickle.dump(data, _file)
 

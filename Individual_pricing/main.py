@@ -8,6 +8,7 @@ import Individual_pricing.pricing_utils.batch_preparation as batch_prep
 from Individual_pricing.matching import matching_function
 from Individual_pricing.pricing_functions import *
 from NYC_tools.nyc_data_load import adjust_nyc_request_to_exmas as import_nyc
+from Utils.data_import_functions import load_washington_requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--directories-json", type=str, required=True)
@@ -17,11 +18,14 @@ parser.add_argument("--operating-cost", type=float, default=0.5)
 # parser.add_argument("--batch-size", nargs='+', type=int, default=[100, 200])
 parser.add_argument("--batch-size", type=int, default=150)
 parser.add_argument("--sample-size", type=int, default=5)
-parser.add_argument("--save-partial", action="store_false")
+parser.add_argument("--skip-save-partial", action="store_false")
+parser.add_argument("--washington", action="store_true")
 parser.add_argument("--load-partial", nargs='+', type=int, default=[0, 0, 0])
 parser.add_argument("--simulation-name", type=str or None, default=None)
 args = parser.parse_args()
 print(args)
+
+args.save_partial = not args.skip_save_partial
 
 assert sum(args.load_partial) <= 1, "Cannot load more than 1 intermediate step"
 
@@ -31,19 +35,22 @@ directories = batch_prep.get_parameters(args.directories_json)
 if not sum(args.load_partial):
     from Individual_pricing.exmas_loop import exmas_loop_func
     """ Prepare requests """
-    # databanks_list, exmas_params = batch_prep.prepare_batches(
-    #     exmas_params=batch_prep.get_parameters(directories.initial_parameters),
-    #     filter_function=lambda x: (len(x.requests) >= args.batch_size[0]) &
-    #                               (len(x.requests) <= args.batch_size[1])
-    # )
     exmas_params = batch_prep.get_parameters(directories['initial_parameters'])
-    demand = import_nyc(
-        nyc_requests_path=exmas_params['paths']['requests'],
-        skim_matrix_path=exmas_params['paths']['skim'],
-        batch_size=args.batch_size,
-        start_time=pd.Timestamp(exmas_params['start_time']),
-        interval_length_minutes=exmas_params['interval_length_minutes'],
-    )
+    if args.washington:
+        demand = load_washington_requests(
+            params=exmas_params,
+            batch_size=args.batch_size,
+            start_time=pd.Timestamp(exmas_params['start_time']),
+            interval_length_minutes=exmas_params['interval_length_minutes']
+        )
+    else:
+        demand = import_nyc(
+            nyc_requests_path=exmas_params['paths']['requests'],
+            skim_matrix_path=exmas_params['paths']['skim'],
+            batch_size=args.batch_size,
+            start_time=pd.Timestamp(exmas_params['start_time']),
+            interval_length_minutes=exmas_params['interval_length_minutes'],
+        )
     databanks_list = [demand]
 
     """ Run the original ExMAS for an initial shareability graph """
@@ -57,7 +64,7 @@ if not sum(args.load_partial):
     batch_prep.create_results_directory(
         directories,
         str(len(databanks_list[0]['requests'])) + "_" + str(args.sample_size),
-        new_directories=True,
+        new_directories=False,
         directories_path=args.directories_json
     )
 
