@@ -36,6 +36,7 @@ parser.add_argument("--guaranteed-discount", type=float, default=0.05)
 parser.add_argument("--separate", action='store_false')
 parser.add_argument("--dpi", type=int, default=300)
 parser.add_argument("--pic-format", type=str, default='png')
+parser.add_argument("--font-size", type=int or float, default=100) # 10*fontsize for \textwidth figure
 parser.add_argument("--ad-hoc-add-ons", action="store_true")
 args = parser.parse_args()
 print(args)
@@ -115,23 +116,6 @@ discounts = [avg_discount] + args.discounts
 discounts_names = ['0' + str(int(100 * disc)) for disc in discounts]
 discounts_labels = ['Personalised'] + ['Flat ' + str(d) for d in discounts]
 
-# For a quick input to the paper, a single chosen ride, do not replicate
-if args.ad_hoc_add_ons:
-    _dat = rr.iloc[526]['accepted_discount']
-    def foo1(_point):
-        return bisect(_dat[0], _point)/len(_dat[0])
-    def foo2(_point):
-        return bisect(_dat[1], _point)/len(_dat[1])
-
-    fig, ax = plt.subplots()
-    x = np.arange(0, 0.25, 0.001)
-    l1 = ax.plot(x, np.vectorize(foo1)(x), label='Traveller A', color='blue')
-    ax2 = ax.twinx()
-    l2 = ax2.plot(x, np.vectorize(foo2)(x), label='Traveller B', color='red')
-    ax.legend(l1+l2, [l.get_label() for l in l1 + l2], loc='upper left')
-    plt.savefig('acceptance_example.' + args.pic_format, dpi=args.dpi)
-
-
 # Conduct analysis for flat discount if not conducted yet
 if data.get('flat_analysis') == discounts:
     pass
@@ -196,8 +180,6 @@ else:
             'flat_analysis': data['flat_analysis']
         }, file)
 
-    raise Warning("Please, rerun the project to ensure the data integrity")
-
 # Now analysis
 if args.baselines:
     for baseline_name in ['jiao', 'karaenke', 'detour']:
@@ -219,8 +201,29 @@ params = {'legend.fontsize': 'x-large',
           'axes.labelsize': 'x-large',
           'axes.titlesize': 'x-large',
           'xtick.labelsize': 'x-large',
-          'ytick.labelsize': 'x-large'}
+          'ytick.labelsize': 'x-large',
+          'font.family': 'serif'}
 pylab.rcParams.update(params)
+
+
+# For a quick input to the paper, a single chosen ride, do not replicate
+if args.ad_hoc_add_ons:
+    _dat = rr.iloc[526]['accepted_discount']
+    def foo1(_point):
+        return bisect(_dat[0], _point)/len(_dat[0])
+    def foo2(_point):
+        return bisect(_dat[1], _point)/len(_dat[1])
+
+    fig, ax = plt.subplots()
+    x = np.arange(0, 0.25, 0.001)
+    l1 = ax.plot(x, np.vectorize(foo1)(x), label='Traveller A', color='blue')
+    ax2 = ax.twinx()
+    l2 = ax2.plot(x, np.vectorize(foo2)(x), label='Traveller B', color='red')
+    ax.tick_params(axis='both', which='major', labelsize=args.font_size/6)
+    ax2.tick_params(axis='both', which='major', labelsize=args.font_size/6)
+    ax.legend(l1+l2, [l.get_label() for l in l1 + l2], loc='upper left', fontsize=args.font_size/6)
+    plt.savefig('acceptance_example.' + args.pic_format, dpi=args.dpi)
+
 
 if args.analysis_parts[0]:
     for obj in data['exmas']['objectives']:
@@ -286,27 +289,35 @@ if args.analysis_parts[1]:
                 _df4 = pd.concat([_df4, pd.DataFrame({'degree': [str(deg)], 'kind': [cur_kind]})])
     _df4 = _df4.reset_index(drop=True)
     fig, ax = plt.subplots()
+    _colors = ['tab:red', 'tab:orange', 'tab:green','tab:blue']
+    _palette = _colors[(4-max_deg):]
     graph = sns.histplot(x='kind', data=_df4, hue='degree', multiple='stack', shrink=0.9,
-                 hue_order=[str(t) for t in range(max_deg, 0, -1)])
+                 hue_order=[str(t) for t in range(max_deg, 0, -1)],
+                         palette=_palette)
     respective_height = [[0] for j in range(len(_labels))]
     for num, rect in enumerate(graph.patches):
         count = rect.get_height()
         respective_height[num%len(_labels)] += [count]
         tmp = respective_height[num%len(_labels)]
         graph.text(rect.get_x()+rect.get_width()/2-0.05, sum(tmp[:-1]) + tmp[-1]/2-2.5, str(int(count)),
-                   color='white')
+                   color='white', fontsize=args.font_size/12)
         if num >= len(graph.patches) - len(_labels):
             temp_val = sum(_deg*tmp[_deg] for _deg in range(1, max_deg+1))
-            graph.text(rect.get_x() + rect.get_width() / 2 - 0.4, sum(tmp)+0.5,
-                       'avg. ' + str(round(temp_val/150, 2)),
-                       color='black')
+            graph.text(rect.get_x() + rect.get_width() / 2 -0.4, sum(tmp)+0.5,
+                       'avg.' + str(round(temp_val/args.no_requests, 2)),
+                       color='black', fontsize=args.font_size/12)
 
-    lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize='x-large',
+    # lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize=args.font_size/8,
+    #                 fontsize=args.font_size/8,
+    #                 bbox_to_anchor=(1.21, 1), borderaxespad=0, loc='upper right')
+    lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize=args.font_size/8,
+                    fontsize=args.font_size/8,
                     bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
     plt.xlabel(None)
     plt.ylabel(None)
-    plt.yticks(np.arange(0, args.no_requests + 30, 30))
-    ax.tick_params(axis='x', which='major', labelsize=10)
+    plt.yticks(np.arange(0, args.no_requests + 5, 30))
+    ax.tick_params(axis='both', which='major', labelsize=args.font_size/8)
+    # plt.xticks(rotation=20)
     plt.savefig('degrees_stacked_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
@@ -323,10 +334,12 @@ if args.analysis_parts[2]:
              weights=[[1 / len(t)] * len(t) for t in list(obj_discounts.values())],
              bins=np.arange(0, 0.55, 0.05).tolist())
     plt.xticks([round(t, 2) for t in np.arange(0.05, 0.55, 0.05)])
-    plt.xlabel('Discount level')
-    plt.ylabel('Density')
-    ax.legend()
+    plt.xlabel('Discount level', fontsize=args.font_size/8)
+    plt.ylabel('Density', fontsize=args.font_size/8)
+    ax.legend(fontsize=args.font_size/8)
     ax.set_xlim(0.05, 0.55)
+    ax.tick_params(axis='both', which='major', labelsize=args.font_size/8)
+    ax.tick_params(axis='both', which='minor', labelsize=args.font_size/8)
     # plt.yticks([])
     plt.tight_layout()
     plt.savefig('discounts_density_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi)
@@ -368,9 +381,12 @@ if args.analysis_parts[3]:
 
     fig, ax = plt.subplots()
     plt.hist(dat, label=labels)
-    ax.legend(loc='upper left')
+    # ax.legend(loc='upper left')
+    # ax.get_legend().remove()
     plt.xlabel(None)
     plt.tight_layout()
+    ax.tick_params(axis='both', which='major', labelsize=args.font_size/4.9)
+    ax.tick_params(axis='both', which='minor', labelsize=args.font_size / 4.9)
     plt.savefig("probability_shared_" + str(_sample) + "_sel." + args.pic_format, dpi=args.dpi)
     plt.close()
 
@@ -396,9 +412,11 @@ if args.analysis_parts[3]:
 
     fig, ax = plt.subplots()
     plt.hist(dat, label=labels)
-    # ax.legend(loc='upper right')
+    ax.legend(loc='upper right', fontsize=args.font_size/4.9)
     # ax.get_legend().remove()
     plt.xlabel(None)
+    ax.tick_params(axis='both', which='major', labelsize=args.font_size/4.9)
+    ax.tick_params(axis='both', which='minor', labelsize=args.font_size / 4.9)
     plt.tight_layout()
     plt.savefig("probability_shared_" + str(_sample) + "_all." + args.pic_format, dpi=args.dpi)
     plt.close()
@@ -527,7 +545,11 @@ if args.analysis_parts[5]:
             temp_data = [[ins for ins in outs if ins[2] == _deg] for outs in unbalanced]
         else:
             temp_data = unbalanced
-        fig, ax = plt.subplots(figsize=(8,14))
+
+        if _deg != list(_range)[0]:
+            fig, ax = plt.subplots(figsize=(8,14))
+        else:
+            fig, ax = plt.subplots(figsize=(10,14))
         if args.baselines:
             iterable_labels = enumerate(discounts_labels + ['Jiao', 'Karaenke', 'Detour'])
         else:
@@ -548,18 +570,24 @@ if args.analysis_parts[5]:
         ax.set_xticks([])
         plt.ylim(0.6, 2.8)
         plt.axhline(1.425, lw=2, ls='solid', color='red', label='Private ride')
-        plt.xlabel('Individual shared rides', fontsize=20)
+        if _deg == list(_range)[1]:
+            plt.xlabel('Individual shared rides', fontsize=args.font_size/3)
+        else:
+            plt.xlabel(' ', fontsize=args.font_size/3)
         if _deg != list(_range)[0]:
             plt.yticks([])
         else:
-            plt.yticks(fontsize=25)
-            plt.ylabel('Expected profitability', fontsize=25)
+            plt.yticks(fontsize=args.font_size/3)
+            plt.ylabel('Expected profitability', fontsize=args.font_size/3)
+            ax.tick_params(axis='both', which='major', labelsize=args.font_size / 3)
         if _deg == list(_range)[-1]:
-            lgnd = plt.legend(loc='upper left', fontsize=25)
+            lgnd = plt.legend(loc='upper left', fontsize=args.font_size/3)
             for handle in lgnd.legend_handles:
                 if type(handle) == PathCollection:
                     handle.set_sizes([200])
-        plt.tight_layout()
+
+        # ax.tick_params(axis='both', which='major', labelsize=args.font_size / 3)
+        fig.tight_layout()
         if args.separate:
             plt.savefig("scatter_all_profitability_unbalanced_" + str(_deg) + "_"
                         + str(_sample) + "." + args.pic_format, dpi=args.dpi)
@@ -611,10 +639,12 @@ if args.analysis_parts[5]:
     # plt.plot(x_plot, y_plot, lw=1.5, color='red', label='Polynomial fit')
     plt.xlabel('Relative mileage reduction')
     plt.ylabel('Expected profitability')
-    lgnd = plt.legend(loc='upper left', fontsize=15, markerscale=3)
+    lgnd = plt.legend(loc='upper left', fontsize=args.font_size/8, markerscale=3)
     for handle in lgnd.legend_handles:
         handle.set_sizes([30])
     ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+    ax.tick_params(axis='both', which='major', labelsize=args.font_size/8)
+    ax.tick_params(axis='both', which='minor', labelsize=args.font_size / 8)
     plt.tight_layout()
     plt.savefig('scatter_distance_saved_profitability_' + str(_sample) + "." + args.pic_format, dpi=args.dpi)
 
@@ -732,22 +762,33 @@ if args.analysis_parts[5]:
             if ex_prof not in _table.columns:
                 _table[ex_prof] = np.nan
         _table = _table[sorted(_table.columns)]
-        fig, ax = plt.subplots(figsize=(8,8))
+        if _num in {0, 2}:
+            fig, ax = plt.subplots(figsize=(9,8))
+        else:
+            fig, ax = plt.subplots(figsize=(7, 8))
         sns.heatmap(_table, yticklabels=[str(round(100*t, 0))[:-2] + '%' for t in _table.index],
-                    cbar=True if _num == len(discounts_labels) - 1 else False,
-                    cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True))
+                    cbar=True if _num == 2 else False,
+                    cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True),
+                    xticklabels=3)
         if _num != 0:
             plt.ylabel(None)
             plt.yticks([])
             plt.xlabel(None)
         else:
-            plt.ylabel('Relative mileage reduction', fontsize=25)
-            plt.yticks(fontsize=25)
-        if _num == len(discounts_labels) - 1:
+            plt.ylabel('Relative mileage reduction', fontsize=args.font_size/2.8)
+            plt.yticks(fontsize=args.font_size/3)
+        if _num == 2:
             cbar = ax.collections[0].colorbar
-            cbar.ax.tick_params(labelsize=25)
-        plt.xticks(fontsize=15)
-        plt.xlabel('Expected Profitability', fontsize=25)
+            cbar.ax.tick_params(labelsize=args.font_size/3)
+        plt.xticks(fontsize=args.font_size / 3)
+        if _num == 1:
+            plt.xlabel('Expected Profitability', fontsize=args.font_size/3)
+        else:
+            plt.xlabel(' ', fontsize=args.font_size / 3)
+
+        ax.tick_params(axis='both', which='major', labelsize=args.font_size / 3)
+        ax.tick_params(axis='both', which='minor', labelsize=args.font_size / 3)
+
         plt.tight_layout()
         plt.savefig('heatmap' + disc_name + "_" + str(_sample) + "." + args.pic_format, dpi=args.dpi)
 
@@ -782,22 +823,31 @@ if args.analysis_parts[5]:
             if ex_prof not in _table.columns:
                 _table[ex_prof] = np.nan
         _table = _table[sorted(_table.columns)]
-        fig, ax = plt.subplots(figsize=(8, 8))
-        sns.heatmap(_table, yticklabels=[str(round(100 * t, 0))[:-2] + '%' for t in _table.index],
-                    cbar=True if baseline_name=='detour' else False,
-                    cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True))
+        if baseline_name == 'karaenke':
+            fig, ax = plt.subplots(figsize=(7, 8))
+        else:
+            fig, ax = plt.subplots(figsize=(9, 8))
+        ax = sns.heatmap(_table, yticklabels=[str(round(100 * t, 0))[:-2] + '%' for t in _table.index],
+                         cbar=True if baseline_name=='detour' else False,
+                         cmap=sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True),
+                         xticklabels=3)
         if baseline_name != 'jiao':
             plt.ylabel(None)
             plt.yticks([])
             plt.xlabel(None)
         else:
-            plt.ylabel('Relative mileage reduction', fontsize=25)
-            plt.yticks(fontsize=25)
+            plt.ylabel('Relative mileage reduction', fontsize=args.font_size / 2.8)
+            plt.yticks(fontsize=args.font_size / 3)
         if baseline_name == 'detour':
             cbar = ax.collections[0].colorbar
-            cbar.ax.tick_params(labelsize=25)
-        plt.xticks(fontsize=15)
-        plt.xlabel('Expected Profitability', fontsize=25)
+            cbar.ax.tick_params(labelsize=args.font_size / 3)
+        plt.xticks(fontsize=args.font_size / 3)
+        if baseline_name == 'karaenke':
+            plt.xlabel('Expected Profitability', fontsize=args.font_size/3)
+        else:
+            plt.xlabel(' ', fontsize=args.font_size / 3)
+        ax.tick_params(axis='both', which='major', labelsize=args.font_size / 3)
+        ax.tick_params(axis='both', which='minor', labelsize=args.font_size / 3)
         plt.tight_layout()
         plt.savefig('heatmap_' + baseline_name + "." + args.pic_format, dpi=args.dpi)
 
