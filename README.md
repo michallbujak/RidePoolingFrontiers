@@ -4,9 +4,8 @@ The analysis can be divided into subdirectories, as according to the folders.
 * **ExMAS**: revised version of original ExMAS algorithm introduced in [[1]](#1). The amended version allows for heterogeneous characteristics among other useful new features.
 * **Topology**: network science approach to the ride-pooling system which was concluded with a paper [[2]](#2).
 * **Individual pricing**: base for heterogeneous analysis of the ride-pooling system. First part, where travellers reveal their individual preferences was published as [[3]](#3). The pricing analysis for the heterogeneous scenario, when travellers do not reveal their preferences is in the publishing process, currently available preprint [[4]](#4)
-* **Dynamic pricing**: _in progress_ dynamic pricing for heterogeneous population where individual traits are learned via Bayesian approach.
+* **Dynamic pricing**: dynamic pricing for heterogeneous population where individual traits are learned via Bayesian approach.
 
-.
 
 ## References
 <a id="1">[1]</a> 
