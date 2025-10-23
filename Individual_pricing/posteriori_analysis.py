@@ -19,6 +19,8 @@ from pricing_functions import *
 from matching import matching_function
 from auxiliary_functions import extract_selected_discounts, extract_selected_profitability, bracket
 
+# For main figures, text size 100, for supplementary 140 + args.rotate
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--no-requests", type=int, required=True)
@@ -38,6 +40,7 @@ parser.add_argument("--dpi", type=int, default=300)
 parser.add_argument("--pic-format", type=str, default='png')
 parser.add_argument("--font-size", type=int or float, default=100) # 10*fontsize for \textwidth figure
 parser.add_argument("--ad-hoc-add-ons", action="store_true")
+parser.add_argument("--rotate", action="store_true")
 args = parser.parse_args()
 print(args)
 
@@ -303,21 +306,29 @@ if args.analysis_parts[1]:
                    color='white', fontsize=args.font_size/12)
         if num >= len(graph.patches) - len(_labels):
             temp_val = sum(_deg*tmp[_deg] for _deg in range(1, max_deg+1))
-            graph.text(rect.get_x() + rect.get_width() / 2 -0.4, sum(tmp)+0.5,
-                       'avg.' + str(round(temp_val/args.no_requests, 2)),
-                       color='black', fontsize=args.font_size/12)
+            if args.rotate:
+                graph.text(rect.get_x() + rect.get_width() / 2 -0.2, sum(tmp)+0.5,
+                           str(round(temp_val/args.no_requests, 2)),
+                           color='black', fontsize=args.font_size/12)
+            else:
+                graph.text(rect.get_x() + rect.get_width() / 2 -0.4, sum(tmp)+0.5,
+                           'avg.' + str(round(temp_val/args.no_requests, 2)),
+                           color='black', fontsize=args.font_size/12)
 
-    # lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize=args.font_size/8,
-    #                 fontsize=args.font_size/8,
-    #                 bbox_to_anchor=(1.21, 1), borderaxespad=0, loc='upper right')
-    lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize=args.font_size/8,
-                    fontsize=args.font_size/8,
-                    bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
+    if args.rotate:
+        lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize=args.font_size/8,
+                        fontsize=args.font_size/8,
+                        bbox_to_anchor=(1.21, 1), borderaxespad=0, loc='upper right')
+    else:
+        lgd = ax.legend(title='Degree', labels=range(1, 5), title_fontsize=args.font_size/8,
+                        fontsize=args.font_size/8,
+                        bbox_to_anchor=(1.15, 1), borderaxespad=0, loc='upper right')
     plt.xlabel(None)
     plt.ylabel(None)
     plt.yticks(np.arange(0, args.no_requests + 5, 30))
     ax.tick_params(axis='both', which='major', labelsize=args.font_size/8)
-    # plt.xticks(rotation=20)
+    if args.rotate:
+        plt.xticks(rotation=20)
     plt.savefig('degrees_stacked_' + str(_sample) + '.' + args.pic_format, dpi=args.dpi,
                 bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
