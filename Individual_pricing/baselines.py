@@ -16,6 +16,7 @@ from Individual_pricing.matching import matching_function_light
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch-size", type=str, required=True)
 parser.add_argument("--sample-size", type=int, required=True)
+parser.add_argument("--correlated", action='store_true')
 args = parser.parse_args()
 print(args)
 
