@@ -9,6 +9,7 @@ import pandas as pd
 import torch
 import networkx as nx
 import numpy as np
+import osmnx as ox
 
 from torch_geometric import utils as geo_utils
 
@@ -17,8 +18,7 @@ import utils_ml as utils
 from model_gnn import GNN
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--requests-csv", type=str, required=True)
-parser.add_argument("--rides-csv", type=str, required=True)
+parser.add_argument("--graph-path", type=str, required=True)
 parser.add_argument("--output-csv", type=str, required=True)
 parser.add_argument("--delta", type=float, default=0.85)
 parser.add_argument("--lr", type=float, default=0.01)
@@ -29,12 +29,12 @@ parser.add_argument("--mlp-units", type=str, default="[3]")
 parser.add_argument("--dmon", action="store_true")
 parser.add_argument("--include-edge-weight", action="store_true")
 parser.add_argument("--include-node-features", action="store_true")
-parser.add_argument("--kappa", type=str, default="[0.,0.,0.,0.,0.,1.,1.,0,0,0]")
+parser.add_argument("--kappa", type=str, default="[0.,0.,0.,0.,0.,1.,1.,0,0,0, 0, 0]")
 parser.add_argument("--pred-epoch", type=int, default=100)
 parser.add_argument("--add-preds", action="store_true")
 parser.add_argument("--weight-power", type=float, default=1)
 parser.add_argument("--laplacian", action="store_true")
-parser.add_argument("--edge-weight", type=str, choices=["u", "frac_u"])
+parser.add_argument("--edge-weight", type=str, default="length")
 parser.add_argument("--gumbel-tau", type=float, default=None)
 args = parser.parse_args()
 print(args)
@@ -43,14 +43,12 @@ mp_units = utils.str_to_list(args.mp_units)
 mlp_units = utils.str_to_list(args.mlp_units)
 kappa = utils.str_to_list(args.kappa, dtype=float)
 
-assert len(kappa) == 12 + int(args.add_preds)
+# assert len(kappa) == 12 + int(args.add_preds)
 
-
-requests = pd.read_csv(args.requests_csv, index_col=0)
-rides = pd.read_csv(args.rides_csv, index_col=0)
-rides["indexes"] = rides.apply(lambda x: utils.str_to_list(x["indexes"]), axis=1)
-
-G = utils.build_shareability_graph(requests, rides)
+G = ox.load_graphml(args.graph_path)
+G = ox.distance.add_edge_lengths(G)
+mapping = {k: k for k in range(113)} | {k: k-1 for k in range(114, 355)} | {k: k-2 for k in range(355, 358)}
+G = nx.relabel_nodes(G, mapping)
 
 G_positive = G.copy()
 negative_edges = list(filter(lambda e: e[2] <= 0, (e for e in G.edges.data(args.edge_weight))))
@@ -70,7 +68,8 @@ torch.cuda.manual_seed(1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if args.include_node_features:
-    x = utils.get_features(requests).to(device)
+    # x = utils.get_features(requests).to(device)
+    x = torch.eye(len(G.nodes)).to(device)
 else:
     x = torch.eye(len(G.nodes)).to(device)
 
@@ -127,7 +126,7 @@ def train(model, optimizer, x, edge_index, edge_weight, components, preds, mask,
     optimizer.zero_grad()
     clusters, loss = model(x, edge_index, edge_weight, components)
     tot_loss = torch.matmul(
-        torch.stack(list(loss.values())), torch.tensor(kappa[: len(loss)])
+        torch.stack(list(loss.values())), torch.tensor(kappa[: len(loss)]).to(device)
     )
     if torch.any(mask):
         p = preds[mask]

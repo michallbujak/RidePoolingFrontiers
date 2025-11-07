@@ -65,7 +65,7 @@ model = model.to(device)
 print(model)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-def train(model, optimizer, x, adj_matrix, preds, mask=None):
+def train(model, optimizer, x, adj_matrix):
     model.train()
     optimizer.zero_grad()
     s, out, out_adj, spectral_loss, ortho_loss, cluster_loss = model(x, adj_matrix)
@@ -74,3 +74,8 @@ def train(model, optimizer, x, adj_matrix, preds, mask=None):
     optimizer.step()
     return tot_loss
 
+@torch.no_grad()
+def test(model, x, adjacency_matrix):
+    model.eval()
+    softmax, o, o_a, l1, l2, l3 = model(x, adjacency_matrix, None)
+    return softmax.argmax(axis=1).cpu(), softmax
