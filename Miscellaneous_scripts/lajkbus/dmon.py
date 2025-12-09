@@ -12,38 +12,6 @@ EPS = 1e-15
 class DMoNPooling(torch.nn.Module):
     r"""The spectral modularity pooling operator from the `"Graph Clustering
     with Graph Neural Networks" <https://arxiv.org/abs/2006.16904>`_ paper
-
-    .. math::
-        \mathbf{X}^{\prime} &= {\mathrm{softmax}(\mathbf{S})}^{\top} \cdot
-        \mathbf{X}
-
-        \mathbf{A}^{\prime} &= {\mathrm{softmax}(\mathbf{S})}^{\top} \cdot
-        \mathbf{A} \cdot \mathrm{softmax}(\mathbf{S})
-
-    based on dense learned assignments :math:`\mathbf{S} \in \mathbb{R}^{B
-    \times N \times C}`.
-    Returns the learned cluster assignment matrix, the pooled node feature
-    matrix, the coarsened symmetrically normalized adjacency matrix, and three
-    auxiliary objectives: (1) The spectral loss
-
-    .. math::
-        \mathcal{L}_s = - \frac{1}{2m}
-        \cdot{\mathrm{Tr}(\mathbf{S}^{\top} \mathbf{B} \mathbf{S})}
-
-    where :math:`\mathbf{B}` is the modularity matrix, (2) the orthogonality
-    loss
-
-    .. math::
-        \mathcal{L}_o = {\left\| \frac{\mathbf{S}^{\top} \mathbf{S}}
-        {{\|\mathbf{S}^{\top} \mathbf{S}\|}_F} -\frac{\mathbf{I}_C}{\sqrt{C}}
-        \right\|}_F
-
-    where :math:`C` is the number of clusters, and (3) the cluster loss
-
-    .. math::
-        \mathcal{L}_c = \frac{\sqrt{C}}{n}
-        {\left\|\sum_i\mathbf{C_i}^{\top}\right\|}_F - 1.
-
     .. note::
 
         For an example of using :class:`DMoNPooling`, see

@@ -11,7 +11,7 @@ from ExMAS.main_ORIGINAL import main as exmas_algo
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    config = utils.get_parameters('configs/test_config.json')
+    config = utils.get_parameters('../configs/test_config.json')
 
     """ Set up varying parameters (optional) """
     # config.variable = 'shared_discount'

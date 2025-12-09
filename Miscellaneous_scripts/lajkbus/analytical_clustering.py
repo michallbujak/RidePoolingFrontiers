@@ -6,13 +6,16 @@ import matplotlib as mp
 
 from typing import Callable, Any
 
+import pandas as pd
+
 
 def community_centrality_node_removal(
         graph: nx.MultiGraph,
         inactive_nodes: list[int] | None =None,
         partition: list[set] | None = None,
         scoring: dict | None = None,
-        preserve_original_partition: bool = False,
+        preserve_original_partition: bool = True,
+        preserve_original_scoring: bool = True,
         partitioning_algorithm: Callable[[nx.MultiGraph, ...], list]
         = nx.community.edge_current_flow_betweenness_partition,
         scoring_algorithm: Callable[[nx.MultiGraph], dict]
@@ -29,7 +32,8 @@ def community_centrality_node_removal(
     :param partition: if one wants to preserve the original partition
     :param scoring: if one wants to preserve the original scoring
     :param preserve_original_partition: if one wants to preserve the original partition.
-    If marked 'False', automatically 'partition' and 'scoring' are set to 'None'
+    If marked 'False', automatically 'partition' is set to 'None'
+    :param preserve_original_scoring: preserve the scoring calculated in the first run.
     :param partitioning_algorithm: a partition algorithm. Optional arguments should
     ba passed in kwargs. For the default 'number_of_sets=...'
     :param scoring_algorithm: an algorithm for the base ranking of nodes
@@ -41,53 +45,59 @@ def community_centrality_node_removal(
     graph_copy = graph.copy()
 
     if not preserve_original_partition:
-        # recalculate scores and partition
-        scoring = None
+        # recalculate partition
         partition = None
-        # add connections between stops on sides of a removed stop
-        for node in inactive_nodes:
-            neighbours = list(graph.neighbors(node))
-            if len(neighbours) >= 2:
-                for j in range(len(neighbours)-1):
-                    for i in range(len(neighbours)-1):
-                        graph.add_edge(neighbours[j], neighbours[i+1])
-        # remove stops which were to be removed
-        for node in inactive_nodes:
-            graph_copy.remove_node(node)
+
+    if not preserve_original_scoring:
+        # recalculate node scores
+        scoring = None
+
+    # add connections between stops on sides of a removed nodes
+    for node in inactive_nodes:
+        neighbours = list(graph.neighbors(node))
+        if len(neighbours) >= 2:
+            for j in range(len(neighbours)-1):
+                for i in range(len(neighbours)-1):
+                    graph.add_edge(neighbours[j], neighbours[i+1])
+
+    # remove nodes which were to be removed
+    for node in inactive_nodes:
+        graph_copy.remove_node(node)
 
     # relabel nodes for consecutive numbers as sometimes there are bugs
     relabel_nodes_map = {}
     for num, node in enumerate(graph_copy.nodes):
         relabel_nodes_map[node] = num
     graph_copy = nx.relabel_nodes(graph_copy, relabel_nodes_map)
+    inverse_relabel_mapping = {v: k for k, v in relabel_nodes_map.items()}
 
-    if (inactive_nodes is not None) & preserve_original_partition:
-        inactive_nodes = [relabel_nodes_map[t] for t in inactive_nodes]
+    # if (inactive_nodes is not None) & preserve_original_partition:
+    #     inactive_nodes = [relabel_nodes_map[t] for t in inactive_nodes]
 
     # compute the evaluation score
     if scoring is None:
         scoring = scoring_algorithm(graph_copy)
-    else:
-        scoring = {relabel_nodes_map[k]: v for k, v in scoring.items()}
+    # else:
+        # scoring = {relabel_nodes_map[k]: v for k, v in scoring.items()}
 
     # compute the partition if not the first iteration
     if partition is None:
         partition = partitioning_algorithm(graph_copy, **kwargs)
-    else:
-        partition = [{relabel_nodes_map[t] for t in part_set} for part_set in partition]
+    # else:
+    #     partition = [{relabel_nodes_map[t] for t in part_set} for part_set in partition]
 
     # do not consider nodes already removed
-    partition = [{i for i in part_set if i not in inactive_nodes} for part_set in partition]
+    partition_new = [{i for i in part_set if i not in inactive_nodes} for part_set in partition]
+    scoring_new = {k: v for k, v in scoring.items() if k not in inactive_nodes}
 
     # create the evaluation metric
     final_scores = {}
-    for part_set in partition:
+    for part_set in partition_new:
         part_size = len(part_set)
         for node in part_set:
-            final_scores[node] = scoring[node] / np.power(part_size, partition_size_sensitivity)
+            final_scores[node] = scoring_new[node] / np.power(part_size, partition_size_sensitivity)
 
     # relabel back everything
-    inverse_relabel_mapping = {v: k for k, v in relabel_nodes_map.items()}
     final_scores = {inverse_relabel_mapping[k]: v for k, v in final_scores.items()}
     auxiliary_data = {
         'scoring': {inverse_relabel_mapping[k]: v for k, v in scoring.items()},
@@ -108,26 +118,31 @@ for num, node in enumerate(city_graph.nodes):
     relabel_nodes_mapping[node] = num
 city_graph = nx.relabel_nodes(city_graph, relabel_nodes_mapping)
 
+clusters = pd.read_csv('skotniki_clusters.csv', index_col='Unnamed: 0')
+clusters = clusters.to_dict()['0']
+partition = [{k for k, v in clusters.items() if v == it} for it in range(5)]
+
 colour_palette = list(mp.colors.BASE_COLORS.keys())
 
 graph_data = {
     'scoring': None,
-    'partition': None
+    'partition': partition
 }
 removed_stops = []
 
-for step in range(32):
+for step in range(300):
     node_to_remove, node_scores, graph_data = community_centrality_node_removal(
         graph=city_graph,
         inactive_nodes=removed_stops,
+        preserve_original_partition=True,
         partition=graph_data['partition'],
-        scoring=graph_data['scoring'],
-        number_of_sets=5
+        scoring=graph_data['scoring']#,
+        #number_of_sets=5
     )
 
     removed_stops += [node_to_remove]
 
-    if step % 5 == 0:
+    if step % 10 == 0:
         colour_list = np.zeros(len(city_graph.nodes))
         for _num, part in enumerate(graph_data['partition']):
             colour_list[list(part)] = _num
