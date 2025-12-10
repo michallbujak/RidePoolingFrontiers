@@ -20,13 +20,17 @@ parser.add_argument("--graph-path", type=str, required=True)
 parser.add_argument("--output-csv", type=str, required=True)
 parser.add_argument("--delta", type=float, default=0.85)
 parser.add_argument("--lr", type=float, default=0.01)
-parser.add_argument("--epochs", type=int, default=500)
-parser.add_argument("--num-clusters", type=int, default=8)
+parser.add_argument("--epochs", type=int, default=2000)
+parser.add_argument("--num-clusters", type=int, default=4)
 args = parser.parse_args()
 print(args)
 
 # read data
 graph = ox.load_graphml(args.graph_path)
+relabel_nodes_map = {}
+for num, node in enumerate(graph.nodes):
+    relabel_nodes_map[node] = num
+graph = nx.relabel_nodes(graph, relabel_nodes_map)
 
 # prep device
 torch.manual_seed(1)
