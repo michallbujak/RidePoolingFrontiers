@@ -19,12 +19,13 @@ def community_centrality_node_removal(
         partitioning_algorithm: Callable[[nx.MultiGraph, ...], list]
         = nx.community.edge_current_flow_betweenness_partition,
         scoring_algorithm: Callable[[nx.MultiGraph], dict]
-        = nx.closeness_centrality,
+        = nx.current_flow_closeness_centrality,
         scoring_within_partitions: bool = False,
         boost_neighbours: bool = True,
-        boost_neighbours_factor: float = 0.7,
+        boost_neighbours_factor: float = 0.5,
         initial_scores: dict = {},
-        partition_size_sensitivity: float = 0.05,
+        new_edges: list = [],
+        partition_size_sensitivity: float = 0.3,
         **kwargs
 ) -> tuple[int, dict[int, float], dict[str, dict[Any, Any] | list[set[Any]]]]:
     """
@@ -46,6 +47,7 @@ def community_centrality_node_removal(
     :param boost_neighbours_factor: if boost_neighbours is True, select a fraction of original score
     that is transferred to the neighbouring nodes
     :param initial_scores: required for neighbours boosting
+    :param new_edges: when nodes are removed, the neighbouring nodes are connected
     :param partition_size_sensitivity: to balance how impactful is partition size
     to the final score
     :return: tuple: 1) node to be removed; 2) scoring of all remaining nodes
@@ -74,13 +76,17 @@ def community_centrality_node_removal(
 
     # add connections between stops on sides of a removed nodes if one wants to recalculate properties
     if (partition is None) | (scoring is None):
+        for edge in new_edges:
+            graph_current.add_edge(*edge)
         for node in inactive_nodes:
             neighbours = list(graph_current.neighbors(node))
             neighbours = [t for t in neighbours if t not in inactive_nodes]
             if len(neighbours) >= 2:
                 for j in range(len(neighbours)-1):
                     for i in range(len(neighbours)-1):
-                        graph_current.add_edge(neighbours[j], neighbours[i+1])
+                        if (neighbours[j], neighbours[i+1], 0) not in graph_current.edges:
+                            graph_current.add_edge(neighbours[j], neighbours[i+1])
+                            new_edges.append((neighbours[j], neighbours[i+1]))
 
     original_graph = graph_current.copy()
     # remove nodes which were to be removed
@@ -141,7 +147,8 @@ def community_centrality_node_removal(
     auxiliary_data = {
         'scoring': scoring,
         'partition': partition,
-        'initial_scores': initial_scores
+        'initial_scores': initial_scores,
+        'new_edges': new_edges
     }
 
     return minimal_element, final_scores, auxiliary_data
@@ -156,7 +163,7 @@ if __name__ == "__main__":
     for _num, _node in enumerate(city_graph.nodes):
         relabel_nodes_mapping[_node] = _num
     city_graph = nx.relabel_nodes(city_graph, relabel_nodes_mapping)
-    colour_palette = list(mp.colors.BASE_COLORS.keys())
+    colour_palette = mp.color_sequences['tab20'] #list(mp.colors.BASE_COLORS.keys())
 
     """ If one wants to use a clustering method provided from other scripts """
     # clusters = pd.read_csv('skotniki_clusters.csv', index_col='Unnamed: 0')
@@ -167,7 +174,8 @@ if __name__ == "__main__":
     graph_data = {
         'scoring': None,
         'partition': None, #loaded_partition - for the case of clustering 'from outside'
-        'initial_scores': {}
+        'initial_scores': {},
+        'new_edges': []
     }
     removed_stops = []
 
@@ -181,18 +189,19 @@ if __name__ == "__main__":
             preserve_original_partition=True, # if you want to recalculate the partition after each run, change to False
             preserve_original_scoring=False, # if you want to recalculate the scoring after each run, change to False
             partitioning_algorithm=nx.community.edge_current_flow_betweenness_partition,
-            scoring_algorithm=nx.closeness_centrality,
+            scoring_algorithm=nx.current_flow_closeness_centrality,
             scoring_within_partitions=False, # calculate scoring separately for subgraphs determined by the clustering - connectivity within a community
             boost_neighbours=True, # if a node is removed, its neighbours (first and second) get some of its score
-            boost_neighbours_factor=0.2, # a fraction that is moved to neighbours and square of that to the second neighbours,
+            boost_neighbours_factor=0.5, # a fraction that is moved to neighbours and square of that to the second neighbours,
             initial_scores=graph_data['initial_scores'], # store data to improve scores of neighbours of removed nodes
-            partition_size_sensitivity=0.1, # a role that the size of a community plays in the final score relative to the connectivity
-            number_of_sets=5
+            new_edges=graph_data['new_edges'], # add edges between neighbours of removed nodes
+            partition_size_sensitivity=0.3, # a role that the size of a community plays in the final score relative to the connectivity
+            number_of_sets=20 # the number of communities
         )
 
         removed_stops += [node_to_remove]
 
-        if step % 10 == 0:
+        if step % 30 == 0:
             colour_list = np.zeros(len(city_graph.nodes))
             for _num, part in enumerate(graph_data['partition']):
                 colour_list[list(part)] = _num
@@ -201,4 +210,3 @@ if __name__ == "__main__":
             node_sizes = [10 if num in removed_stops else 30 for num, t in enumerate(colour_list)]
 
             ox.plot_graph(city_graph, node_color=colour_list, node_size=node_sizes)
-
