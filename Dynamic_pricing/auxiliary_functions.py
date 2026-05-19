@@ -7,7 +7,7 @@ from bisect import bisect_left, bisect_right
 
 import numpy as np
 import pandas as pd
-from numba import jit
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
@@ -419,6 +419,7 @@ def maximise_profit_bayes_optimised(
     - expected distance
     - probability of acceptance when in certain class: [t1 in C1, t1 in C2,...], [t2 in C1, t2 in C2, ...]
     - max output function (by default, profitability) """
+    import numba as jit
     @jit
     def row_calculations(
             _indexes: np.ndarray or list,

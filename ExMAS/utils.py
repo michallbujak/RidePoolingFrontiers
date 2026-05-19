@@ -197,8 +197,6 @@ def load_G(inData, _params=None, stats=False, graph=False):
     skim = pd.read_csv(_params.paths.skim, index_col='Unnamed: 0')
     skim.columns = [int(c) for c in skim.columns]
     inData.skim = skim
-    if stats:
-        inData.stats = networkstats(inData)  # calculate center of network, radius and central node
     return inData
 
 

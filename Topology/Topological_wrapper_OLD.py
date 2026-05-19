@@ -15,11 +15,11 @@ from ExMAS.utils import make_graph as exmas_make_graph
 
 if __name__ == "__main__":
     """ Load all the topological parameters """
-    topological_config = utils.get_parameters('Topology/data/configs/topology_settings_no_random.json')
+    topological_config = utils.get_parameters('data/configs/topology_settings.json')
 
     """ Set up varying parameters (optional) """
-    # topological_config.variable = 'shared_discount'
-    # topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
+    topological_config.variable = 'shared_discount'
+    topological_config.values = np.round(np.arange(0, 0.51, 0.01), 2)
     # # topological_config.values = [0.2, 0.25, 0.3]
 
     """ Run parameters """
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     """ Prepare data """
     dotmaps_list, params = nyc_tools.prepare_batches(topological_config.no_batches,
-                                                     filter_function=lambda x: len(x.requests) < 150,
+                                                     filter_function=lambda x: abs(len(x.requests) - 150)<4,
                                                      config=topological_config.initial_parameters)
 
     params = utils.update_probabilistic(topological_config, params)

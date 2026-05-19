@@ -502,16 +502,16 @@ class APosterioriAnalysis:
         plt.subplots_adjust(bottom=0.3, left=0.3)
         plt.savefig(self.output_temp + 'heatmap' + '.png')
         plt.close()
-        self.heatmap = round(self.heatmap, 3).style.background_gradient(cmap='coolwarm').set_precision(2)
+        self.heatmap = round(self.heatmap, 3).style.background_gradient(cmap='coolwarm')#.set_precision(2)
 
     def save_grouped_results(self):
         if self.date == '000':
             date = str(datetime.date.today().strftime("%d-%m-%y"))
         writer = pd.ExcelWriter(self.output_path + 'Final_results_' + '_'.join(self.input_variables) + '_' +
                                 self.date + '.xlsx', engine='xlsxwriter')
-        self.dataset_grouped.min().to_excel(writer, sheet_name='Min')
-        self.dataset_grouped.mean().to_excel(writer, sheet_name='Mean')
-        self.dataset_grouped.max().to_excel(writer, sheet_name='Max')
+        self.dataset_grouped.min(numeric_only=True).to_excel(writer, sheet_name='Min')
+        self.dataset_grouped.mean(numeric_only=True).to_excel(writer, sheet_name='Mean')
+        self.dataset_grouped.max(numeric_only=True).to_excel(writer, sheet_name='Max')
         workbook = writer.book
 
         worksheet = workbook.add_worksheet('Boxplots')
@@ -532,7 +532,7 @@ class APosterioriAnalysis:
         self.heatmap.to_excel(writer, sheet_name='Correlation')
         worksheet = workbook.get_worksheet_by_name('Correlation')
         worksheet.insert_image('B' + str(len(self.all_graph_properties) * 2 + 5), self.output_temp + 'heatmap' + '.png')
-        writer.save()
+        writer._save()
 
     def do_all(self):
         self.alternate_kpis()

@@ -4,25 +4,37 @@ import numpy as np
 from Utils import utils_topology as utils
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.stats.stats import pearsonr
 
 # plt.style.use(['science', 'no-latex'])
 
-date = "19-01-23"
-special_name = "_full"
+date = "18-05-26"
+special_name = ""
 sblts_exmas = "exmas"
 
 # with open('data/results/' + date + '/rep_graphs_' + date + '.obj', 'rb') as file:
 #     e = pickle.load(file)
 
 with open('data/results/' + date + special_name + '/dotmap_list_' + date + '.obj', 'rb') as file:
+    x = pickle.load(file)
+
+reses = [
+    {'d_saved': t['exmas']['res']['PassHourTrav_ns'] - t['exmas']['res']['PassHourTrav'],
+     'ut_gain': t['exmas']['res']['PassUtility_ns'] - t['exmas']['res']['PassUtility'],
+     'dist_saved': t['exmas']['res']['VehHourTrav_ns'] - t['exmas']['res']['VehHourTrav']}
+    for t in x]
+
+with open('data/results/' + date + '/all_graphs_list_' + date + '.obj', 'rb') as file:
     e = pickle.load(file)
 
-# with open('data/results/' + date + '/all_graphs_list_' + date + '.obj', 'rb') as file:
-#     e = pickle.load(file)
-
-topological_config = utils.get_parameters('data/configs/topology_settings_panel.json')
+# topological_config = utils.get_parameters('data/configs/topology_settings_panel.json')
 # utils.create_results_directory(topological_config, date=date)
-topological_config.path_results = 'data/results/' + date + special_name + '/'
+# topological_config.path_results = 'data/results/' + date + special_name + '/'
+
+new_list = [x['pairs_shareability'] for x in e]
+degs = [np.mean(list(dict(t.degree()).values())) for t in new_list]
+dists = [t['dist_saved'] for t in reses]
+print(pearsonr(degs, dists))
 
 # G = e[0]['pairs_matching']
 # G = e['pairs_shareability']
