@@ -42,9 +42,12 @@ def save_load_data(
     if save_load == 'load':
         folder = kwargs['run_config'].path_results + 'Step_0/'
         all_requests = pd.read_csv(folder + 'demand_sample_' + str(kwargs['run_config'].batch_size) + '.csv')
-        all_rides = pd.read_csv(folder + 'rides' + '_' + str(kwargs['run_config'].batch_size) + '.csv',
-                                converters={k: ast.literal_eval for k in
-                                            ['indexes', 'u_paxes', 'individual_times', 'individual_distances']})
+        all_rides = pd.read_csv(folder + 'rides' + '_' + str(kwargs['run_config'].batch_size) + '.csv')
+        #                         converters={k: ast.literal_eval for k in
+        #                                     ['indexes', 'u_paxes', 'individual_times', 'individual_distances']})
+        for k in ['indexes', 'u_paxes', 'individual_times', 'individual_distances']:
+            all_rides[k] = all_rides[k].str.replace(r'np\.(int64|float64)\(([^)]+)\)', r'\2', regex=True)
+            all_rides[k] = all_rides[k].apply(ast.literal_eval)
         vot_sample = np.load(folder + 'sample' + '_' + str(kwargs['run_config'].sample_size) + '.npy')
         with open(folder + 'exmas_config.json', 'r') as _file:
             exmas_params = json.load(_file)
@@ -55,8 +58,7 @@ def save_load_data(
         vot_sample_dict = {k: [t[0] for t in vot_sample if t[1] == k] for k in set(vot_sample[:, 1])}
 
         if step == 0:
-            return ({'requests':all_requests, 'rides':all_rides}, vot_sample,
-                    vot_sample_dict, exmas_params, actual_class_membership)
+            return {'requests':all_requests, 'rides':all_rides}, vot_sample, vot_sample_dict, exmas_params, actual_class_membership
 
     if step == 1:
         assert kwargs['run_config'], 'run_config needs to be passed'

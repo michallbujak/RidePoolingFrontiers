@@ -296,8 +296,8 @@ if compute_save['starting_step'] <= 2:
         exmas_params=exmas_params,
         out_path=out_path,
         args=args,
-        x_ticks=[t - 1 for t in [1, 5, 10, 15, 20]],
-        x_ticks_labels=[str(t) for t in [1, 5, 10, 15, 20]]
+        # x_ticks=[t - 1 for t in [1, 5, 10, 15, 20]],
+        # x_ticks_labels=[str(t) for t in [1, 5, 10, 15, 20]]
     )
 
     run_config.update(exmas_params)

@@ -638,8 +638,8 @@ def row_maximise_profit_future(
         _rides_row: pd.Series,
         _class_membership: dict[dict],
         _max_output_func: Callable[[list], float],
-        _sample_vot: list or np.ndarray[int or float],
-        _bs_levels: list or np.ndarray[int or float],
+        _sample_vot: list | np.ndarray[int | float],
+        _bs_levels: list | np.ndarray[int | float],
         _individual_satisfaction: dict,
         _fare: float = 0.0015,
         _speed: float = 6,
@@ -815,7 +815,7 @@ def row_maximise_profit_future(
 
 def _sigmoid(x):
     return 1 / (1 + np.exp(-x))
-
+    # return (1/np.pi)*np.arctan(x) + 0.5
 
 def update_satisfaction(
         predicted_travellers_satisfaction_day: dict,
@@ -961,14 +961,14 @@ def post_run_analysis(
         run_config: dict,
         exmas_params: dict,
         out_path: str,
-        args: dict or argparse.Namespace,
+        args: dict | argparse.Namespace,
         **kwargs
 ):
     import matplotlib.pyplot as plt
     import seaborn as sns
 
-    x_ticks = kwargs.get('x_ticks', [round(t) for t in np.arange(0, 22, 2)])
-    x_ticks_labels = kwargs.get('x_ticks_labels', [str(round(t) + 1) for t in np.arange(0, 22, 2)])
+    x_ticks = kwargs.get('x_ticks', [round(t) for t in np.arange(0, run_config.get('no_days', 20)+2, 2)])
+    x_ticks_labels = kwargs.get('x_ticks_labels', [str(round(t)) for t in np.arange(0, run_config.get('no_days', 20)+2, 2)])
 
     # KPIs to latex
     _results_daily = results_daily.copy()
